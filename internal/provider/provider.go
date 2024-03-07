@@ -4,7 +4,7 @@ import (
 	"context"
 	"os"
 
-	"authsignal.com/authsignal-management-sdk-go"
+	authsignal "authsignal.com/authsignal-management-go"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
@@ -53,14 +53,17 @@ func (p *authsignalProvider) Schema(_ context.Context, _ provider.SchemaRequest,
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
 			"host": schema.StringAttribute{
-				Optional: true,
+				Description: "The host URL of the Authsignal Management API for your tenant.",
+				Optional:    true,
 			},
 			"tenant_id": schema.StringAttribute{
-				Optional: true,
+				Description: "The ID of your tenant.",
+				Optional:    true,
 			},
 			"api_secret": schema.StringAttribute{
-				Optional:  true,
-				Sensitive: true,
+				Description: "The Management API Secret obtained from Authsignal's admin portal.",
+				Optional:    true,
+				Sensitive:   true,
 			},
 		},
 	}

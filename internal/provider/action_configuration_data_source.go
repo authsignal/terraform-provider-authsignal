@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"authsignal.com/authsignal-management-sdk-go"
+	authsignal "authsignal.com/authsignal-management-go"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -44,16 +44,20 @@ func (d *actionConfigurationDataSource) Schema(_ context.Context, _ datasource.S
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
 			"action_code": schema.StringAttribute{
-				Required: true,
+				Description: "A string used to define the action to track against.",
+				Required:    true,
 			},
 			"tenant_id": schema.StringAttribute{
-				Computed: true,
+				Description: "The ID of your tenant.",
+				Computed:    true,
 			},
 			"default_user_action_result": schema.StringAttribute{
-				Computed: true,
+				Description: "The default action behaviour if no rules match.",
+				Computed:    true,
 			},
 			"last_action_created_at": schema.StringAttribute{
-				Computed: true,
+				Description: "The date of when an action was last tracked.",
+				Computed:    true,
 			},
 		},
 	}

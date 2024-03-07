@@ -1,3 +1,4 @@
+# Configuration-based authentication
 provider "authsignal" {
   // For production systems please configure these as environment variables in your CI/CD process.
   host       = "https://authsignal.com/not-a-real-endpoint"

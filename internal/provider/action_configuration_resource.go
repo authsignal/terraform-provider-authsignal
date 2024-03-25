@@ -188,8 +188,8 @@ func (r *actionConfigurationResource) Delete(ctx context.Context, req resource.D
 	_, err := r.client.DeleteActionConfiguration(state.ActionCode.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(
-			"Error Deleting HashiCups Order",
-			"Could not delete order, unexpected error: "+err.Error(),
+			"Error Deleting Authsignal action configuration",
+			"Could not delete action configuration, unexpected error: "+err.Error(),
 		)
 		return
 	}

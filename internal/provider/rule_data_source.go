@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	authsignal "authsignal.com/authsignal-management-go"
+	"github.com/authsignal/authsignal-management-go"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"

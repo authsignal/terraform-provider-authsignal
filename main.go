@@ -9,7 +9,7 @@ import (
 
 	"github.com/hashicorp/terraform-plugin-framework/providerserver"
 
-	"terraform-provider-authsignal/internal/provider"
+	"github.com/authsignal/terraform-provider-authsignal/internal/provider"
 )
 
 // Run "go generate" to format example terraform files and generate the docs for the registry/website

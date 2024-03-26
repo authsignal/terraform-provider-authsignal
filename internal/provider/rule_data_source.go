@@ -52,6 +52,10 @@ func (d *ruleDataSource) Metadata(_ context.Context, req datasource.MetadataRequ
 func (d *ruleDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
+			"action_code": schema.StringAttribute{
+				Description: "The name of the action that users perform which you will track. (e.g 'login')",
+				Required:    true,
+			},
 			"name": schema.StringAttribute{
 				Description: "A string used to name the rule.",
 				Computed:    true,
@@ -65,33 +69,21 @@ func (d *ruleDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, r
 				Computed:    true,
 			},
 			"priority": schema.Int64Attribute{
-				Description: "Determines the order which the rules are applied in.",
+				Description: "Determines the order which the rules are applied in, where 0 is applied first, 1 is applied second...",
 				Computed:    true,
 			},
-			"action_code": schema.StringAttribute{
-				Description: "The action that the rule is applied to.",
-				Required:    true,
-			},
-			"rule_id": schema.StringAttribute{
-				Description: "The ID of the rule.",
-				Required:    true,
-			},
-			"tenant_id": schema.StringAttribute{
-				Description: "The ID of the tenant that the rule belongs to.",
-				Required:    true,
-			},
 			"type": schema.StringAttribute{
-				Description: "The result that the rule should return (e.g. allow, challenge).",
+				Description: "The result that the rule should return when the conditions are met. (e.g. ALLOW, CHALLENGE)",
 				Computed:    true,
 			},
 			"verification_methods": schema.ListAttribute{
 				ElementType: types.StringType,
-				Description: "Determines the order which the rules are applied in.",
+				Description: "A list of permitted authenticators that can be used if the type of the rule is 'CHALLENGE'",
 				Computed:    true,
 			},
 			"prompt_to_enroll_verification_methods": schema.ListAttribute{
 				ElementType: types.StringType,
-				Description: "<description here>",
+				Description: "If this is set then users will be prompted to add a passkey after a challenge is completed.",
 				Computed:    true,
 			},
 			"default_verification_method": schema.StringAttribute{
@@ -99,8 +91,16 @@ func (d *ruleDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, r
 				Computed:    true,
 			},
 			"conditions": schema.StringAttribute{
-				Description: "The conditions of the rule.",
+				Description: "The logical conditions to match tracked actions against. If the conditions are met then the rule's type will be returned in the track action response.",
 				Computed:    true,
+			},
+			"rule_id": schema.StringAttribute{
+				Description: "The ID of the rule. This can be obtained from the Authsignal portal.",
+				Required:    true,
+			},
+			"tenant_id": schema.StringAttribute{
+				Description: "The ID of your tenant.",
+				Required:    true,
 			},
 		},
 	}

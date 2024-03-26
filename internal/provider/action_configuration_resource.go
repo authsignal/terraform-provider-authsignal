@@ -48,14 +48,18 @@ func (r *actionConfigurationResource) Schema(_ context.Context, _ resource.Schem
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
 			"action_code": schema.StringAttribute{
-				Description: "A string used to define the action to track against.",
+				Description: "The name of the action that users perform which you will track. (e.g 'login')",
 				Required:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
+			"default_user_action_result": schema.StringAttribute{
+				Description: "The default action behavior if no rules match. (i.e 'CHALLENGE')",
+				Required:    true,
+			},
 			"last_action_created_at": schema.StringAttribute{
-				Description: "The date of when an action was last tracked.",
+				Description: "The date of when an action was last tracked for any user.",
 				Computed:    true,
 			},
 			"tenant_id": schema.StringAttribute{
@@ -64,10 +68,6 @@ func (r *actionConfigurationResource) Schema(_ context.Context, _ resource.Schem
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
 				},
-			},
-			"default_user_action_result": schema.StringAttribute{
-				Description: "The default action behaviour if no rules match.",
-				Required:    true,
 			},
 		},
 	}

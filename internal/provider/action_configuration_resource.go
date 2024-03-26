@@ -146,7 +146,7 @@ func (r *actionConfigurationResource) Update(ctx context.Context, req resource.U
 
 	var actionConfigurationToUpdate = authsignal.ActionConfiguration{ActionCode: plan.ActionCode.ValueString(), DefaultUserActionResult: plan.DefaultUserActionResult.ValueString()}
 
-	_, err := r.client.UpdateActionConfiguration(actionConfigurationToUpdate)
+	_, err := r.client.UpdateActionConfiguration(plan.ActionCode.ValueString(), actionConfigurationToUpdate)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Updating Authsignal action configuration",

@@ -297,7 +297,7 @@ func (r *ruleResource) Update(ctx context.Context, req resource.UpdateRequest, r
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Reading Authsignal rule",
-			"Could not read rule code "+plan.ActionCode.ValueString()+"-"+plan.RuleId.ValueString()+": "+err.Error(),
+			"Could not read rule using values: "+plan.ActionCode.ValueString()+"-"+plan.RuleId.ValueString()+":\n"+err.Error(),
 		)
 		return
 	}

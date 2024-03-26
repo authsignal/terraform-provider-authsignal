@@ -15,7 +15,6 @@ description: |-
 ```terraform
 # Retrieve rule by action code and rule id.
 data "authsignal_rule" "test" {
-  tenant_id   = "680137cd-1bb7-40b3-b3c3-6f0a665e9d94"
   action_code = "test-rules"
   rule_id     = "a2d9670f-4028-424c-9f0f-1493ed9efc45"
 }
@@ -28,7 +27,6 @@ data "authsignal_rule" "test" {
 
 - `action_code` (String) The name of the action that users perform which you will track. (e.g 'login')
 - `rule_id` (String) The ID of the rule. This can be obtained from the Authsignal portal.
-- `tenant_id` (String) The ID of your tenant.
 
 ### Read-Only
 
@@ -39,5 +37,6 @@ data "authsignal_rule" "test" {
 - `name` (String) A string used to name the rule.
 - `priority` (Number) Determines the order which the rules are applied in, where 0 is applied first, 1 is applied second...
 - `prompt_to_enroll_verification_methods` (List of String) If this is set then users will be prompted to add a passkey after a challenge is completed.
+- `tenant_id` (String) The ID of your tenant.
 - `type` (String) The result that the rule should return when the conditions are met. (e.g. ALLOW, CHALLENGE)
 - `verification_methods` (List of String) A list of permitted authenticators that can be used if the type of the rule is 'CHALLENGE'

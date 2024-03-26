@@ -100,7 +100,7 @@ func (d *ruleDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, r
 			},
 			"tenant_id": schema.StringAttribute{
 				Description: "The ID of your tenant.",
-				Required:    true,
+				Computed:    true,
 			},
 		},
 	}

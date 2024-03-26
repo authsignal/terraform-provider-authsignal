@@ -12,7 +12,6 @@ func TestAccRuleDataSource(t *testing.T) {
 		Steps: []resource.TestStep{
 			{
 				Config: `data "authsignal_rule" "terraform-acc-tests" {
-					tenant_id   = "680137cd-1bb7-40b3-b3c3-6f0a665e9d94"
 					action_code = "terraform-acc-tests"
 					rule_id     = "73d8750b-7ddf-4e0e-bf4f-a832d091e835"
 				}`,

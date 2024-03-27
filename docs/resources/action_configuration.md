@@ -25,12 +25,12 @@ resource "authsignal_action_configuration" "terraform-provider-test" {
 
 ### Required
 
-- `action_code` (String) A string used to define the action to track against.
-- `default_user_action_result` (String) The default action behaviour if no rules match.
+- `action_code` (String) The name of the action that users perform which you will track. (e.g 'login')
+- `default_user_action_result` (String) The default action behavior if no rules match. (i.e 'CHALLENGE')
 
 ### Read-Only
 
-- `last_action_created_at` (String) The date of when an action was last tracked.
+- `last_action_created_at` (String) The date of when an action was last tracked for any user.
 - `tenant_id` (String) The ID of your tenant.
 
 ## Import
@@ -39,6 +39,5 @@ Import is supported using the following syntax:
 
 ```shell
 # action configurations can be imported by specifying the action code.
-
 terraform import authsignal_action_configuration.test test
 ```

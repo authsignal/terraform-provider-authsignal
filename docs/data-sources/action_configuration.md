@@ -24,10 +24,10 @@ data "authsignal_action_configuration" "test" {
 
 ### Required
 
-- `action_code` (String) A string used to define the action to track against.
+- `action_code` (String) The name of the action that users perform which you will track. (e.g 'login')
 
 ### Read-Only
 
-- `default_user_action_result` (String) The default action behaviour if no rules match.
-- `last_action_created_at` (String) The date of when an action was last tracked.
+- `default_user_action_result` (String) The default action behavior if no rules match. (i.e 'CHALLENGE')
+- `last_action_created_at` (String) The date of when an action was last tracked for any user.
 - `tenant_id` (String) The ID of your tenant.

@@ -57,6 +57,10 @@ func (r *ruleResource) Metadata(_ context.Context, req resource.MetadataRequest,
 func (d *ruleResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
+			"action_code": schema.StringAttribute{
+				Description: "The name of the action that users perform which you will track. (e.g 'login')",
+				Required:    true,
+			},
 			"name": schema.StringAttribute{
 				Description: "A string used to name the rule.",
 				Required:    true,
@@ -70,11 +74,29 @@ func (d *ruleResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 				Required:    true,
 			},
 			"priority": schema.Int64Attribute{
-				Description: "Determines the order which the rules are applied in.",
+				Description: "Determines the order which the rules are applied in, where 0 is applied first, 1 is applied second...",
 				Required:    true,
 			},
-			"action_code": schema.StringAttribute{
-				Description: "The action that the rule is applied to.",
+			"type": schema.StringAttribute{
+				Description: "The result that the rule should return when the conditions are met. (e.g. ALLOW, CHALLENGE)",
+				Required:    true,
+			},
+			"verification_methods": schema.ListAttribute{
+				ElementType: types.StringType,
+				Description: "A list of permitted authenticators that can be used if the type of the rule is 'CHALLENGE'",
+				Optional:    true,
+			},
+			"prompt_to_enroll_verification_methods": schema.ListAttribute{
+				ElementType: types.StringType,
+				Description: "If this is set then users will be prompted to add a passkey after a challenge is completed.",
+				Optional:    true,
+			},
+			"default_verification_method": schema.StringAttribute{
+				Description: "<tbd>",
+				Optional:    true,
+			},
+			"conditions": schema.StringAttribute{
+				Description: "The logical conditions to match tracked actions against. If the conditions are met then the rule's type will be returned in the track action response.",
 				Required:    true,
 			},
 			"rule_id": schema.StringAttribute{
@@ -85,30 +107,8 @@ func (d *ruleResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 				},
 			},
 			"tenant_id": schema.StringAttribute{
-				Description: "The ID of the tenant that the rule belongs to.",
+				Description: "The ID of your tenant.",
 				Computed:    true,
-			},
-			"type": schema.StringAttribute{
-				Description: "The result that the rule should return (e.g. allow, challenge).",
-				Required:    true,
-			},
-			"verification_methods": schema.ListAttribute{
-				ElementType: types.StringType,
-				Description: "Determines the order which the rules are applied in.",
-				Optional:    true,
-			},
-			"prompt_to_enroll_verification_methods": schema.ListAttribute{
-				ElementType: types.StringType,
-				Description: "<description here>",
-				Optional:    true,
-			},
-			"default_verification_method": schema.StringAttribute{
-				Description: "The default verification method that users should be prompted with.",
-				Optional:    true,
-			},
-			"conditions": schema.StringAttribute{
-				Description: "The conditions of the rule.",
-				Required:    true,
 			},
 		},
 	}
@@ -297,7 +297,7 @@ func (r *ruleResource) Update(ctx context.Context, req resource.UpdateRequest, r
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Reading Authsignal rule",
-			"Could not read rule code "+plan.ActionCode.ValueString()+"-"+plan.RuleId.ValueString()+": "+err.Error(),
+			"Could not read rule using values: "+plan.ActionCode.ValueString()+"-"+plan.RuleId.ValueString()+":\n"+err.Error(),
 		)
 		return
 	}

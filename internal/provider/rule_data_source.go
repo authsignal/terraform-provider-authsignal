@@ -149,7 +149,6 @@ func (d *ruleDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 
 	ruleState := ruleDataSourceModel{
 		Name:                              types.StringValue(rule.Name),
-		Description:                       types.StringValue(rule.Description),
 		IsActive:                          types.BoolValue(rule.IsActive),
 		Priority:                          types.Int64Value(rule.Priority),
 		ActionCode:                        types.StringValue(rule.ActionCode),
@@ -158,8 +157,15 @@ func (d *ruleDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 		Type:                              types.StringValue(rule.Type),
 		VerificationMethods:               verificationMethodsList,
 		PromptToEnrollVerificationMethods: promptToEnrollVerificationMethodsList,
-		DefaultVerificationMethod:         types.StringValue(rule.DefaultVerificationMethod),
 		Conditions:                        types.StringValue(string(conditionsJson)),
+	}
+
+	if len(rule.Description) > 0 {
+		ruleState.Description = types.StringValue(rule.Description)
+	}
+
+	if len(rule.DefaultVerificationMethod) > 0 {
+		ruleState.DefaultVerificationMethod = types.StringValue(rule.DefaultVerificationMethod)
 	}
 
 	diags2 := resp.State.Set(ctx, &ruleState)

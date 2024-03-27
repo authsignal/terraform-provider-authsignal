@@ -109,6 +109,9 @@ func (d *ruleResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 			"tenant_id": schema.StringAttribute{
 				Description: "The ID of your tenant.",
 				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 		},
 	}
@@ -221,15 +224,21 @@ func (r *ruleResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 	}
 
 	state.Name = types.StringValue(rule.Name)
-	state.Description = types.StringValue(rule.Description)
 	state.IsActive = types.BoolValue(rule.IsActive)
 	state.Priority = types.Int64Value(rule.Priority)
 	state.Type = types.StringValue(rule.Type)
 	state.VerificationMethods = verificationMethodsList
 	state.PromptToEnrollVerificationMethods = promptToEnrollVerificationMethodsList
-	state.DefaultVerificationMethod = types.StringValue(rule.DefaultVerificationMethod)
 	state.Conditions = types.StringValue(string(conditionsJson))
 	state.TenantId = types.StringValue(rule.TenantId)
+
+	if len(rule.Description) > 0 {
+		state.Description = types.StringValue(rule.Description)
+	}
+
+	if len(rule.DefaultVerificationMethod) > 0 {
+		state.DefaultVerificationMethod = types.StringValue(rule.DefaultVerificationMethod)
+	}
 
 	diags = resp.State.Set(ctx, &state)
 	resp.Diagnostics.Append(diags...)

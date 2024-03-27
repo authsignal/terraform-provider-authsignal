@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	authsignal "authsignal.com/authsignal-management-go"
+	"github.com/authsignal/authsignal-management-go"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"

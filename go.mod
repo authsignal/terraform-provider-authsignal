@@ -3,7 +3,7 @@ module github.com/authsignal/terraform-provider-authsignal
 go 1.22.0
 
 require (
-	github.com/authsignal/authsignal-management-go v0.0.0-00010101000000-000000000000
+	github.com/authsignal/authsignal-management-go v1.0.0
 	github.com/hashicorp/terraform-plugin-docs v0.18.0
 	github.com/hashicorp/terraform-plugin-framework v1.7.0
 	github.com/hashicorp/terraform-plugin-go v0.22.1
@@ -79,5 +79,3 @@ require (
 	google.golang.org/protobuf v1.33.0 // indirect
 	gopkg.in/yaml.v2 v2.3.0 // indirect
 )
-
-replace github.com/authsignal/authsignal-management-go => ../authsignal-management-go

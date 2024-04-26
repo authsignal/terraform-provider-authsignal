@@ -12,18 +12,15 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
-// Ensure the implementation satisfies the expected interfaces.
 var (
 	_ datasource.DataSource              = &ruleDataSource{}
 	_ datasource.DataSourceWithConfigure = &ruleDataSource{}
 )
 
-// NewRuleDataSource is a helper function to simplify the provider implementation.
 func NewRuleDataSource() datasource.DataSource {
 	return &ruleDataSource{}
 }
 
-// ruleDataSource is the data source implementation.
 type ruleDataSource struct {
 	client *authsignal.Client
 }
@@ -43,12 +40,10 @@ type ruleDataSourceModel struct {
 	Conditions                        types.String `tfsdk:"conditions"`
 }
 
-// Metadata returns the data source type name.
 func (d *ruleDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_rule"
 }
 
-// Schema defines the schema for the data source.
 func (d *ruleDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
@@ -87,7 +82,7 @@ func (d *ruleDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, r
 				Computed:    true,
 			},
 			"default_verification_method": schema.StringAttribute{
-				Description: "The default verification method that users should be prompted with.",
+				Description: "Ignore the user's preference and choose which authenticator the Pre-built UI will present by default.",
 				Computed:    true,
 			},
 			"conditions": schema.StringAttribute{
@@ -99,14 +94,13 @@ func (d *ruleDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, r
 				Required:    true,
 			},
 			"tenant_id": schema.StringAttribute{
-				Description: "The ID of your tenant.",
+				Description: "The ID of your tenant. This can be found in the admin portal.",
 				Computed:    true,
 			},
 		},
 	}
 }
 
-// Read refreshes the Terraform state with the latest data.
 func (d *ruleDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
 
 	var data ruleDataSourceModel

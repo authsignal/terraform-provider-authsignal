@@ -14,19 +14,16 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
-// Ensure the implementation satisfies the expected interfaces.
 var (
 	_ resource.Resource                = &actionConfigurationResource{}
 	_ resource.ResourceWithConfigure   = &actionConfigurationResource{}
 	_ resource.ResourceWithImportState = &actionConfigurationResource{}
 )
 
-// NewActionConfigurationResource is a helper function to simplify the provider implementation.
 func NewActionConfigurationResource() resource.Resource {
 	return &actionConfigurationResource{}
 }
 
-// actionConfigurationResource is the resource implementation.
 type actionConfigurationResource struct {
 	client *authsignal.Client
 }
@@ -38,12 +35,10 @@ type actionConfigurationResourceModel struct {
 	DefaultUserActionResult types.String `tfsdk:"default_user_action_result"`
 }
 
-// Metadata returns the resource type name.
 func (r *actionConfigurationResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_action_configuration"
 }
 
-// Schema defines the schema for the resource.
 func (r *actionConfigurationResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
@@ -63,7 +58,7 @@ func (r *actionConfigurationResource) Schema(_ context.Context, _ resource.Schem
 				Computed:    true,
 			},
 			"tenant_id": schema.StringAttribute{
-				Description: "The ID of your tenant.",
+				Description: "The ID of your tenant. This can be found in the admin portal.",
 				Computed:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
@@ -73,7 +68,6 @@ func (r *actionConfigurationResource) Schema(_ context.Context, _ resource.Schem
 	}
 }
 
-// Create creates the resource and sets the initial Terraform state.
 func (r *actionConfigurationResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var plan actionConfigurationResourceModel
 	diags := req.Plan.Get(ctx, &plan)
@@ -106,7 +100,6 @@ func (r *actionConfigurationResource) Create(ctx context.Context, req resource.C
 	}
 }
 
-// Read refreshes the Terraform state with the latest data.
 func (r *actionConfigurationResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
 	var state actionConfigurationResourceModel
 	diags := req.State.Get(ctx, &state)
@@ -135,7 +128,6 @@ func (r *actionConfigurationResource) Read(ctx context.Context, req resource.Rea
 	}
 }
 
-// Update updates the resource and sets the updated Terraform state on success.
 func (r *actionConfigurationResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	var plan actionConfigurationResourceModel
 	diags := req.Plan.Get(ctx, &plan)
@@ -176,7 +168,6 @@ func (r *actionConfigurationResource) Update(ctx context.Context, req resource.U
 	}
 }
 
-// Delete deletes the resource and removes the Terraform state on success.
 func (r *actionConfigurationResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
 	var state actionConfigurationResourceModel
 	diags := req.State.Get(ctx, &state)
@@ -196,7 +187,6 @@ func (r *actionConfigurationResource) Delete(ctx context.Context, req resource.D
 }
 
 func (r *actionConfigurationResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	// Retrieve import ID and save to id attribute
 	resource.ImportStatePassthroughID(ctx, path.Root("action_code"), req, resp)
 }
 

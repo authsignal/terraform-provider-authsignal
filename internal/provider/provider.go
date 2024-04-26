@@ -14,12 +14,10 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
-// Ensure the implementation satisfies the expected interfaces.
 var (
 	_ provider.Provider = &authsignalProvider{}
 )
 
-// New is a helper function to simplify provider server and testing implementation.
 func New(version string) func() provider.Provider {
 	return func() provider.Provider {
 		return &authsignalProvider{
@@ -28,11 +26,7 @@ func New(version string) func() provider.Provider {
 	}
 }
 
-// authsignalProvider is the provider implementation.
 type authsignalProvider struct {
-	// version is set to the provider version on release, "dev" when the
-	// provider is built and ran locally, and "test" when running acceptance
-	// testing.
 	version string
 }
 
@@ -42,13 +36,11 @@ type authsignalProviderModel struct {
 	ApiSecret types.String `tfsdk:"api_secret"`
 }
 
-// Metadata returns the provider type name.
 func (p *authsignalProvider) Metadata(_ context.Context, _ provider.MetadataRequest, resp *provider.MetadataResponse) {
 	resp.TypeName = "authsignal"
 	resp.Version = p.version
 }
 
-// Schema defines the provider-level schema for configuration data.
 func (p *authsignalProvider) Schema(_ context.Context, _ provider.SchemaRequest, resp *provider.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
@@ -69,18 +61,13 @@ func (p *authsignalProvider) Schema(_ context.Context, _ provider.SchemaRequest,
 	}
 }
 
-// Configure prepares a Authsignal API client for data sources and resources.
 func (p *authsignalProvider) Configure(ctx context.Context, req provider.ConfigureRequest, resp *provider.ConfigureResponse) {
-	// Retrieve provider data from configuration
 	var config authsignalProviderModel
 	diags := req.Config.Get(ctx, &config)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
-
-	// If practitioner provided a configuration value for any of the
-	// attributes, it must be a known value.
 
 	if config.Host.IsUnknown() {
 		resp.Diagnostics.AddAttributeError(
@@ -113,9 +100,6 @@ func (p *authsignalProvider) Configure(ctx context.Context, req provider.Configu
 		return
 	}
 
-	// Default values to environment variables, but override
-	// with Terraform configuration value if set.
-
 	host := os.Getenv("AUTHSIGNAL_HOST")
 	tenant_id := os.Getenv("AUTHSIGNAL_TENANT_ID")
 	api_secret := os.Getenv("AUTHSIGNAL_API_SECRET")
@@ -131,9 +115,6 @@ func (p *authsignalProvider) Configure(ctx context.Context, req provider.Configu
 	if !config.ApiSecret.IsNull() {
 		api_secret = config.ApiSecret.ValueString()
 	}
-
-	// If any of the expected configurations are missing, return
-	// errors with provider-specific guidance.
 
 	if host == "" {
 		resp.Diagnostics.AddAttributeError(
@@ -172,18 +153,14 @@ func (p *authsignalProvider) Configure(ctx context.Context, req provider.Configu
 	ctx = tflog.SetField(ctx, "authsignal_host", host)
 	ctx = tflog.SetField(ctx, "authsignal_tenant_id", tenant_id)
 
-	// Create a new Authsignal client using the configuration values
 	client := authsignal.NewClient(host, tenant_id, api_secret)
 
-	// Make the Authsignal client available during DataSource and Resource
-	// type Configure methods.
 	resp.DataSourceData = &client
 	resp.ResourceData = &client
 
 	tflog.Info(ctx, "Configured Authsignal client", map[string]any{"success": true})
 }
 
-// DataSources defines the data sources implemented in the provider.
 func (p *authsignalProvider) DataSources(_ context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
 		NewActionConfigurationDataSource,
@@ -191,7 +168,6 @@ func (p *authsignalProvider) DataSources(_ context.Context) []func() datasource.
 	}
 }
 
-// Resources defines the resources implemented in the provider.
 func (p *authsignalProvider) Resources(_ context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
 		NewActionConfigurationResource,

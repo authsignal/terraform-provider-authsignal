@@ -16,19 +16,16 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
-// Ensure the implementation satisfies the expected interfaces.
 var (
 	_ resource.Resource                = &ruleResource{}
 	_ resource.ResourceWithConfigure   = &ruleResource{}
 	_ resource.ResourceWithImportState = &ruleResource{}
 )
 
-// NewActionConfigurationResource is a helper function to simplify the provider implementation.
 func NewRuleResource() resource.Resource {
 	return &ruleResource{}
 }
 
-// actionConfigurationResource is the resource implementation.
 type ruleResource struct {
 	client *authsignal.Client
 }
@@ -48,12 +45,10 @@ type ruleResourceModel struct {
 	Conditions                        types.String `tfsdk:"conditions"`
 }
 
-// Metadata returns the resource type name.
 func (r *ruleResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_rule"
 }
 
-// Schema defines the schema for the resource.
 func (d *ruleResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
@@ -92,7 +87,7 @@ func (d *ruleResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 				Optional:    true,
 			},
 			"default_verification_method": schema.StringAttribute{
-				Description: "<tbd>",
+				Description: "Ignore the user's preference and choose which authenticator the Pre-built UI will present by default.",
 				Optional:    true,
 			},
 			"conditions": schema.StringAttribute{
@@ -107,7 +102,7 @@ func (d *ruleResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 				},
 			},
 			"tenant_id": schema.StringAttribute{
-				Description: "The ID of your tenant.",
+				Description: "The ID of your tenant. This can be found in the admin portal.",
 				Computed:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.UseStateForUnknown(),
@@ -117,7 +112,6 @@ func (d *ruleResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 	}
 }
 
-// Create creates the resource and sets the initial Terraform state.
 func (r *ruleResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
 	var plan ruleResourceModel
 	diags := req.Plan.Get(ctx, &plan)
@@ -184,7 +178,6 @@ func (r *ruleResource) Create(ctx context.Context, req resource.CreateRequest, r
 	}
 }
 
-// Read refreshes the Terraform state with the latest data.
 func (r *ruleResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
 	var state ruleResourceModel
 	diags := req.State.Get(ctx, &state)
@@ -247,7 +240,6 @@ func (r *ruleResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 	}
 }
 
-// Update updates the resource and sets the updated Terraform state on success.
 func (r *ruleResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	var plan ruleResourceModel
 	diags := req.Plan.Get(ctx, &plan)
@@ -321,7 +313,6 @@ func (r *ruleResource) Update(ctx context.Context, req resource.UpdateRequest, r
 	}
 }
 
-// Delete deletes the resource and removes the Terraform state on success.
 func (r *ruleResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
 	var state ruleResourceModel
 	diags := req.State.Get(ctx, &state)

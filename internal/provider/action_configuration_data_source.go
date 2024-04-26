@@ -11,18 +11,15 @@ import (
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
 
-// Ensure the implementation satisfies the expected interfaces.
 var (
 	_ datasource.DataSource              = &actionConfigurationDataSource{}
 	_ datasource.DataSourceWithConfigure = &actionConfigurationDataSource{}
 )
 
-// NewActionConfigurationDataSource is a helper function to simplify the provider implementation.
 func NewActionConfigurationDataSource() datasource.DataSource {
 	return &actionConfigurationDataSource{}
 }
 
-// actionConfigurationDataSource is the data source implementation.
 type actionConfigurationDataSource struct {
 	client *authsignal.Client
 }
@@ -34,12 +31,10 @@ type actionConfigurationDataSourceModel struct {
 	LastActionCreatedAt     types.String `tfsdk:"last_action_created_at"`
 }
 
-// Metadata returns the data source type name.
 func (d *actionConfigurationDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_action_configuration"
 }
 
-// Schema defines the schema for the data source.
 func (d *actionConfigurationDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
@@ -56,14 +51,13 @@ func (d *actionConfigurationDataSource) Schema(_ context.Context, _ datasource.S
 				Computed:    true,
 			},
 			"tenant_id": schema.StringAttribute{
-				Description: "The ID of your tenant.",
+				Description: "The ID of your tenant. This can be found in the admin portal.",
 				Computed:    true,
 			},
 		},
 	}
 }
 
-// Read refreshes the Terraform state with the latest data.
 func (d *actionConfigurationDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
 
 	var data actionConfigurationDataSourceModel

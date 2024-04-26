@@ -31,7 +31,7 @@ resource "authsignal_action_configuration" "terraform-provider-test" {
 ### Read-Only
 
 - `last_action_created_at` (String) The date of when an action was last tracked for any user.
-- `tenant_id` (String) The ID of your tenant.
+- `tenant_id` (String) The ID of your tenant. This can be found in the admin portal.
 
 ## Import
 
@@ -39,5 +39,5 @@ Import is supported using the following syntax:
 
 ```shell
 # action configurations can be imported by specifying the action code.
-terraform import authsignal_action_configuration.test test
+terraform import authsignal_action_configuration.test test-action-code
 ```

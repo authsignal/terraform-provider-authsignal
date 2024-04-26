@@ -31,12 +31,12 @@ data "authsignal_rule" "test" {
 ### Read-Only
 
 - `conditions` (String) The logical conditions to match tracked actions against. If the conditions are met then the rule's type will be returned in the track action response.
-- `default_verification_method` (String) The default verification method that users should be prompted with.
+- `default_verification_method` (String) Ignore the user's preference and choose which authenticator the Pre-built UI will present by default.
 - `description` (String) A description of the rule.
 - `is_active` (Boolean) Toggles whether or not the rule is actively applied.
 - `name` (String) A string used to name the rule.
 - `priority` (Number) Determines the order which the rules are applied in, where 0 is applied first, 1 is applied second...
 - `prompt_to_enroll_verification_methods` (List of String) If this is set then users will be prompted to add a passkey after a challenge is completed.
-- `tenant_id` (String) The ID of your tenant.
+- `tenant_id` (String) The ID of your tenant. This can be found in the admin portal.
 - `type` (String) The result that the rule should return when the conditions are met. (e.g. ALLOW, CHALLENGE)
 - `verification_methods` (List of String) A list of permitted authenticators that can be used if the type of the rule is 'CHALLENGE'

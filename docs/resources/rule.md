@@ -59,7 +59,7 @@ resource "authsignal_rule" "test" {
 
 ### Optional
 
-- `default_verification_method` (String) <tbd>
+- `default_verification_method` (String) Ignore the user's preference and choose which authenticator the Pre-built UI will present by default.
 - `description` (String) A description of the rule.
 - `prompt_to_enroll_verification_methods` (List of String) If this is set then users will be prompted to add a passkey after a challenge is completed.
 - `verification_methods` (List of String) A list of permitted authenticators that can be used if the type of the rule is 'CHALLENGE'
@@ -67,7 +67,7 @@ resource "authsignal_rule" "test" {
 ### Read-Only
 
 - `rule_id` (String) The ID of the rule.
-- `tenant_id` (String) The ID of your tenant.
+- `tenant_id` (String) The ID of your tenant. This can be found in the admin portal.
 
 ## Import
 

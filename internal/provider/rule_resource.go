@@ -7,11 +7,15 @@ import (
 	"strings"
 
 	"github.com/authsignal/authsignal-management-go"
+	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
@@ -55,6 +59,9 @@ func (d *ruleResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 			"action_code": schema.StringAttribute{
 				Description: "The name of the action that users perform which you will track. (e.g 'login')",
 				Required:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.RequiresReplace(),
+				},
 			},
 			"name": schema.StringAttribute{
 				Description: "A string used to name the rule.",
@@ -71,24 +78,39 @@ func (d *ruleResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 			"priority": schema.Int64Attribute{
 				Description: "Determines the order which the rules are applied in, where 0 is applied first, 1 is applied second...",
 				Required:    true,
+				Validators: []validator.Int64{
+					int64validator.Between(0, 99),
+				},
 			},
 			"type": schema.StringAttribute{
 				Description: "The result that the rule should return when the conditions are met. (e.g. ALLOW, CHALLENGE)",
 				Required:    true,
+				Validators: []validator.String{
+					stringvalidator.OneOf([]string{"ALLOW", "CHALLENGE", "REVIEW", "BLOCK"}...),
+				},
 			},
 			"verification_methods": schema.ListAttribute{
 				ElementType: types.StringType,
 				Description: "A list of permitted authenticators that can be used if the type of the rule is 'CHALLENGE'",
 				Optional:    true,
+				Validators: []validator.List{
+					listvalidator.ValueStringsAre(stringvalidator.OneOf([]string{"SMS", "AUTHENTICATOR_APP", "EMAIL_MAGIC_LINK", "EMAIL_OTP", "PUSH", "SECURITY_KEY", "PASSKEY", "VERIFF", "IPROOV", "REDROCK", "IDVERSE"}...)),
+				},
 			},
 			"prompt_to_enroll_verification_methods": schema.ListAttribute{
 				ElementType: types.StringType,
 				Description: "If this is set then users will be prompted to add a passkey after a challenge is completed.",
 				Optional:    true,
+				Validators: []validator.List{
+					listvalidator.ValueStringsAre(stringvalidator.OneOf([]string{"PASSKEY"}...)),
+				},
 			},
 			"default_verification_method": schema.StringAttribute{
 				Description: "Ignore the user's preference and choose which authenticator the Pre-built UI will present by default.",
 				Optional:    true,
+				Validators: []validator.String{
+					stringvalidator.OneOf([]string{"SMS", "AUTHENTICATOR_APP", "EMAIL_MAGIC_LINK", "EMAIL_OTP", "PUSH", "SECURITY_KEY", "PASSKEY", "VERIFF", "IPROOV", "REDROCK", "IDVERSE"}...),
+				},
 			},
 			"conditions": schema.StringAttribute{
 				Description: "The logical conditions to match tracked actions against. If the conditions are met then the rule's type will be returned in the track action response.",

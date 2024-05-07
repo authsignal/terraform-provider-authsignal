@@ -5,11 +5,13 @@ import (
 	"fmt"
 
 	"github.com/authsignal/authsignal-management-go"
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
 )
@@ -52,6 +54,9 @@ func (r *actionConfigurationResource) Schema(_ context.Context, _ resource.Schem
 			"default_user_action_result": schema.StringAttribute{
 				Description: "The default action behavior if no rules match. (i.e 'CHALLENGE')",
 				Required:    true,
+				Validators: []validator.String{
+					stringvalidator.OneOf([]string{"ALLOW", "CHALLENGE", "REVIEW", "BLOCK"}...),
+				},
 			},
 			"last_action_created_at": schema.StringAttribute{
 				Description: "The date of when an action was last tracked for any user.",

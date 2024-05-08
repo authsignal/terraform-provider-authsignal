@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/authsignal/authsignal-management-go"
+	"github.com/authsignal/authsignal-management-go/v2"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"

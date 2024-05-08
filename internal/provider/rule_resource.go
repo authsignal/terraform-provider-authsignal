@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/authsignal/authsignal-management-go"
+	"github.com/authsignal/authsignal-management-go/v2"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -168,15 +168,35 @@ func (r *ruleResource) Create(ctx context.Context, req resource.CreateRequest, r
 	}
 
 	var ruleToCreate = authsignal.Rule{
-		Name:                              plan.Name.ValueString(),
-		Description:                       plan.Description.ValueString(),
-		IsActive:                          plan.IsActive.ValueBool(),
-		Priority:                          plan.Priority.ValueInt64(),
-		Type:                              plan.Type.ValueString(),
-		VerificationMethods:               verificationMethodsSlice,
-		PromptToEnrollVerificationMethods: promptToEnrollVerificationMethodsSlice,
-		DefaultVerificationMethod:         plan.DefaultVerificationMethod.ValueString(),
-		Conditions:                        conditionsJson,
+		IsActive: authsignal.SetValue(plan.IsActive.ValueBool()),
+		Priority: authsignal.SetValue(plan.Priority.ValueInt64()),
+		Type:     authsignal.SetValue(plan.Type.ValueString()),
+	}
+
+	var ruleName = plan.Name.ValueString()
+	if len(ruleName) > 0 {
+		ruleToCreate.Name = authsignal.SetValue(ruleName)
+	}
+	var ruleDescription = plan.Description.ValueString()
+	if len(ruleDescription) > 0 {
+		ruleToCreate.Description = authsignal.SetValue(ruleDescription)
+	}
+
+	var ruleDefaultVerificationMethod = plan.DefaultVerificationMethod.ValueString()
+	if len(ruleDefaultVerificationMethod) > 0 {
+		ruleToCreate.DefaultVerificationMethod = authsignal.SetValue(ruleDefaultVerificationMethod)
+	}
+
+	if len(verificationMethodsSlice) > 0 {
+		ruleToCreate.VerificationMethods = authsignal.SetValue(verificationMethodsSlice)
+	}
+
+	if len(promptToEnrollVerificationMethodsSlice) > 0 {
+		ruleToCreate.PromptToEnrollVerificationMethods = authsignal.SetValue(promptToEnrollVerificationMethodsSlice)
+	}
+
+	if len(string(plan.Conditions.ValueString())) > 0 {
+		ruleToCreate.Conditions = authsignal.SetValue(conditionsJson)
 	}
 
 	rule, err := r.client.CreateRule(plan.ActionCode.ValueString(), ruleToCreate)
@@ -296,15 +316,48 @@ func (r *ruleResource) Update(ctx context.Context, req resource.UpdateRequest, r
 	}
 
 	var ruleToUpdate = authsignal.Rule{
-		Name:                              plan.Name.ValueString(),
-		Description:                       plan.Description.ValueString(),
-		IsActive:                          plan.IsActive.ValueBool(),
-		Priority:                          plan.Priority.ValueInt64(),
-		Type:                              plan.Type.ValueString(),
-		VerificationMethods:               verificationMethodsSlice,
-		PromptToEnrollVerificationMethods: promptToEnrollVerificationMethodsSlice,
-		DefaultVerificationMethod:         plan.DefaultVerificationMethod.ValueString(),
-		Conditions:                        conditionsJson,
+		IsActive: authsignal.SetValue(plan.IsActive.ValueBool()),
+		Priority: authsignal.SetValue(plan.Priority.ValueInt64()),
+		Type:     authsignal.SetValue(plan.Type.ValueString()),
+	}
+
+	var ruleName = plan.Name.ValueString()
+	if len(ruleName) > 0 {
+		ruleToUpdate.Name = authsignal.SetValue(ruleName)
+	} else {
+		ruleToUpdate.Name = authsignal.SetNull(ruleName)
+	}
+
+	var ruleDescription = plan.Description.ValueString()
+	if len(ruleDescription) > 0 {
+		ruleToUpdate.Description = authsignal.SetValue(ruleDescription)
+	} else {
+		ruleToUpdate.Description = authsignal.SetNull(ruleDescription)
+	}
+
+	var ruleDefaultVerificationMethod = plan.DefaultVerificationMethod.ValueString()
+	if len(ruleDefaultVerificationMethod) > 0 {
+		ruleToUpdate.DefaultVerificationMethod = authsignal.SetValue(ruleDefaultVerificationMethod)
+	} else {
+		ruleToUpdate.DefaultVerificationMethod = authsignal.SetNull(ruleDefaultVerificationMethod)
+	}
+
+	if len(verificationMethodsSlice) > 0 {
+		ruleToUpdate.VerificationMethods = authsignal.SetValue(verificationMethodsSlice)
+	} else {
+		ruleToUpdate.VerificationMethods = authsignal.SetNull(verificationMethodsSlice)
+	}
+
+	if len(promptToEnrollVerificationMethodsSlice) > 0 {
+		ruleToUpdate.PromptToEnrollVerificationMethods = authsignal.SetValue(promptToEnrollVerificationMethodsSlice)
+	} else {
+		ruleToUpdate.PromptToEnrollVerificationMethods = authsignal.SetNull(promptToEnrollVerificationMethodsSlice)
+	}
+
+	if len(string(plan.Conditions.ValueString())) > 0 {
+		ruleToUpdate.Conditions = authsignal.SetValue(conditionsJson)
+	} else {
+		ruleToUpdate.Conditions = authsignal.SetNull(conditionsJson)
 	}
 
 	_, err := r.client.UpdateRule(plan.ActionCode.ValueString(), plan.RuleId.ValueString(), ruleToUpdate)

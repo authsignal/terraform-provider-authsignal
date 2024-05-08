@@ -81,7 +81,17 @@ func (r *actionConfigurationResource) Create(ctx context.Context, req resource.C
 		return
 	}
 
-	var actionConfigurationToCreate = authsignal.ActionConfiguration{ActionCode: plan.ActionCode.ValueString(), DefaultUserActionResult: plan.DefaultUserActionResult.ValueString()}
+	var actionConfigurationToCreate = authsignal.ActionConfiguration{}
+
+	var actionConfigurationActionCode = plan.ActionCode.ValueString()
+	if len(actionConfigurationActionCode) > 0 {
+		actionConfigurationToCreate.ActionCode = authsignal.SetValue(actionConfigurationActionCode)
+	}
+
+	var actionConfigurationDefaultUserActionResult = plan.DefaultUserActionResult.ValueString()
+	if len(actionConfigurationDefaultUserActionResult) > 0 {
+		actionConfigurationToCreate.DefaultUserActionResult = authsignal.SetValue(actionConfigurationDefaultUserActionResult)
+	}
 
 	actionConfiguration, err := r.client.CreateActionConfiguration(actionConfigurationToCreate)
 	if err != nil {
@@ -141,7 +151,21 @@ func (r *actionConfigurationResource) Update(ctx context.Context, req resource.U
 		return
 	}
 
-	var actionConfigurationToUpdate = authsignal.ActionConfiguration{ActionCode: plan.ActionCode.ValueString(), DefaultUserActionResult: plan.DefaultUserActionResult.ValueString()}
+	var actionConfigurationToUpdate = authsignal.ActionConfiguration{}
+
+	var actionConfigurationActionCode = plan.ActionCode.ValueString()
+	if len(actionConfigurationActionCode) > 0 {
+		actionConfigurationToUpdate.ActionCode = authsignal.SetValue(actionConfigurationActionCode)
+	} else {
+		actionConfigurationToUpdate.ActionCode = authsignal.SetNull(actionConfigurationActionCode)
+	}
+
+	var actionConfigurationDefaultUserActionResult = plan.DefaultUserActionResult.ValueString()
+	if len(actionConfigurationDefaultUserActionResult) > 0 {
+		actionConfigurationToUpdate.DefaultUserActionResult = authsignal.SetValue(actionConfigurationDefaultUserActionResult)
+	} else {
+		actionConfigurationToUpdate.DefaultUserActionResult = authsignal.SetNull(actionConfigurationDefaultUserActionResult)
+	}
 
 	_, err := r.client.UpdateActionConfiguration(plan.ActionCode.ValueString(), actionConfigurationToUpdate)
 	if err != nil {

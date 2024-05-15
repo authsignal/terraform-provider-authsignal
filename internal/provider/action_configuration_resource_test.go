@@ -21,7 +21,7 @@ func TestAccActionConfigurationResource(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("authsignal_action_configuration.test", "action_code", "terraform-acceptance-test"),
 					resource.TestCheckResourceAttr("authsignal_action_configuration.test", "default_user_action_result", "ALLOW"),
-					resource.TestCheckResourceAttr("authsignal_action_configuration.test", "tenant_id", "680137cd-1bb7-40b3-b3c3-6f0a665e9d94"),
+					resource.TestCheckResourceAttr("authsignal_action_configuration.test", "tenant_id", "ec3910e7-ab32-479e-b58b-36a122631d58"),
 				),
 			},
 			// Update and Read testing
@@ -35,7 +35,7 @@ func TestAccActionConfigurationResource(t *testing.T) {
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("authsignal_action_configuration.test", "action_code", "terraform-acceptance-test"),
 					resource.TestCheckResourceAttr("authsignal_action_configuration.test", "default_user_action_result", "BLOCK"),
-					resource.TestCheckResourceAttr("authsignal_action_configuration.test", "tenant_id", "680137cd-1bb7-40b3-b3c3-6f0a665e9d94"),
+					resource.TestCheckResourceAttr("authsignal_action_configuration.test", "tenant_id", "ec3910e7-ab32-479e-b58b-36a122631d58"),
 				),
 			},
 			// Delete testing automatically occurs in TestCase

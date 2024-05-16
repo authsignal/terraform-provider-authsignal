@@ -26,6 +26,10 @@ data "authsignal_action_configuration" "test" {
 
 - `action_code` (String) The name of the action that users perform which you will track. (e.g 'login')
 
+### Optional
+
+- `messaging_templates` (String) Optional messaging templates to be shown in Authsignal's pre-built UI.
+
 ### Read-Only
 
 - `default_user_action_result` (String) The default action behavior if no rules match. (i.e 'CHALLENGE')

@@ -93,7 +93,7 @@ func (r *actionConfigurationResource) Create(ctx context.Context, req resource.C
 		err := json.Unmarshal([]byte(plan.MessagingTemplates.ValueString()), &messagingTemplatesJson)
 		if err != nil {
 			resp.Diagnostics.AddError(
-				"Unable to unmarshal messaging templates 1",
+				"Unable to unmarshal messaging templates",
 				err.Error(),
 			)
 			return
@@ -202,7 +202,7 @@ func (r *actionConfigurationResource) Update(ctx context.Context, req resource.U
 		err := json.Unmarshal([]byte(plan.MessagingTemplates.ValueString()), &messagingTemplatesJson)
 		if err != nil {
 			resp.Diagnostics.AddError(
-				"Unable to unmarshal messaging templates 2",
+				"Unable to unmarshal messaging templates",
 				err.Error(),
 			)
 			return

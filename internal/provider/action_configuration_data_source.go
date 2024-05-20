@@ -86,7 +86,7 @@ func (d *actionConfigurationDataSource) Read(ctx context.Context, req datasource
 	messagingTemplatesJson, err := json.Marshal(actionConfiguration.MessagingTemplates)
 	if err != nil {
 		resp.Diagnostics.AddError(
-			"Unable to marshall messaging templates",
+			"Unable to marshal messaging templates",
 			err.Error(),
 		)
 		return

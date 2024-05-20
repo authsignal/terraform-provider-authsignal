@@ -97,7 +97,10 @@ func (d *actionConfigurationDataSource) Read(ctx context.Context, req datasource
 		TenantId:                types.StringValue(actionConfiguration.TenantId),
 		DefaultUserActionResult: types.StringValue(actionConfiguration.DefaultUserActionResult),
 		LastActionCreatedAt:     types.StringValue(actionConfiguration.LastActionCreatedAt),
-		MessagingTemplates:      types.StringValue(string(messagingTemplatesJson)),
+	}
+
+	if actionConfiguration.MessagingTemplates != nil {
+		actionConfigurationState.MessagingTemplates = types.StringValue(string(messagingTemplatesJson))
 	}
 
 	diags2 := resp.State.Set(ctx, &actionConfigurationState)

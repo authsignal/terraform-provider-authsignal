@@ -89,13 +89,15 @@ func (r *actionConfigurationResource) Create(ctx context.Context, req resource.C
 
 	var messagingTemplatesJson authsignal.MessagingTemplates
 
-	err := json.Unmarshal([]byte(plan.MessagingTemplates.ValueString()), &messagingTemplatesJson)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Unable to unmarshall messaging templates",
-			err.Error(),
-		)
-		return
+	if len(string(plan.MessagingTemplates.ValueString())) > 0 {
+		err := json.Unmarshal([]byte(plan.MessagingTemplates.ValueString()), &messagingTemplatesJson)
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Unable to unmarshal messaging templates 1",
+				err.Error(),
+			)
+			return
+		}
 	}
 
 	var actionConfigurationToCreate = authsignal.ActionConfiguration{}
@@ -156,7 +158,7 @@ func (r *actionConfigurationResource) Read(ctx context.Context, req resource.Rea
 	messagingTemplatesJson, err := json.Marshal(actionConfiguration.MessagingTemplates)
 	if err != nil {
 		resp.Diagnostics.AddError(
-			"Unable to marshall messaging templates",
+			"Unable to marshal messaging templates",
 			err.Error(),
 		)
 		return
@@ -166,7 +168,7 @@ func (r *actionConfigurationResource) Read(ctx context.Context, req resource.Rea
 	state.LastActionCreatedAt = types.StringValue(actionConfiguration.LastActionCreatedAt)
 	state.TenantId = types.StringValue(actionConfiguration.TenantId)
 
-	if len(string(messagingTemplatesJson)) > 0 {
+	if actionConfiguration.MessagingTemplates != nil {
 		state.MessagingTemplates = types.StringValue(string(messagingTemplatesJson))
 	}
 
@@ -200,7 +202,7 @@ func (r *actionConfigurationResource) Update(ctx context.Context, req resource.U
 		err := json.Unmarshal([]byte(plan.MessagingTemplates.ValueString()), &messagingTemplatesJson)
 		if err != nil {
 			resp.Diagnostics.AddError(
-				"Unable to unmarshall messaging templates",
+				"Unable to unmarshal messaging templates 2",
 				err.Error(),
 			)
 			return

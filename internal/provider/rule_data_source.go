@@ -73,7 +73,7 @@ func (d *ruleDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, r
 			},
 			"verification_methods": schema.ListAttribute{
 				ElementType: types.StringType,
-				Description: "A list of permitted authenticators that can be used if the type of the rule is 'CHALLENGE'",
+				Description: "A list of permitted authenticators that can be used if the type of the rule is 'CHALLENGE'.",
 				Computed:    true,
 			},
 			"prompt_to_enroll_verification_methods": schema.ListAttribute{
@@ -156,10 +156,14 @@ func (d *ruleDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 
 	if len(rule.Description) > 0 {
 		ruleState.Description = types.StringValue(rule.Description)
+	} else {
+		ruleState.Description = types.StringNull()
 	}
 
 	if len(rule.DefaultVerificationMethod) > 0 {
 		ruleState.DefaultVerificationMethod = types.StringValue(rule.DefaultVerificationMethod)
+	} else {
+		ruleState.DefaultVerificationMethod = types.StringNull()
 	}
 
 	diags2 := resp.State.Set(ctx, &ruleState)

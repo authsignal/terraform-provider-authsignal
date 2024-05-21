@@ -39,4 +39,4 @@ data "authsignal_rule" "test" {
 - `prompt_to_enroll_verification_methods` (List of String) If this is set then users will be prompted to add a passkey after a challenge is completed.
 - `tenant_id` (String) The ID of your tenant. This can be found in the admin portal.
 - `type` (String) The result that the rule should return when the conditions are met. (e.g. ALLOW, CHALLENGE)
-- `verification_methods` (List of String) A list of permitted authenticators that can be used if the type of the rule is 'CHALLENGE'
+- `verification_methods` (List of String) A list of permitted authenticators that can be used if the type of the rule is 'CHALLENGE'.

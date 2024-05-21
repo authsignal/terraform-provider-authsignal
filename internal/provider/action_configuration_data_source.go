@@ -48,7 +48,7 @@ func (d *actionConfigurationDataSource) Schema(_ context.Context, _ datasource.S
 				Required:    true,
 			},
 			"default_user_action_result": schema.StringAttribute{
-				Description: "The default action behavior if no rules match. (i.e 'CHALLENGE')",
+				Description: "The default action behavior if no rules match. (i.e 'CHALLENGE').",
 				Computed:    true,
 			},
 			"last_action_created_at": schema.StringAttribute{
@@ -65,7 +65,7 @@ func (d *actionConfigurationDataSource) Schema(_ context.Context, _ datasource.S
 			},
 			"verification_methods": schema.ListAttribute{
 				ElementType: types.StringType,
-				Description: "A list of permitted authenticators that can be used if the result of the action is 'CHALLENGE'",
+				Description: "A list of permitted authenticators that can be used if the result of the action is 'CHALLENGE'.",
 				Computed:    true,
 			},
 			"prompt_to_enroll_verification_methods": schema.ListAttribute{
@@ -132,10 +132,14 @@ func (d *actionConfigurationDataSource) Read(ctx context.Context, req datasource
 
 	if actionConfiguration.MessagingTemplates != nil {
 		actionConfigurationState.MessagingTemplates = types.StringValue(string(messagingTemplatesJson))
+	} else {
+		actionConfigurationState.MessagingTemplates = types.StringNull()
 	}
 
 	if len(actionConfiguration.DefaultVerificationMethod) > 0 {
 		actionConfigurationState.DefaultVerificationMethod = types.StringValue(actionConfiguration.DefaultVerificationMethod)
+	} else {
+		actionConfigurationState.DefaultVerificationMethod = types.StringNull()
 	}
 
 	diags2 := resp.State.Set(ctx, &actionConfigurationState)

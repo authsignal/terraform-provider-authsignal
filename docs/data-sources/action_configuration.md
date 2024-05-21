@@ -28,10 +28,10 @@ data "authsignal_action_configuration" "test" {
 
 ### Read-Only
 
-- `default_user_action_result` (String) The default action behavior if no rules match. (i.e 'CHALLENGE')
+- `default_user_action_result` (String) The default action behavior if no rules match. (i.e 'CHALLENGE').
 - `default_verification_method` (String) Ignore the user's preference and choose which authenticator the Pre-built UI will present by default.
 - `last_action_created_at` (String) The date of when an action was last tracked for any user.
 - `messaging_templates` (String) Optional messaging templates to be shown in Authsignal's pre-built UI.
 - `prompt_to_enroll_verification_methods` (List of String) If this is set then users will be prompted to add a passkey after a challenge is completed.
 - `tenant_id` (String) The ID of your tenant. This can be found in the admin portal.
-- `verification_methods` (List of String) A list of permitted authenticators that can be used if the result of the action is 'CHALLENGE'
+- `verification_methods` (List of String) A list of permitted authenticators that can be used if the result of the action is 'CHALLENGE'.

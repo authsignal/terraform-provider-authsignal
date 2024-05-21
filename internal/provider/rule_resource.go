@@ -91,7 +91,7 @@ func (d *ruleResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 			},
 			"verification_methods": schema.ListAttribute{
 				ElementType: types.StringType,
-				Description: "A list of permitted authenticators that can be used if the type of the rule is 'CHALLENGE'",
+				Description: "A list of permitted authenticators that can be used if the type of the rule is 'CHALLENGE'.",
 				Optional:    true,
 				Validators: []validator.List{
 					listvalidator.ValueStringsAre(stringvalidator.OneOf([]string{"SMS", "AUTHENTICATOR_APP", "EMAIL_MAGIC_LINK", "EMAIL_OTP", "PUSH", "SECURITY_KEY", "PASSKEY", "VERIFF", "IPROOV", "REDROCK", "IDVERSE"}...)),

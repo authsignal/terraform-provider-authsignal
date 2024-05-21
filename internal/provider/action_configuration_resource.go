@@ -58,7 +58,7 @@ func (r *actionConfigurationResource) Schema(_ context.Context, _ resource.Schem
 				},
 			},
 			"default_user_action_result": schema.StringAttribute{
-				Description: "The default action behavior if no rules match. (i.e 'CHALLENGE')",
+				Description: "The default action behavior if no rules match. (i.e 'CHALLENGE').",
 				Required:    true,
 				Validators: []validator.String{
 					stringvalidator.OneOf([]string{"ALLOW", "CHALLENGE", "REVIEW", "BLOCK"}...),
@@ -81,7 +81,7 @@ func (r *actionConfigurationResource) Schema(_ context.Context, _ resource.Schem
 			},
 			"verification_methods": schema.ListAttribute{
 				ElementType: types.StringType,
-				Description: "A list of permitted authenticators that can be used if the result of the action is 'CHALLENGE'",
+				Description: "A list of permitted authenticators that can be used if the result of the action is 'CHALLENGE'.",
 				Optional:    true,
 				Validators: []validator.List{
 					listvalidator.ValueStringsAre(stringvalidator.OneOf([]string{"SMS", "AUTHENTICATOR_APP", "EMAIL_MAGIC_LINK", "EMAIL_OTP", "PUSH", "SECURITY_KEY", "PASSKEY", "VERIFF", "IPROOV", "REDROCK", "IDVERSE"}...)),

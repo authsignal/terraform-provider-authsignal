@@ -62,7 +62,7 @@ resource "authsignal_rule" "test" {
 - `default_verification_method` (String) Ignore the user's preference and choose which authenticator the Pre-built UI will present by default.
 - `description` (String) A description of the rule.
 - `prompt_to_enroll_verification_methods` (List of String) If this is set then users will be prompted to add a passkey after a challenge is completed.
-- `verification_methods` (List of String) A list of permitted authenticators that can be used if the type of the rule is 'CHALLENGE'
+- `verification_methods` (List of String) A list of permitted authenticators that can be used if the type of the rule is 'CHALLENGE'.
 
 ### Read-Only
 

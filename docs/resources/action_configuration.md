@@ -31,14 +31,14 @@ resource "authsignal_action_configuration" "terraform-provider-test" {
 ### Required
 
 - `action_code` (String) The name of the action that users perform which you will track. (e.g 'login')
-- `default_user_action_result` (String) The default action behavior if no rules match. (i.e 'CHALLENGE')
+- `default_user_action_result` (String) The default action behavior if no rules match. (i.e 'CHALLENGE').
 
 ### Optional
 
 - `default_verification_method` (String) Ignore the user's preference and choose which authenticator the Pre-built UI will present by default.
 - `messaging_templates` (String) Optional messaging templates to be shown in Authsignal's pre-built UI.
 - `prompt_to_enroll_verification_methods` (List of String) If this is set then users will be prompted to add a passkey after a challenge is completed.
-- `verification_methods` (List of String) A list of permitted authenticators that can be used if the result of the action is 'CHALLENGE'
+- `verification_methods` (List of String) A list of permitted authenticators that can be used if the result of the action is 'CHALLENGE'.
 
 ### Read-Only
 

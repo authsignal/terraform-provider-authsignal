@@ -269,14 +269,20 @@ func (r *ruleResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 
 	if len(rule.Description) > 0 {
 		state.Description = types.StringValue(rule.Description)
+	} else {
+		state.Description = types.StringNull()
 	}
 
 	if len(rule.DefaultVerificationMethod) > 0 {
 		state.DefaultVerificationMethod = types.StringValue(rule.DefaultVerificationMethod)
+	} else {
+		state.DefaultVerificationMethod = types.StringNull()
 	}
 
 	if rule.Conditions != nil {
 		state.Conditions = types.StringValue(string(conditionsJson))
+	} else {
+		state.Conditions = types.StringNull()
 	}
 
 	diags = resp.State.Set(ctx, &state)

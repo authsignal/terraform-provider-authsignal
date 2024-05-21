@@ -170,6 +170,8 @@ func (r *actionConfigurationResource) Read(ctx context.Context, req resource.Rea
 
 	if actionConfiguration.MessagingTemplates != nil {
 		state.MessagingTemplates = types.StringValue(string(messagingTemplatesJson))
+	} else {
+		state.MessagingTemplates = types.StringNull()
 	}
 
 	diags = resp.State.Set(ctx, &state)

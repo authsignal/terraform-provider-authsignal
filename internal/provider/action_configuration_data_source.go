@@ -58,7 +58,7 @@ func (d *actionConfigurationDataSource) Schema(_ context.Context, _ datasource.S
 			},
 			"messaging_templates": schema.StringAttribute{
 				Description: "Optional messaging templates to be shown in Authsignal's pre-built UI.",
-				Optional:    true,
+				Computed:    true,
 			},
 		},
 	}

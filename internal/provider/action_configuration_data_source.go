@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"github.com/authsignal/authsignal-management-go/v2"
@@ -29,6 +30,7 @@ type actionConfigurationDataSourceModel struct {
 	TenantId                types.String `tfsdk:"tenant_id"`
 	DefaultUserActionResult types.String `tfsdk:"default_user_action_result"`
 	LastActionCreatedAt     types.String `tfsdk:"last_action_created_at"`
+	MessagingTemplates      types.String `tfsdk:"messaging_templates"`
 }
 
 func (d *actionConfigurationDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
@@ -54,6 +56,10 @@ func (d *actionConfigurationDataSource) Schema(_ context.Context, _ datasource.S
 				Description: "The ID of your tenant. This can be found in the admin portal.",
 				Computed:    true,
 			},
+			"messaging_templates": schema.StringAttribute{
+				Description: "Optional messaging templates to be shown in Authsignal's pre-built UI.",
+				Computed:    true,
+			},
 		},
 	}
 }
@@ -77,11 +83,24 @@ func (d *actionConfigurationDataSource) Read(ctx context.Context, req datasource
 		return
 	}
 
+	messagingTemplatesJson, err := json.Marshal(actionConfiguration.MessagingTemplates)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Unable to marshal messaging templates",
+			err.Error(),
+		)
+		return
+	}
+
 	actionConfigurationState := actionConfigurationDataSourceModel{
 		ActionCode:              types.StringValue(actionConfiguration.ActionCode),
 		TenantId:                types.StringValue(actionConfiguration.TenantId),
 		DefaultUserActionResult: types.StringValue(actionConfiguration.DefaultUserActionResult),
 		LastActionCreatedAt:     types.StringValue(actionConfiguration.LastActionCreatedAt),
+	}
+
+	if actionConfiguration.MessagingTemplates != nil {
+		actionConfigurationState.MessagingTemplates = types.StringValue(string(messagingTemplatesJson))
 	}
 
 	diags2 := resp.State.Set(ctx, &actionConfigurationState)

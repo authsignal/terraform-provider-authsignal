@@ -30,4 +30,5 @@ data "authsignal_action_configuration" "test" {
 
 - `default_user_action_result` (String) The default action behavior if no rules match. (i.e 'CHALLENGE')
 - `last_action_created_at` (String) The date of when an action was last tracked for any user.
+- `messaging_templates` (String) Optional messaging templates to be shown in Authsignal's pre-built UI.
 - `tenant_id` (String) The ID of your tenant. This can be found in the admin portal.

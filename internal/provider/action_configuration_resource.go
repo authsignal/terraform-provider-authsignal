@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"github.com/authsignal/authsignal-management-go/v2"
@@ -35,6 +36,7 @@ type actionConfigurationResourceModel struct {
 	LastActionCreatedAt     types.String `tfsdk:"last_action_created_at"`
 	TenantId                types.String `tfsdk:"tenant_id"`
 	DefaultUserActionResult types.String `tfsdk:"default_user_action_result"`
+	MessagingTemplates      types.String `tfsdk:"messaging_templates"`
 }
 
 func (r *actionConfigurationResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -69,6 +71,10 @@ func (r *actionConfigurationResource) Schema(_ context.Context, _ resource.Schem
 					stringplanmodifier.UseStateForUnknown(),
 				},
 			},
+			"messaging_templates": schema.StringAttribute{
+				Description: "Optional messaging templates to be shown in Authsignal's pre-built UI.",
+				Optional:    true,
+			},
 		},
 	}
 }
@@ -81,6 +87,19 @@ func (r *actionConfigurationResource) Create(ctx context.Context, req resource.C
 		return
 	}
 
+	var messagingTemplatesJson authsignal.MessagingTemplates
+
+	if len(string(plan.MessagingTemplates.ValueString())) > 0 {
+		err := json.Unmarshal([]byte(plan.MessagingTemplates.ValueString()), &messagingTemplatesJson)
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Unable to unmarshal messaging templates",
+				err.Error(),
+			)
+			return
+		}
+	}
+
 	var actionConfigurationToCreate = authsignal.ActionConfiguration{}
 
 	var actionConfigurationActionCode = plan.ActionCode.ValueString()
@@ -91,6 +110,10 @@ func (r *actionConfigurationResource) Create(ctx context.Context, req resource.C
 	var actionConfigurationDefaultUserActionResult = plan.DefaultUserActionResult.ValueString()
 	if len(actionConfigurationDefaultUserActionResult) > 0 {
 		actionConfigurationToCreate.DefaultUserActionResult = authsignal.SetValue(actionConfigurationDefaultUserActionResult)
+	}
+
+	if len(string(plan.MessagingTemplates.ValueString())) > 0 {
+		actionConfigurationToCreate.MessagingTemplates = authsignal.SetValue(messagingTemplatesJson)
 	}
 
 	actionConfiguration, err := r.client.CreateActionConfiguration(actionConfigurationToCreate)
@@ -132,9 +155,24 @@ func (r *actionConfigurationResource) Read(ctx context.Context, req resource.Rea
 		return
 	}
 
+	messagingTemplatesJson, err := json.Marshal(actionConfiguration.MessagingTemplates)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Unable to marshal messaging templates",
+			err.Error(),
+		)
+		return
+	}
+
 	state.DefaultUserActionResult = types.StringValue(actionConfiguration.DefaultUserActionResult)
 	state.LastActionCreatedAt = types.StringValue(actionConfiguration.LastActionCreatedAt)
 	state.TenantId = types.StringValue(actionConfiguration.TenantId)
+
+	if actionConfiguration.MessagingTemplates != nil {
+		state.MessagingTemplates = types.StringValue(string(messagingTemplatesJson))
+	} else {
+		state.MessagingTemplates = types.StringNull()
+	}
 
 	diags = resp.State.Set(ctx, &state)
 	resp.Diagnostics.Append(diags...)
@@ -151,14 +189,9 @@ func (r *actionConfigurationResource) Update(ctx context.Context, req resource.U
 		return
 	}
 
-	var actionConfigurationToUpdate = authsignal.ActionConfiguration{}
+	var messagingTemplatesJson authsignal.MessagingTemplates
 
-	var actionConfigurationActionCode = plan.ActionCode.ValueString()
-	if len(actionConfigurationActionCode) > 0 {
-		actionConfigurationToUpdate.ActionCode = authsignal.SetValue(actionConfigurationActionCode)
-	} else {
-		actionConfigurationToUpdate.ActionCode = authsignal.SetNull(actionConfigurationActionCode)
-	}
+	var actionConfigurationToUpdate = authsignal.ActionConfiguration{}
 
 	var actionConfigurationDefaultUserActionResult = plan.DefaultUserActionResult.ValueString()
 	if len(actionConfigurationDefaultUserActionResult) > 0 {
@@ -167,11 +200,26 @@ func (r *actionConfigurationResource) Update(ctx context.Context, req resource.U
 		actionConfigurationToUpdate.DefaultUserActionResult = authsignal.SetNull(actionConfigurationDefaultUserActionResult)
 	}
 
-	_, err := r.client.UpdateActionConfiguration(plan.ActionCode.ValueString(), actionConfigurationToUpdate)
-	if err != nil {
+	if len(string(plan.MessagingTemplates.ValueString())) > 0 {
+		err := json.Unmarshal([]byte(plan.MessagingTemplates.ValueString()), &messagingTemplatesJson)
+		if err != nil {
+			resp.Diagnostics.AddError(
+				"Unable to unmarshal messaging templates",
+				err.Error(),
+			)
+			return
+		}
+
+		actionConfigurationToUpdate.MessagingTemplates = authsignal.SetValue(messagingTemplatesJson)
+	} else {
+		actionConfigurationToUpdate.MessagingTemplates = authsignal.SetNull(messagingTemplatesJson)
+	}
+
+	_, err2 := r.client.UpdateActionConfiguration(plan.ActionCode.ValueString(), actionConfigurationToUpdate)
+	if err2 != nil {
 		resp.Diagnostics.AddError(
 			"Error Updating Authsignal action configuration",
-			"Could not update action configuration, unexpected error: "+err.Error(),
+			"Could not update action configuration, unexpected error: "+err2.Error(),
 		)
 		return
 	}

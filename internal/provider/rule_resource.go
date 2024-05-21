@@ -161,7 +161,7 @@ func (r *ruleResource) Create(ctx context.Context, req resource.CreateRequest, r
 	err := json.Unmarshal([]byte(plan.Conditions.ValueString()), &conditionsJson)
 	if err != nil {
 		resp.Diagnostics.AddError(
-			"Unable to marshall conditions",
+			"Unable to marshal conditions",
 			err.Error(),
 		)
 		return
@@ -252,7 +252,7 @@ func (r *ruleResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 	conditionsJson, err := json.Marshal(rule.Conditions)
 	if err != nil {
 		resp.Diagnostics.AddError(
-			"Unable to marshall conditions",
+			"Unable to marshal conditions",
 			err.Error(),
 		)
 		return
@@ -264,15 +264,25 @@ func (r *ruleResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 	state.Type = types.StringValue(rule.Type)
 	state.VerificationMethods = verificationMethodsList
 	state.PromptToEnrollVerificationMethods = promptToEnrollVerificationMethodsList
-	state.Conditions = types.StringValue(string(conditionsJson))
+
 	state.TenantId = types.StringValue(rule.TenantId)
 
 	if len(rule.Description) > 0 {
 		state.Description = types.StringValue(rule.Description)
+	} else {
+		state.Description = types.StringNull()
 	}
 
 	if len(rule.DefaultVerificationMethod) > 0 {
 		state.DefaultVerificationMethod = types.StringValue(rule.DefaultVerificationMethod)
+	} else {
+		state.DefaultVerificationMethod = types.StringNull()
+	}
+
+	if rule.Conditions != nil {
+		state.Conditions = types.StringValue(string(conditionsJson))
+	} else {
+		state.Conditions = types.StringNull()
 	}
 
 	diags = resp.State.Set(ctx, &state)
@@ -309,7 +319,7 @@ func (r *ruleResource) Update(ctx context.Context, req resource.UpdateRequest, r
 	err2 := json.Unmarshal([]byte(plan.Conditions.ValueString()), &conditionsJson)
 	if err2 != nil {
 		resp.Diagnostics.AddError(
-			"Unable to marshall conditions",
+			"Unable to marshal conditions",
 			err2.Error(),
 		)
 		return

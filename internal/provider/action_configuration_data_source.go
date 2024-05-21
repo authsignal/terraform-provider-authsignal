@@ -26,11 +26,14 @@ type actionConfigurationDataSource struct {
 }
 
 type actionConfigurationDataSourceModel struct {
-	ActionCode              types.String `tfsdk:"action_code"`
-	TenantId                types.String `tfsdk:"tenant_id"`
-	DefaultUserActionResult types.String `tfsdk:"default_user_action_result"`
-	LastActionCreatedAt     types.String `tfsdk:"last_action_created_at"`
-	MessagingTemplates      types.String `tfsdk:"messaging_templates"`
+	ActionCode                        types.String `tfsdk:"action_code"`
+	TenantId                          types.String `tfsdk:"tenant_id"`
+	DefaultUserActionResult           types.String `tfsdk:"default_user_action_result"`
+	LastActionCreatedAt               types.String `tfsdk:"last_action_created_at"`
+	MessagingTemplates                types.String `tfsdk:"messaging_templates"`
+	VerificationMethods               types.List   `tfsdk:"verification_methods"`
+	PromptToEnrollVerificationMethods types.List   `tfsdk:"prompt_to_enroll_verification_methods"`
+	DefaultVerificationMethod         types.String `tfsdk:"default_verification_method"`
 }
 
 func (d *actionConfigurationDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
@@ -60,6 +63,20 @@ func (d *actionConfigurationDataSource) Schema(_ context.Context, _ datasource.S
 				Description: "Optional messaging templates to be shown in Authsignal's pre-built UI.",
 				Computed:    true,
 			},
+			"verification_methods": schema.ListAttribute{
+				ElementType: types.StringType,
+				Description: "A list of permitted authenticators that can be used if the result of the action is 'CHALLENGE'",
+				Computed:    true,
+			},
+			"prompt_to_enroll_verification_methods": schema.ListAttribute{
+				ElementType: types.StringType,
+				Description: "If this is set then users will be prompted to add a passkey after a challenge is completed.",
+				Computed:    true,
+			},
+			"default_verification_method": schema.StringAttribute{
+				Description: "Ignore the user's preference and choose which authenticator the Pre-built UI will present by default.",
+				Computed:    true,
+			},
 		},
 	}
 }
@@ -83,6 +100,18 @@ func (d *actionConfigurationDataSource) Read(ctx context.Context, req datasource
 		return
 	}
 
+	verificationMethodsList, diags := types.ListValueFrom(ctx, types.StringType, actionConfiguration.VerificationMethods)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	promptToEnrollVerificationMethodsList, diags := types.ListValueFrom(ctx, types.StringType, actionConfiguration.PromptToEnrollVerificationMethods)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	messagingTemplatesJson, err := json.Marshal(actionConfiguration.MessagingTemplates)
 	if err != nil {
 		resp.Diagnostics.AddError(
@@ -93,14 +122,20 @@ func (d *actionConfigurationDataSource) Read(ctx context.Context, req datasource
 	}
 
 	actionConfigurationState := actionConfigurationDataSourceModel{
-		ActionCode:              types.StringValue(actionConfiguration.ActionCode),
-		TenantId:                types.StringValue(actionConfiguration.TenantId),
-		DefaultUserActionResult: types.StringValue(actionConfiguration.DefaultUserActionResult),
-		LastActionCreatedAt:     types.StringValue(actionConfiguration.LastActionCreatedAt),
+		ActionCode:                        types.StringValue(actionConfiguration.ActionCode),
+		TenantId:                          types.StringValue(actionConfiguration.TenantId),
+		DefaultUserActionResult:           types.StringValue(actionConfiguration.DefaultUserActionResult),
+		LastActionCreatedAt:               types.StringValue(actionConfiguration.LastActionCreatedAt),
+		VerificationMethods:               verificationMethodsList,
+		PromptToEnrollVerificationMethods: promptToEnrollVerificationMethodsList,
 	}
 
 	if actionConfiguration.MessagingTemplates != nil {
 		actionConfigurationState.MessagingTemplates = types.StringValue(string(messagingTemplatesJson))
+	}
+
+	if len(actionConfiguration.DefaultVerificationMethod) > 0 {
+		actionConfigurationState.DefaultVerificationMethod = types.StringValue(actionConfiguration.DefaultVerificationMethod)
 	}
 
 	diags2 := resp.State.Set(ctx, &actionConfigurationState)

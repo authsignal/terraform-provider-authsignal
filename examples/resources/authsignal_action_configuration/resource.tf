@@ -7,4 +7,7 @@ resource "authsignal_action_configuration" "terraform-provider-test" {
       "defaultTemplate" : "hello world!"
     }
   })
+  verification_methods                  = ["EMAIL_OTP", "PASSKEY", "AUTHENTICATOR_APP"]
+  default_verification_method           = "AUTHENTICATOR_APP"
+  prompt_to_enroll_verification_methods = ["PASSKEY"]
 }

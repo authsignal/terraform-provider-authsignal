@@ -165,6 +165,7 @@ func (p *authsignalProvider) DataSources(_ context.Context) []func() datasource.
 	return []func() datasource.DataSource{
 		NewActionConfigurationDataSource,
 		NewRuleDataSource,
+		NewThemeDataSource,
 	}
 }
 
@@ -172,5 +173,6 @@ func (p *authsignalProvider) Resources(_ context.Context) []func() resource.Reso
 	return []func() resource.Resource{
 		NewActionConfigurationResource,
 		NewRuleResource,
+		NewThemeResource,
 	}
 }

@@ -33,7 +33,7 @@ data "authsignal_theme" "theme" {
 - `page_background` (Attributes) (see [below for nested schema](#nestedatt--page_background))
 - `primary_color` (String) The primary color for the tenant.
 - `typography` (Attributes) (see [below for nested schema](#nestedatt--typography))
-- `watermark_url` (String) placeholder
+- `watermark_url` (String) The URL of an image to be used as a watermark at the bottom of Authsignal's pre-built UI.
 
 <a id="nestedatt--borders"></a>
 ### Nested Schema for `borders`
@@ -104,7 +104,7 @@ Read-Only:
 - `page_background` (Attributes) (see [below for nested schema](#nestedatt--dark_mode--page_background))
 - `primary_color` (String) The primary color for the tenant.
 - `typography` (Attributes) (see [below for nested schema](#nestedatt--dark_mode--typography))
-- `watermark_url` (String) placeholder
+- `watermark_url` (String) The URL of an image to be used as a watermark at the bottom of Authsignal's pre-built UI.
 
 <a id="nestedatt--dark_mode--borders"></a>
 ### Nested Schema for `dark_mode.borders`

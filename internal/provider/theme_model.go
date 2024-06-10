@@ -76,7 +76,7 @@ func (m *themeModel) CreateObject(input authsignal.ThemeResponse) types.Object {
 
 func (m themeModel) AttributeTypes() map[string]attr.Type {
 	return map[string]attr.Type{
-		"name":            types.Int64Type,
+		"name":            types.StringType,
 		"logo_url":        types.StringType,
 		"watermark_url":   types.StringType,
 		"favicon_url":     types.StringType,

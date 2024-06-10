@@ -42,7 +42,7 @@ func (r *themeResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 				Optional:    true,
 			},
 			"watermark_url": schema.StringAttribute{
-				Description: "placeholder",
+				Description: "The URL of an image to be used as a watermark at the bottom of Authsignal's pre-built UI.",
 				Optional:    true,
 			},
 			"favicon_url": schema.StringAttribute{
@@ -219,7 +219,7 @@ func (r *themeResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 						Optional:    true,
 					},
 					"watermark_url": schema.StringAttribute{
-						Description: "placeholder",
+						Description: "The URL of an image to be used as a watermark at the bottom of Authsignal's pre-built UI.",
 						Optional:    true,
 					},
 					"favicon_url": schema.StringAttribute{

@@ -26,7 +26,7 @@ resource "authsignal_value_list" "example_value_list_strings" {
 resource "authsignal_value_list" "example_value_list_numbers" {
   name      = "Example Value List Numbers"
   is_active = true
-  value_list_items_strings = [
+  value_list_items_numbers = [
     1,
     2,
     3,
@@ -39,7 +39,7 @@ resource "authsignal_value_list" "example_value_list_numbers" {
 
 ### Required
 
-- `is_active` (Boolean) Indicates whether the value list is active.
+- `is_active` (Boolean) Whether or not the list is active. This currently has no effect, please set the value to `true`.
 - `name` (String) The name of the value list.
 
 ### Optional

@@ -19,13 +19,10 @@ description: |-
 
 - `alias` (String) The hypenated name of the list.
 
-### Optional
-
-- `value_list_items_numbers` (List of Number) The list of items.
-- `value_list_items_strings` (List of String) The list of items.
-
 ### Read-Only
 
-- `is_active` (Boolean) Whether or not the list is active. This currently has no effect, please set it to true
+- `is_active` (Boolean) Whether or not the list is active. This currently has no effect.
 - `item_type` (String) The type of the items in the list. Allowed values: `string`, `number`.
 - `name` (String) The name of the list.
+- `value_list_items_numbers` (List of Number) The list of items.
+- `value_list_items_strings` (List of String) The list of items.

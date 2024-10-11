@@ -57,13 +57,11 @@ func (d *valueListDataSource) Schema(_ context.Context, _ datasource.SchemaReque
 			"value_list_items_strings": schema.ListAttribute{
 				ElementType: types.StringType,
 				Description: "The list of items.",
-				Optional:    true,
 				Computed:    true,
 			},
 			"value_list_items_numbers": schema.ListAttribute{
 				ElementType: types.Float64Type,
 				Description: "The list of items.",
-				Optional:    true,
 				Computed:    true,
 			},
 			"is_active": schema.BoolAttribute{

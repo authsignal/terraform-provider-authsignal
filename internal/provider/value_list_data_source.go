@@ -67,7 +67,7 @@ func (d *valueListDataSource) Schema(_ context.Context, _ datasource.SchemaReque
 				Computed:    true,
 			},
 			"is_active": schema.BoolAttribute{
-				Description: "tbd",
+				Description: "Whether or not the list is active. This currently has no effect.",
 				Computed:    true,
 			},
 		},

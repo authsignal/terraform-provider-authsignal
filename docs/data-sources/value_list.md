@@ -26,6 +26,6 @@ description: |-
 
 ### Read-Only
 
-- `is_active` (Boolean) tbd
+- `is_active` (Boolean) Whether or not the list is active. This currently has no effect, please set it to true
 - `item_type` (String) The type of the items in the list. Allowed values: `string`, `number`.
 - `name` (String) The name of the list.

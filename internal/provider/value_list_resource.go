@@ -80,7 +80,7 @@ func (r *valueListResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 				},
 			},
 			"is_active": schema.BoolAttribute{
-				Description: "Indicates whether the value list is active.",
+				Description: "Whether or not the list is active. This currently has no effect, please set the value to `true`.",
 				Required:    true,
 			},
 			"value_list_items_strings": schema.ListAttribute{

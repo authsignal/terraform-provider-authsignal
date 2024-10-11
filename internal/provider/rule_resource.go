@@ -82,7 +82,7 @@ func (d *ruleResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 				},
 			},
 			"type": schema.StringAttribute{
-				Description: "The result that the rule should return when the conditions are met. (e.g. ALLOW, CHALLENGE)",
+				Description: "The result that the rule should return when the conditions are met. Allowed values: `ALLOW`, `CHALLENGE`, `REVIEW`, `BLOCK`.",
 				Required:    true,
 				Validators: []validator.String{
 					stringvalidator.OneOf([]string{"ALLOW", "CHALLENGE", "REVIEW", "BLOCK"}...),
@@ -90,7 +90,7 @@ func (d *ruleResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 			},
 			"verification_methods": schema.ListAttribute{
 				ElementType: types.StringType,
-				Description: "A list of permitted authenticators that can be used if the type of the rule is 'CHALLENGE'.",
+				Description: "A list of permitted authenticators that can be used if the type of the rule is 'CHALLENGE'. Allowed values: `SMS`, `AUTHENTICATOR_APP`, `EMAIL_MAGIC_LINK`, `EMAIL_OTP`, `PUSH`, `SECURITY_KEY`, `PASSKEY`, `VERIFF`, `IPROOV`, `REDROCK`, `IDVERSE`.",
 				Optional:    true,
 				Validators: []validator.List{
 					listvalidator.ValueStringsAre(stringvalidator.OneOf([]string{"SMS", "AUTHENTICATOR_APP", "EMAIL_MAGIC_LINK", "EMAIL_OTP", "PUSH", "SECURITY_KEY", "PASSKEY", "VERIFF", "IPROOV", "REDROCK", "IDVERSE"}...)),
@@ -98,14 +98,14 @@ func (d *ruleResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 			},
 			"prompt_to_enroll_verification_methods": schema.ListAttribute{
 				ElementType: types.StringType,
-				Description: "If this is set then users will be prompted to add a passkey after a challenge is completed.",
+				Description: "If this is set then users will be prompted to add a passkey after a challenge is completed. Allowed values: `[PASSKEY]`.",
 				Optional:    true,
 				Validators: []validator.List{
 					listvalidator.ValueStringsAre(stringvalidator.OneOf([]string{"PASSKEY"}...)),
 				},
 			},
 			"default_verification_method": schema.StringAttribute{
-				Description: "Ignore the user's preference and choose which authenticator the Pre-built UI will present by default.",
+				Description: "Ignore the user's preference and choose which authenticator the Pre-built UI will present by default. Allowed values: `SMS`, `AUTHENTICATOR_APP`, `EMAIL_MAGIC_LINK`, `EMAIL_OTP`, `PUSH`, `SECURITY_KEY`, `PASSKEY`, `VERIFF`, `IPROOV`, `REDROCK`, `IDVERSE`.",
 				Optional:    true,
 				Validators: []validator.String{
 					stringvalidator.OneOf([]string{"SMS", "AUTHENTICATOR_APP", "EMAIL_MAGIC_LINK", "EMAIL_OTP", "PUSH", "SECURITY_KEY", "PASSKEY", "VERIFF", "IPROOV", "REDROCK", "IDVERSE"}...),

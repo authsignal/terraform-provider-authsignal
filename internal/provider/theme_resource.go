@@ -82,13 +82,15 @@ func (r *themeResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 			"container": schema.SingleNestedAttribute{
 				Attributes: map[string]schema.Attribute{
 					"content_alignment": schema.StringAttribute{
-						Optional: true,
+						Description: "Allowed values: `left`, `center`.",
+						Optional:    true,
 						Validators: []validator.String{
 							stringvalidator.OneOf([]string{"left", "center"}...),
 						},
 					},
 					"position": schema.StringAttribute{
-						Optional: true,
+						Description: "Allowed values: `inside`, `outside`.",
+						Optional:    true,
 						Validators: []validator.String{
 							stringvalidator.OneOf([]string{"inside", "outside"}...),
 						},
@@ -97,13 +99,15 @@ func (r *themeResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 						Optional: true,
 					},
 					"logo_alignment": schema.StringAttribute{
-						Optional: true,
+						Description: "Allowed values: `left`, `center`.",
+						Optional:    true,
 						Validators: []validator.String{
 							stringvalidator.OneOf([]string{"left", "center"}...),
 						},
 					},
 					"logo_position": schema.StringAttribute{
-						Optional: true,
+						Description: "Allowed values: `inside`, `outside`.",
+						Optional:    true,
 						Validators: []validator.String{
 							stringvalidator.OneOf([]string{"inside", "outside"}...),
 						},
@@ -259,13 +263,15 @@ func (r *themeResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 					"container": schema.SingleNestedAttribute{
 						Attributes: map[string]schema.Attribute{
 							"content_alignment": schema.StringAttribute{
-								Optional: true,
+								Description: "Allowed values: `left`, `center`.",
+								Optional:    true,
 								Validators: []validator.String{
 									stringvalidator.OneOf([]string{"left", "center"}...),
 								},
 							},
 							"position": schema.StringAttribute{
-								Optional: true,
+								Description: "Allowed values: `inside`, `outside`.",
+								Optional:    true,
 								Validators: []validator.String{
 									stringvalidator.OneOf([]string{"inside", "outside"}...),
 								},
@@ -274,13 +280,15 @@ func (r *themeResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 								Optional: true,
 							},
 							"logo_alignment": schema.StringAttribute{
-								Optional: true,
+								Description: "Allowed values: `left`, `center`.",
+								Optional:    true,
 								Validators: []validator.String{
 									stringvalidator.OneOf([]string{"left", "center"}...),
 								},
 							},
 							"logo_position": schema.StringAttribute{
-								Optional: true,
+								Description: "Allowed values: `inside`, `outside`.",
+								Optional:    true,
 								Validators: []validator.String{
 									stringvalidator.OneOf([]string{"inside", "outside"}...),
 								},

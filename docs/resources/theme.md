@@ -185,12 +185,12 @@ Optional:
 
 Optional:
 
-- `content_alignment` (String)
-- `logo_alignment` (String)
+- `content_alignment` (String) Allowed values: `left`, `center`.
+- `logo_alignment` (String) Allowed values: `left`, `center`.
 - `logo_height` (Number)
-- `logo_position` (String)
+- `logo_position` (String) Allowed values: `inside`, `outside`.
 - `padding` (Number)
-- `position` (String)
+- `position` (String) Allowed values: `inside`, `outside`.
 
 
 <a id="nestedatt--dark_mode"></a>
@@ -256,12 +256,12 @@ Optional:
 
 Optional:
 
-- `content_alignment` (String)
-- `logo_alignment` (String)
+- `content_alignment` (String) Allowed values: `left`, `center`.
+- `logo_alignment` (String) Allowed values: `left`, `center`.
 - `logo_height` (Number)
-- `logo_position` (String)
+- `logo_position` (String) Allowed values: `inside`, `outside`.
 - `padding` (Number)
-- `position` (String)
+- `position` (String) Allowed values: `inside`, `outside`.
 
 
 <a id="nestedatt--dark_mode--page_background"></a>

@@ -34,14 +34,14 @@ resource "authsignal_action_configuration" "terraform-provider-test" {
 ### Required
 
 - `action_code` (String) The name of the action that users perform which you will track. (e.g 'login')
-- `default_user_action_result` (String) The default action behavior if no rules match. (i.e 'CHALLENGE').
+- `default_user_action_result` (String) The default action behavior if no rules match. Allowed values: `ALLOW`, `CHALLENGE`, `REVIEW`, `BLOCK`.
 
 ### Optional
 
-- `default_verification_method` (String) Ignore the user's preference and choose which authenticator the Pre-built UI will present by default.
+- `default_verification_method` (String) Ignore the user's preference and choose which authenticator the Pre-built UI will present by default. Allowed values: `SMS`, `AUTHENTICATOR_APP`, `EMAIL_MAGIC_LINK`, `EMAIL_OTP`, `PUSH`, `SECURITY_KEY`, `PASSKEY`, `VERIFF`, `IPROOV`, `REDROCK`, `IDVERSE`.
 - `messaging_templates` (String) Optional messaging templates to be shown in Authsignal's pre-built UI.
-- `prompt_to_enroll_verification_methods` (List of String) If this is set then users will be prompted to add a passkey after a challenge is completed.
-- `verification_methods` (List of String) A list of permitted authenticators that can be used if the result of the action is 'CHALLENGE'.
+- `prompt_to_enroll_verification_methods` (List of String) If this is set then users will be prompted to add a passkey after a challenge is completed. Allowed values: `[PASSKEY]`.
+- `verification_methods` (List of String) A list of permitted authenticators that can be used if the result of the action is 'CHALLENGE'. Allowed values: `SMS`, `AUTHENTICATOR_APP`, `EMAIL_MAGIC_LINK`, `EMAIL_OTP`, `PUSH`, `SECURITY_KEY`, `PASSKEY`, `VERIFF`, `IPROOV`, `REDROCK`, `IDVERSE`.
 
 ### Read-Only
 

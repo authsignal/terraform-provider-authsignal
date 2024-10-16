@@ -55,14 +55,14 @@ resource "authsignal_rule" "test" {
 - `is_active` (Boolean) Toggles whether or not the rule is actively applied.
 - `name` (String) A string used to name the rule.
 - `priority` (Number) Determines the order which the rules are applied in, where 0 is applied first, 1 is applied second...
-- `type` (String) The result that the rule should return when the conditions are met. (e.g. ALLOW, CHALLENGE)
+- `type` (String) The result that the rule should return when the conditions are met. Allowed values: `ALLOW`, `CHALLENGE`, `REVIEW`, `BLOCK`.
 
 ### Optional
 
-- `default_verification_method` (String) Ignore the user's preference and choose which authenticator the Pre-built UI will present by default.
+- `default_verification_method` (String) Ignore the user's preference and choose which authenticator the Pre-built UI will present by default. Allowed values: `SMS`, `AUTHENTICATOR_APP`, `EMAIL_MAGIC_LINK`, `EMAIL_OTP`, `PUSH`, `SECURITY_KEY`, `PASSKEY`, `VERIFF`, `IPROOV`, `REDROCK`, `IDVERSE`.
 - `description` (String) A description of the rule.
-- `prompt_to_enroll_verification_methods` (List of String) If this is set then users will be prompted to add a passkey after a challenge is completed.
-- `verification_methods` (List of String) A list of permitted authenticators that can be used if the type of the rule is 'CHALLENGE'.
+- `prompt_to_enroll_verification_methods` (List of String) If this is set then users will be prompted to add a passkey after a challenge is completed. Allowed values: `[PASSKEY]`.
+- `verification_methods` (List of String) A list of permitted authenticators that can be used if the type of the rule is 'CHALLENGE'. Allowed values: `SMS`, `AUTHENTICATOR_APP`, `EMAIL_MAGIC_LINK`, `EMAIL_OTP`, `PUSH`, `SECURITY_KEY`, `PASSKEY`, `VERIFF`, `IPROOV`, `REDROCK`, `IDVERSE`.
 
 ### Read-Only
 

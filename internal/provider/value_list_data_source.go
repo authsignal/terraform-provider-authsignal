@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/authsignal/authsignal-management-go/v2"
+	"github.com/authsignal/authsignal-management-go/v3"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -100,7 +100,7 @@ func (d *valueListDataSource) Read(ctx context.Context, req datasource.ReadReque
 		return
 	}
 
-	valueList, err := d.client.GetValueList(data.Alias.ValueString())
+	valueList, _, err := d.client.GetValueList(data.Alias.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("Unable to Read Authsignal ValueList", err.Error())
 		return

@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/authsignal/authsignal-management-go/v2"
+	"github.com/authsignal/authsignal-management-go/v3"
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -169,7 +169,7 @@ func (r *actionConfigurationResource) Create(ctx context.Context, req resource.C
 		actionConfigurationToCreate.PromptToEnrollVerificationMethods = authsignal.SetValue(promptToEnrollVerificationMethodsSlice)
 	}
 
-	actionConfiguration, err := r.client.CreateActionConfiguration(actionConfigurationToCreate)
+	actionConfiguration, _, err := r.client.CreateActionConfiguration(actionConfigurationToCreate)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating action configuration",
@@ -197,7 +197,13 @@ func (r *actionConfigurationResource) Read(ctx context.Context, req resource.Rea
 		return
 	}
 
-	actionConfiguration, err := r.client.GetActionConfiguration(state.ActionCode.ValueString())
+	actionConfiguration, statusCode, err := r.client.GetActionConfiguration(state.ActionCode.ValueString())
+
+	if statusCode == 404 {
+		resp.State.RemoveResource(ctx)
+		return
+	}
+
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Reading action configuration",
@@ -319,7 +325,7 @@ func (r *actionConfigurationResource) Update(ctx context.Context, req resource.U
 		actionConfigurationToUpdate.MessagingTemplates = authsignal.SetNull(messagingTemplatesJson)
 	}
 
-	_, err2 := r.client.UpdateActionConfiguration(plan.ActionCode.ValueString(), actionConfigurationToUpdate)
+	_, _, err2 := r.client.UpdateActionConfiguration(plan.ActionCode.ValueString(), actionConfigurationToUpdate)
 	if err2 != nil {
 		resp.Diagnostics.AddError(
 			"Error Updating Authsignal action configuration",
@@ -328,7 +334,7 @@ func (r *actionConfigurationResource) Update(ctx context.Context, req resource.U
 		return
 	}
 
-	updatedActionConfiguration, err := r.client.GetActionConfiguration(plan.ActionCode.ValueString())
+	updatedActionConfiguration, _, err := r.client.GetActionConfiguration(plan.ActionCode.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Reading Authsignal action configuration",
@@ -357,7 +363,7 @@ func (r *actionConfigurationResource) Delete(ctx context.Context, req resource.D
 		return
 	}
 
-	_, err := r.client.DeleteActionConfiguration(state.ActionCode.ValueString())
+	_, _, err := r.client.DeleteActionConfiguration(state.ActionCode.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Deleting Authsignal action configuration",

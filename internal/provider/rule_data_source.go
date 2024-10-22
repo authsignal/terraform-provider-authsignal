@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/authsignal/authsignal-management-go/v2"
+	"github.com/authsignal/authsignal-management-go/v3"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -110,7 +110,7 @@ func (d *ruleDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 		return
 	}
 
-	rule, err := d.client.GetRule(data.ActionCode.ValueString(), data.RuleId.ValueString())
+	rule, _, err := d.client.GetRule(data.ActionCode.ValueString(), data.RuleId.ValueString())
 
 	if err != nil {
 		resp.Diagnostics.AddError(

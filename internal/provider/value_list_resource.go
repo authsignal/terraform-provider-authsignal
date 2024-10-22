@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/authsignal/authsignal-management-go/v2"
+	"github.com/authsignal/authsignal-management-go/v3"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -180,7 +180,7 @@ func (r *valueListResource) Create(ctx context.Context, req resource.CreateReque
 
 	valueListToCreate.ValueListItems = valueListItems
 
-	valueList, err := r.client.CreateValueList(valueListToCreate)
+	valueList, _, err := r.client.CreateValueList(valueListToCreate)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating value list",
@@ -208,7 +208,12 @@ func (r *valueListResource) Read(ctx context.Context, req resource.ReadRequest, 
 		return
 	}
 
-	valueList, err := r.client.GetValueList(state.Alias.ValueString())
+	valueList, statusCode, err := r.client.GetValueList(state.Alias.ValueString())
+
+	if statusCode == 404 {
+		resp.State.RemoveResource(ctx)
+		return
+	}
 
 	if err != nil {
 		resp.Diagnostics.AddError(
@@ -269,7 +274,7 @@ func (r *valueListResource) Update(ctx context.Context, req resource.UpdateReque
 
 	valueListToUpdate.ValueListItems = valueListItems
 
-	valueList, err := r.client.UpdateValueList(plan.Alias.ValueString(), valueListToUpdate)
+	valueList, _, err := r.client.UpdateValueList(plan.Alias.ValueString(), valueListToUpdate)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error updating value list",
@@ -297,7 +302,7 @@ func (r *valueListResource) Delete(ctx context.Context, req resource.DeleteReque
 		return
 	}
 
-	_, err := r.client.DeleteValueList(state.Alias.ValueString())
+	_, _, err := r.client.DeleteValueList(state.Alias.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Deleting Authsignal value list",

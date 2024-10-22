@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/authsignal/authsignal-management-go/v2"
+	"github.com/authsignal/authsignal-management-go/v3"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -412,7 +412,12 @@ func (r *themeResource) Create(ctx context.Context, req resource.CreateRequest, 
 }
 
 func (r *themeResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
-	theme, err := r.client.GetTheme()
+	theme, statusCode, err := r.client.GetTheme()
+
+	if statusCode == 404 {
+		resp.State.RemoveResource(ctx)
+		return
+	}
 
 	if err != nil {
 		resp.Diagnostics.AddError(
@@ -443,7 +448,7 @@ func (r *themeResource) Update(ctx context.Context, req resource.UpdateRequest, 
 
 	var themeToCreate = buildAuthsignalThemeUpdateObject(ctx, resp, plan)
 
-	theme, err := r.client.UpdateTheme(themeToCreate)
+	theme, _, err := r.client.UpdateTheme(themeToCreate)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating theme",
@@ -472,7 +477,7 @@ func (r *themeResource) Delete(ctx context.Context, req resource.DeleteRequest, 
 
 	var themeToCreate = buildAuthsignalThemeDeleteObject(state)
 
-	_, err := r.client.UpdateTheme(themeToCreate)
+	_, _, err := r.client.UpdateTheme(themeToCreate)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating theme",

@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/authsignal/authsignal-management-go/v2"
+	"github.com/authsignal/authsignal-management-go/v3"
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -198,7 +198,7 @@ func (r *ruleResource) Create(ctx context.Context, req resource.CreateRequest, r
 		ruleToCreate.Conditions = authsignal.SetValue(conditionsJson)
 	}
 
-	rule, err := r.client.CreateRule(plan.ActionCode.ValueString(), ruleToCreate)
+	rule, _, err := r.client.CreateRule(plan.ActionCode.ValueString(), ruleToCreate)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating rule",
@@ -225,7 +225,13 @@ func (r *ruleResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 		return
 	}
 
-	rule, err := r.client.GetRule(state.ActionCode.ValueString(), state.RuleId.ValueString())
+	rule, statusCode, err := r.client.GetRule(state.ActionCode.ValueString(), state.RuleId.ValueString())
+
+	if statusCode == 404 {
+		resp.State.RemoveResource(ctx)
+		return
+	}
+
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Reading rule",
@@ -367,7 +373,7 @@ func (r *ruleResource) Update(ctx context.Context, req resource.UpdateRequest, r
 		ruleToUpdate.Conditions = authsignal.SetNull(conditionsJson)
 	}
 
-	_, err := r.client.UpdateRule(plan.ActionCode.ValueString(), plan.RuleId.ValueString(), ruleToUpdate)
+	_, _, err := r.client.UpdateRule(plan.ActionCode.ValueString(), plan.RuleId.ValueString(), ruleToUpdate)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Updating Authsignal rule",
@@ -376,7 +382,7 @@ func (r *ruleResource) Update(ctx context.Context, req resource.UpdateRequest, r
 		return
 	}
 
-	updatedRule, err := r.client.GetRule(plan.ActionCode.ValueString(), plan.RuleId.ValueString())
+	updatedRule, _, err := r.client.GetRule(plan.ActionCode.ValueString(), plan.RuleId.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Reading Authsignal rule",
@@ -403,7 +409,7 @@ func (r *ruleResource) Delete(ctx context.Context, req resource.DeleteRequest, r
 		return
 	}
 
-	_, err := r.client.DeleteRule(state.ActionCode.ValueString(), state.RuleId.ValueString())
+	_, _, err := r.client.DeleteRule(state.ActionCode.ValueString(), state.RuleId.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Deleting Authsignal rule",

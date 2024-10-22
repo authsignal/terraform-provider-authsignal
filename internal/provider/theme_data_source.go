@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/authsignal/authsignal-management-go/v2"
+	"github.com/authsignal/authsignal-management-go/v3"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
@@ -370,7 +370,7 @@ func (d *themeDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, 
 }
 
 func (d *themeDataSource) Read(ctx context.Context, req datasource.ReadRequest, resp *datasource.ReadResponse) {
-	theme, err := d.client.GetTheme()
+	theme, _, err := d.client.GetTheme()
 
 	if err != nil {
 		resp.Diagnostics.AddError(

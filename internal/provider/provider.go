@@ -167,6 +167,7 @@ func (p *authsignalProvider) DataSources(_ context.Context) []func() datasource.
 		NewRuleDataSource,
 		NewThemeDataSource,
 		NewValueListDataSource,
+		NewCustomDataPointDataSource,
 	}
 }
 
@@ -176,5 +177,6 @@ func (p *authsignalProvider) Resources(_ context.Context) []func() resource.Reso
 		NewRuleResource,
 		NewThemeResource,
 		NewValueListResource,
+		NewCustomDataPointResource,
 	}
 }

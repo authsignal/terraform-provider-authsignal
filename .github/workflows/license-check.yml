@@ -1,0 +1,48 @@
+name: License Check
+
+on:
+  pull_request:
+    branches: ["main"]
+  push:
+    branches: ["main"]
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  license-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4.1.1
+
+      - name: Set up Go
+        uses: actions/setup-go@v5.0.0
+        with:
+          go-version-file: "go.mod"
+          cache: true
+
+      - name: Install go-licenses
+        run: go install github.com/google/go-licenses@latest
+
+      - name: Check licenses
+        run: |
+          go-licenses check ./... \
+            --allowed_licenses="MIT,Apache-2.0,BSD-2-Clause,BSD-3-Clause,Python-2.0,ISC,CC0-1.0,Unlicense,0BSD,CC-BY-4.0,CC-BY-3.0,MPL-2.0,BlueOak-1.0.0" \
+            --include_tests
+
+      - name: Generate license report summary
+        if: success()
+        run: |
+          echo "# 📋 License Check Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ **All dependencies use approved licenses!**" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## 📦 Dependencies and Licenses" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Package | License | URL |" >> $GITHUB_STEP_SUMMARY
+          echo "|---------|---------|-----|" >> $GITHUB_STEP_SUMMARY
+          go-licenses report ./... 2>/dev/null | while IFS=',' read -r name url license; do
+            echo "| \`${name}\` | ${license} | [View License](${url}) |" >> $GITHUB_STEP_SUMMARY
+          done

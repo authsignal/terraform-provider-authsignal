@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/authsignal/authsignal-management-go/v3"
+	"github.com/authsignal/authsignal-management-go/v4"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
@@ -79,9 +79,6 @@ func (d *themeDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, 
 			"container": schema.SingleNestedAttribute{
 				Attributes: map[string]schema.Attribute{
 					"content_alignment": schema.StringAttribute{
-						Computed: true,
-					},
-					"position": schema.StringAttribute{
 						Computed: true,
 					},
 					"padding": schema.Int64Attribute{
@@ -244,9 +241,6 @@ func (d *themeDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, 
 					"container": schema.SingleNestedAttribute{
 						Attributes: map[string]schema.Attribute{
 							"content_alignment": schema.StringAttribute{
-								Computed: true,
-							},
-							"position": schema.StringAttribute{
 								Computed: true,
 							},
 							"padding": schema.Int64Attribute{

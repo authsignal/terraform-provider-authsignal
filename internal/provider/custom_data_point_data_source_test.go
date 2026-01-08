@@ -11,9 +11,9 @@ func TestAccCustomDataPointDataSource(t *testing.T) {
 		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
 		Steps: []resource.TestStep{
 			{
-				Config: `data "authsignal_custom_data_point" "terraform_data_source_testing" {id="36744ff9-5189-4a53-b7e0-89cf4d53eaee"}`,
+				Config: `data "authsignal_custom_data_point" "terraform_data_source_testing" {id="45930709-396e-440c-893e-8f67794dc345"}`,
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("data.authsignal_custom_data_point.terraform_data_source_testing", "name", "Terraform Data Source Testing"),
+					resource.TestCheckResourceAttr("data.authsignal_custom_data_point.terraform_data_source_testing", "name", "Terraform_Data_Source_Testing"),
 					resource.TestCheckResourceAttr("data.authsignal_custom_data_point.terraform_data_source_testing", "data_type", "text"),
 					resource.TestCheckResourceAttr("data.authsignal_custom_data_point.terraform_data_source_testing", "model_type", "action"),
 					resource.TestCheckResourceAttr("data.authsignal_custom_data_point.terraform_data_source_testing", "description", "hello world"),

@@ -14,14 +14,14 @@ func TestAccCustomDataPointResource(t *testing.T) {
 			{
 				Config: `
 					resource "authsignal_custom_data_point" "terraform_acc_test_action_custom_data_point" {
-						name = "Terraform Acc Test Action Model Type"
+						name = "Terraform_Acc_Test_Action_Model_Type"
 						data_type = "number"
 						model_type = "action"
 						description = "A test custom data point."
 					}
 				`,
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("authsignal_custom_data_point.terraform_acc_test_action_custom_data_point", "name", "Terraform Acc Test Action Model Type"),
+					resource.TestCheckResourceAttr("authsignal_custom_data_point.terraform_acc_test_action_custom_data_point", "name", "Terraform_Acc_Test_Action_Model_Type"),
 					resource.TestCheckResourceAttr("authsignal_custom_data_point.terraform_acc_test_action_custom_data_point", "data_type", "number"),
 					resource.TestCheckResourceAttr("authsignal_custom_data_point.terraform_acc_test_action_custom_data_point", "model_type", "action"),
 					resource.TestCheckResourceAttr("authsignal_custom_data_point.terraform_acc_test_action_custom_data_point", "description", "A test custom data point."),
@@ -31,14 +31,14 @@ func TestAccCustomDataPointResource(t *testing.T) {
 			{
 				Config: `
 					resource "authsignal_custom_data_point" "terraform_acc_test_user_custom_data_point" {
-						name = "Terraform Acc Test User Model Type"
+						name = "Terraform_Acc_Test_User_Model_Type"
 						data_type = "text"
 						model_type = "user"
 						description = "A test custom data point."
 					}
 				`,
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("authsignal_custom_data_point.terraform_acc_test_user_custom_data_point", "name", "Terraform Acc Test User Model Type"),
+					resource.TestCheckResourceAttr("authsignal_custom_data_point.terraform_acc_test_user_custom_data_point", "name", "Terraform_Acc_Test_User_Model_Type"),
 					resource.TestCheckResourceAttr("authsignal_custom_data_point.terraform_acc_test_user_custom_data_point", "data_type", "text"),
 					resource.TestCheckResourceAttr("authsignal_custom_data_point.terraform_acc_test_user_custom_data_point", "model_type", "user"),
 					resource.TestCheckResourceAttr("authsignal_custom_data_point.terraform_acc_test_user_custom_data_point", "description", "A test custom data point."),
@@ -48,14 +48,14 @@ func TestAccCustomDataPointResource(t *testing.T) {
 			{
 				Config: `
 					resource "authsignal_custom_data_point" "terraform_acc_test_action_custom_data_point" {
-						name = "Terraform Acc Test Action Model Type"
+						name = "Terraform_Acc_Test_Action_Model_Type"
 						data_type = "multiselect"
 						model_type = "action"
 						description = "A test custom data point.!.!.!"
 					}
 				`,
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("authsignal_custom_data_point.terraform_acc_test_action_custom_data_point", "name", "Terraform Acc Test Action Model Type"),
+					resource.TestCheckResourceAttr("authsignal_custom_data_point.terraform_acc_test_action_custom_data_point", "name", "Terraform_Acc_Test_Action_Model_Type"),
 					resource.TestCheckResourceAttr("authsignal_custom_data_point.terraform_acc_test_action_custom_data_point", "data_type", "multiselect"),
 					resource.TestCheckResourceAttr("authsignal_custom_data_point.terraform_acc_test_action_custom_data_point", "model_type", "action"),
 					resource.TestCheckResourceAttr("authsignal_custom_data_point.terraform_acc_test_action_custom_data_point", "description", "A test custom data point.!.!.!"),
@@ -65,14 +65,14 @@ func TestAccCustomDataPointResource(t *testing.T) {
 			{
 				Config: `
 					resource "authsignal_custom_data_point" "terraform_acc_test_user_custom_data_point" {
-						name = "Terraform Acc Test User Model Type"
+						name = "Terraform_Acc_Test_User_Model_Type"
 						data_type = "boolean"
 						model_type = "user"
 						description = "A test custom data point.!.!.!"
 					}
 				`,
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("authsignal_custom_data_point.terraform_acc_test_user_custom_data_point", "name", "Terraform Acc Test User Model Type"),
+					resource.TestCheckResourceAttr("authsignal_custom_data_point.terraform_acc_test_user_custom_data_point", "name", "Terraform_Acc_Test_User_Model_Type"),
 					resource.TestCheckResourceAttr("authsignal_custom_data_point.terraform_acc_test_user_custom_data_point", "data_type", "boolean"),
 					resource.TestCheckResourceAttr("authsignal_custom_data_point.terraform_acc_test_user_custom_data_point", "model_type", "user"),
 					resource.TestCheckResourceAttr("authsignal_custom_data_point.terraform_acc_test_user_custom_data_point", "description", "A test custom data point.!.!.!"),

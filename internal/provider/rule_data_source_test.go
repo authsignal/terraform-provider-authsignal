@@ -22,7 +22,7 @@ func TestAccRuleDataSource(t *testing.T) {
 					resource.TestCheckResourceAttr("data.authsignal_rule.terraform-acc-tests", "tenant_id", "ec3910e7-ab32-479e-b58b-36a122631d58"),
 					resource.TestCheckResourceAttr("data.authsignal_rule.terraform-acc-tests", "description", "hello world"),
 					resource.TestCheckResourceAttr("data.authsignal_rule.terraform-acc-tests", "is_active", "false"),
-					resource.TestCheckResourceAttr("data.authsignal_rule.terraform-acc-tests", "priority", "0"),
+					resource.TestCheckResourceAttr("data.authsignal_rule.terraform-acc-tests", "priority", "1"),
 					resource.TestCheckResourceAttr("data.authsignal_rule.terraform-acc-tests", "rule_id", "2568fe20-851d-40f6-9c17-448dc484174c"),
 					resource.TestCheckResourceAttr("data.authsignal_rule.terraform-acc-tests", "type", "CHALLENGE"),
 					resource.TestCheckResourceAttr("data.authsignal_rule.terraform-acc-tests", "verification_methods.#", "3"),

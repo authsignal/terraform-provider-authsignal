@@ -62,7 +62,6 @@ resource "authsignal_theme" "theme" {
     logo_alignment    = "center"
     logo_position     = "inside"
     logo_height       = 2
-    position          = "outside"
   }
   dark_mode = {
     logo_url      = "<url to an image>"
@@ -190,7 +189,6 @@ Optional:
 - `logo_height` (Number)
 - `logo_position` (String) Allowed values: `inside`, `outside`.
 - `padding` (Number)
-- `position` (String) Allowed values: `inside`, `outside`.
 
 
 <a id="nestedatt--dark_mode"></a>
@@ -261,7 +259,6 @@ Optional:
 - `logo_height` (Number)
 - `logo_position` (String) Allowed values: `inside`, `outside`.
 - `padding` (Number)
-- `position` (String) Allowed values: `inside`, `outside`.
 
 
 <a id="nestedatt--dark_mode--page_background"></a>
@@ -316,6 +313,8 @@ Optional:
 ## Import
 
 Import is supported using the following syntax:
+
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
 
 ```shell
 # themes can be imported with the following command. An empty string is needed for the command to run.

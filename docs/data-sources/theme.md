@@ -88,7 +88,6 @@ Read-Only:
 - `logo_height` (Number)
 - `logo_position` (String)
 - `padding` (Number)
-- `position` (String)
 
 
 <a id="nestedatt--dark_mode"></a>
@@ -159,7 +158,6 @@ Read-Only:
 - `logo_height` (Number)
 - `logo_position` (String)
 - `padding` (Number)
-- `position` (String)
 
 
 <a id="nestedatt--dark_mode--page_background"></a>

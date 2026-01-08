@@ -54,7 +54,6 @@ func TestAccThemeDataSource(t *testing.T) {
 					resource.TestCheckResourceAttr("data.authsignal_theme.theme", "container.logo_alignment", "right"),
 					resource.TestCheckResourceAttr("data.authsignal_theme.theme", "container.logo_position", "inside"),
 					resource.TestCheckResourceAttr("data.authsignal_theme.theme", "container.logo_height", "113"),
-					resource.TestCheckResourceAttr("data.authsignal_theme.theme", "container.position", "outside"),
 
 					resource.TestCheckResourceAttr("data.authsignal_theme.theme", "dark_mode.logo_url", "https://res.cloudinary.com/authsignal/image/upload/v1716774524/m7bvgqjzr29tp69qcogr.png"),
 					resource.TestCheckResourceAttr("data.authsignal_theme.theme", "dark_mode.favicon_url", "https://res.cloudinary.com/authsignal/image/upload/v1716774530/nvjzmbqax2jiiwse3a40.png"),
@@ -96,7 +95,6 @@ func TestAccThemeDataSource(t *testing.T) {
 					resource.TestCheckResourceAttr("data.authsignal_theme.theme", "dark_mode.container.logo_alignment", "right"),
 					resource.TestCheckResourceAttr("data.authsignal_theme.theme", "dark_mode.container.logo_position", "outside"),
 					resource.TestCheckResourceAttr("data.authsignal_theme.theme", "dark_mode.container.logo_height", "99"),
-					resource.TestCheckResourceAttr("data.authsignal_theme.theme", "dark_mode.container.position", "outside"),
 				),
 			},
 		},

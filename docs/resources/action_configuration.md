@@ -52,6 +52,8 @@ resource "authsignal_action_configuration" "terraform-provider-test" {
 
 Import is supported using the following syntax:
 
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
 ```shell
 # action configurations can be imported by specifying the action code.
 terraform import authsignal_action_configuration.test test-action-code

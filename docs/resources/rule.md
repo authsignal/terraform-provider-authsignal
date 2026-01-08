@@ -73,6 +73,8 @@ resource "authsignal_rule" "test" {
 
 Import is supported using the following syntax:
 
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
 ```shell
 # rules can be imported by specifying the action code.
 terraform import authsignal_rule.test "test-action-code/a2d9670f-4028-424c-9f0f-1493ed9efc45"

@@ -56,6 +56,8 @@ resource "authsignal_value_list" "example_value_list_numbers" {
 
 Import is supported using the following syntax:
 
+The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
+
 ```shell
 # value lists can be imported with the following command. The value provided is the value list alias.
 terraform import authsignal_value_list.example_value_list "example-value-list"

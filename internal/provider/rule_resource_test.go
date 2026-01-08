@@ -17,7 +17,7 @@ func TestAccRuleResource(t *testing.T) {
 					action_code = "terraform-acc-tests"
 					name        = "create-rule-test"
 					description = "hello world"
-					priority    = 1
+					priority    = 2
 					type        = "ALLOW"
 					is_active   = false
 					verification_methods = [
@@ -46,7 +46,7 @@ func TestAccRuleResource(t *testing.T) {
 					resource.TestCheckResourceAttr("authsignal_rule.terraform-acc-tests", "tenant_id", "ec3910e7-ab32-479e-b58b-36a122631d58"),
 					resource.TestCheckResourceAttr("authsignal_rule.terraform-acc-tests", "description", "hello world"),
 					resource.TestCheckResourceAttr("authsignal_rule.terraform-acc-tests", "is_active", "false"),
-					resource.TestCheckResourceAttr("authsignal_rule.terraform-acc-tests", "priority", "1"),
+					resource.TestCheckResourceAttr("authsignal_rule.terraform-acc-tests", "priority", "2"),
 					resource.TestCheckResourceAttr("authsignal_rule.terraform-acc-tests", "type", "ALLOW"),
 					resource.TestCheckResourceAttr("authsignal_rule.terraform-acc-tests", "verification_methods.#", "3"),
 					resource.TestCheckResourceAttr("authsignal_rule.terraform-acc-tests", "verification_methods.0", "AUTHENTICATOR_APP"),
@@ -63,7 +63,7 @@ func TestAccRuleResource(t *testing.T) {
 					action_code = "terraform-acc-tests"
 					name        = "update-rule-test"
 					description = "hello world"
-					priority    = 2
+					priority    = 3
 					type        = "CHALLENGE"
 					is_active   = false
 					verification_methods = [
@@ -92,7 +92,7 @@ func TestAccRuleResource(t *testing.T) {
 					resource.TestCheckResourceAttr("authsignal_rule.terraform-acc-tests", "tenant_id", "ec3910e7-ab32-479e-b58b-36a122631d58"),
 					resource.TestCheckResourceAttr("authsignal_rule.terraform-acc-tests", "description", "hello world"),
 					resource.TestCheckResourceAttr("authsignal_rule.terraform-acc-tests", "is_active", "false"),
-					resource.TestCheckResourceAttr("authsignal_rule.terraform-acc-tests", "priority", "2"),
+					resource.TestCheckResourceAttr("authsignal_rule.terraform-acc-tests", "priority", "3"),
 					resource.TestCheckResourceAttr("authsignal_rule.terraform-acc-tests", "type", "CHALLENGE"),
 					resource.TestCheckResourceAttr("authsignal_rule.terraform-acc-tests", "verification_methods.#", "3"),
 					resource.TestCheckResourceAttr("authsignal_rule.terraform-acc-tests", "verification_methods.0", "AUTHENTICATOR_APP"),

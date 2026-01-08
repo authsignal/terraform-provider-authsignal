@@ -3,7 +3,7 @@ package provider
 import (
 	"context"
 
-	"github.com/authsignal/authsignal-management-go/v3"
+	"github.com/authsignal/authsignal-management-go/v4"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 )
@@ -132,10 +132,6 @@ func buildAuthsignalContainerCreateObject(container containerModel) authsignal.C
 
 	if len(container.ContentAlignment.ValueString()) > 0 {
 		authsignalContainer.ContentAlignment = authsignal.SetValue(container.ContentAlignment.ValueString())
-	}
-
-	if len(container.Position.ValueString()) > 0 {
-		authsignalContainer.Position = authsignal.SetValue(container.Position.ValueString())
 	}
 
 	if container.Padding.ValueInt64() != 0 {
@@ -503,12 +499,6 @@ func buildAuthsignalContainerUpdateObject(container containerModel) authsignal.C
 		authsignalContainer.ContentAlignment = authsignal.SetNull(container.ContentAlignment.ValueString())
 	}
 
-	if len(container.Position.ValueString()) > 0 {
-		authsignalContainer.Position = authsignal.SetValue(container.Position.ValueString())
-	} else {
-		authsignalContainer.Position = authsignal.SetNull(container.Position.ValueString())
-	}
-
 	if container.Padding.ValueInt64() != 0 {
 		authsignalContainer.Padding = authsignal.SetValue(container.Padding.ValueInt64())
 	} else {
@@ -795,7 +785,6 @@ func buildAuthsignalContainerDeleteObject(container containerModel) authsignal.C
 	var authsignalContainer authsignal.Container
 
 	authsignalContainer.ContentAlignment = authsignal.SetNull(container.ContentAlignment.ValueString())
-	authsignalContainer.Position = authsignal.SetNull(container.Position.ValueString())
 	authsignalContainer.Padding = authsignal.SetNull(container.Padding.ValueInt64())
 	authsignalContainer.LogoAlignment = authsignal.SetNull(container.LogoAlignment.ValueString())
 	authsignalContainer.LogoPosition = authsignal.SetNull(container.LogoPosition.ValueString())

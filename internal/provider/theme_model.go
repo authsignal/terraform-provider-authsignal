@@ -1,7 +1,7 @@
 package provider
 
 import (
-	"github.com/authsignal/authsignal-management-go/v3"
+	"github.com/authsignal/authsignal-management-go/v4"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
@@ -466,7 +466,6 @@ func (m colorsModel) AttributeValues() map[string]attr.Value {
 // CONTAINER
 type containerModel struct {
 	ContentAlignment types.String `tfsdk:"content_alignment"`
-	Position         types.String `tfsdk:"position"`
 	Padding          types.Int64  `tfsdk:"padding"`
 	LogoAlignment    types.String `tfsdk:"logo_alignment"`
 	LogoPosition     types.String `tfsdk:"logo_position"`
@@ -480,13 +479,6 @@ func (m *containerModel) CreateObject(input authsignal.ContainerResponse) types.
 		m.ContentAlignment = types.StringValue(input.ContentAlignment)
 	} else {
 		m.ContentAlignment = types.StringNull()
-	}
-
-	if len(input.Position) > 0 {
-		isNull = 0
-		m.Position = types.StringValue(input.Position)
-	} else {
-		m.Position = types.StringNull()
 	}
 
 	if input.Padding != 0 {
@@ -528,7 +520,6 @@ func (m *containerModel) CreateObject(input authsignal.ContainerResponse) types.
 func (m containerModel) AttributeTypes() map[string]attr.Type {
 	return map[string]attr.Type{
 		"content_alignment": types.StringType,
-		"position":          types.StringType,
 		"padding":           types.Int64Type,
 		"logo_alignment":    types.StringType,
 		"logo_position":     types.StringType,
@@ -539,7 +530,6 @@ func (m containerModel) AttributeTypes() map[string]attr.Type {
 func (m containerModel) AttributeValues() map[string]attr.Value {
 	elements := map[string]attr.Value{}
 	elements["content_alignment"] = m.ContentAlignment
-	elements["position"] = m.Position
 	elements["padding"] = m.Padding
 	elements["logo_alignment"] = m.LogoAlignment
 	elements["logo_position"] = m.LogoPosition

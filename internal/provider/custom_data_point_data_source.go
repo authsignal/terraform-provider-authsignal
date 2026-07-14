@@ -78,11 +78,16 @@ func (d *customDataPointDataSource) Read(ctx context.Context, req datasource.Rea
 	}
 
 	customDataPointState := customDataPointDataSourceModel{
-		Id:          types.StringValue(customDataPoint.Id),
-		Name:        types.StringValue(customDataPoint.Name),
-		DataType:    types.StringValue(customDataPoint.DataType),
-		ModelType:   types.StringValue(customDataPoint.ModelType),
-		Description: types.StringValue(customDataPoint.Description),
+		Id:        types.StringValue(customDataPoint.Id),
+		Name:      types.StringValue(customDataPoint.Name),
+		DataType:  types.StringValue(customDataPoint.DataType),
+		ModelType: types.StringValue(customDataPoint.ModelType),
+	}
+
+	if len(customDataPoint.Description) > 0 {
+		customDataPointState.Description = types.StringValue(customDataPoint.Description)
+	} else {
+		customDataPointState.Description = types.StringNull()
 	}
 
 	diags = resp.State.Set(ctx, &customDataPointState)

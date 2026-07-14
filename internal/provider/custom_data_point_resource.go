@@ -100,10 +100,14 @@ func (r *customDataPointResource) Create(ctx context.Context, req resource.Creat
 	}
 
 	var customDataPointToCreate = authsignal.CustomDataPoint{
-		Name:        authsignal.SetValue(plan.Name.ValueString()),
-		DataType:    authsignal.SetValue(plan.DataType.ValueString()),
-		ModelType:   authsignal.SetValue(plan.ModelType.ValueString()),
-		Description: authsignal.SetValue(plan.Description.ValueString()),
+		Name:      authsignal.SetValue(plan.Name.ValueString()),
+		DataType:  authsignal.SetValue(plan.DataType.ValueString()),
+		ModelType: authsignal.SetValue(plan.ModelType.ValueString()),
+	}
+
+	var customDataPointDescription = plan.Description.ValueString()
+	if len(customDataPointDescription) > 0 {
+		customDataPointToCreate.Description = authsignal.SetValue(customDataPointDescription)
 	}
 
 	customDataPoint, _, err := r.client.CreateCustomDataPoint(customDataPointToCreate)
@@ -157,7 +161,12 @@ func (r *customDataPointResource) Read(ctx context.Context, req resource.ReadReq
 	state.Name = types.StringValue(customDataPoint.Name)
 	state.DataType = types.StringValue(customDataPoint.DataType)
 	state.ModelType = types.StringValue(customDataPoint.ModelType)
-	state.Description = types.StringValue(customDataPoint.Description)
+
+	if len(customDataPoint.Description) > 0 {
+		state.Description = types.StringValue(customDataPoint.Description)
+	} else {
+		state.Description = types.StringNull()
+	}
 
 	diags = resp.State.Set(ctx, &state)
 	resp.Diagnostics.Append(diags...)

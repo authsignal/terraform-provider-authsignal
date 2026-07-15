@@ -27,6 +27,23 @@ func TestAccCustomDataPointResource(t *testing.T) {
 					resource.TestCheckResourceAttr("authsignal_custom_data_point.terraform_acc_test_action_custom_data_point", "description", "A test custom data point."),
 				),
 			},
+			// Create and Read testing without a description (guards against
+			// perpetual replacement when the optional description is omitted)
+			{
+				Config: `
+					resource "authsignal_custom_data_point" "terraform_acc_test_no_description_custom_data_point" {
+						name = "Terraform_Acc_Test_No_Description"
+						data_type = "text"
+						model_type = "action"
+					}
+				`,
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("authsignal_custom_data_point.terraform_acc_test_no_description_custom_data_point", "name", "Terraform_Acc_Test_No_Description"),
+					resource.TestCheckResourceAttr("authsignal_custom_data_point.terraform_acc_test_no_description_custom_data_point", "data_type", "text"),
+					resource.TestCheckResourceAttr("authsignal_custom_data_point.terraform_acc_test_no_description_custom_data_point", "model_type", "action"),
+					resource.TestCheckNoResourceAttr("authsignal_custom_data_point.terraform_acc_test_no_description_custom_data_point", "description"),
+				),
+			},
 			// Create and Read testing for user model type
 			{
 				Config: `

@@ -30,6 +30,7 @@ type customDataPointDataSourceModel struct {
 	DataType    types.String `tfsdk:"data_type"`
 	ModelType   types.String `tfsdk:"model_type"`
 	Description types.String `tfsdk:"description"`
+	IsPublic    types.Bool   `tfsdk:"is_public"`
 }
 
 func (d *customDataPointDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
@@ -59,6 +60,10 @@ func (d *customDataPointDataSource) Schema(_ context.Context, _ datasource.Schem
 				Description: "The description of the custom data point.",
 				Computed:    true,
 			},
+			"is_public": schema.BoolAttribute{
+				Description: "Whether the data point's value is surfaced when getting push challenges and claiming QR code challenges.",
+				Computed:    true,
+			},
 		},
 	}
 }
@@ -82,6 +87,7 @@ func (d *customDataPointDataSource) Read(ctx context.Context, req datasource.Rea
 		Name:      types.StringValue(customDataPoint.Name),
 		DataType:  types.StringValue(customDataPoint.DataType),
 		ModelType: types.StringValue(customDataPoint.ModelType),
+		IsPublic:  types.BoolValue(customDataPoint.IsPublic),
 	}
 
 	if len(customDataPoint.Description) > 0 {

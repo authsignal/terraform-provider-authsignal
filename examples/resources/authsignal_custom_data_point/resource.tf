@@ -30,3 +30,12 @@ resource "authsignal_custom_data_point" "my_custom_multiselect_data_point" {
   description = "My custom multiselect data point"
 }
 
+# Example public custom data point, surfaced when getting push challenges
+# and claiming QR code challenges
+resource "authsignal_custom_data_point" "my_public_data_point" {
+  name        = "MyPublicDataPoint"
+  data_type   = "text"
+  model_type  = "action"
+  description = "My public data point"
+  is_public   = true
+}

@@ -29,5 +29,6 @@ data "authsignal_custom_data_point" "my_custom_data_point" {
 
 - `data_type` (String) The data type of the custom data point. Allowed values: `text`, `number`, `boolean`, 'multiselect'.
 - `description` (String) The description of the custom data point.
+- `is_public` (Boolean) Whether the data point's value is surfaced when getting push challenges and claiming QR code challenges.
 - `model_type` (String) The model type of the custom data point. Allowed values: `action`, `user`.
 - `name` (String) The name of the custom data point.

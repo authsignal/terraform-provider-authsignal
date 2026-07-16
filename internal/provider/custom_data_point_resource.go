@@ -9,6 +9,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
@@ -40,6 +41,7 @@ type customDataPointResourceModel struct {
 	DataType    types.String `tfsdk:"data_type"`
 	ModelType   types.String `tfsdk:"model_type"`
 	Description types.String `tfsdk:"description"`
+	IsPublic    types.Bool   `tfsdk:"is_public"`
 }
 
 func (r *customDataPointResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -52,6 +54,9 @@ func (r *customDataPointResource) Schema(_ context.Context, _ resource.SchemaReq
 			"id": schema.StringAttribute{
 				Description: "The id of the custom data point.",
 				Computed:    true,
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"name": schema.StringAttribute{
 				Description: "The name of the custom data point.",
@@ -87,6 +92,12 @@ func (r *customDataPointResource) Schema(_ context.Context, _ resource.SchemaReq
 					stringplanmodifier.RequiresReplace(),
 				},
 			},
+			"is_public": schema.BoolAttribute{
+				Description: "Whether the data point's value is surfaced when getting push challenges and claiming QR code challenges. Defaults to `false` (private).",
+				Optional:    true,
+				Computed:    true,
+				Default:     booldefault.StaticBool(false),
+			},
 		},
 	}
 }
@@ -103,6 +114,7 @@ func (r *customDataPointResource) Create(ctx context.Context, req resource.Creat
 		Name:      authsignal.SetValue(plan.Name.ValueString()),
 		DataType:  authsignal.SetValue(plan.DataType.ValueString()),
 		ModelType: authsignal.SetValue(plan.ModelType.ValueString()),
+		IsPublic:  authsignal.SetValue(plan.IsPublic.ValueBool()),
 	}
 
 	var customDataPointDescription = plan.Description.ValueString()
@@ -120,6 +132,7 @@ func (r *customDataPointResource) Create(ctx context.Context, req resource.Creat
 	}
 
 	plan.Id = types.StringValue(customDataPoint.Id)
+	plan.IsPublic = types.BoolValue(customDataPoint.IsPublic)
 
 	diags = resp.State.Set(ctx, plan)
 	resp.Diagnostics.Append(diags...)
@@ -161,6 +174,7 @@ func (r *customDataPointResource) Read(ctx context.Context, req resource.ReadReq
 	state.Name = types.StringValue(customDataPoint.Name)
 	state.DataType = types.StringValue(customDataPoint.DataType)
 	state.ModelType = types.StringValue(customDataPoint.ModelType)
+	state.IsPublic = types.BoolValue(customDataPoint.IsPublic)
 
 	if len(customDataPoint.Description) > 0 {
 		state.Description = types.StringValue(customDataPoint.Description)
@@ -176,10 +190,33 @@ func (r *customDataPointResource) Read(ctx context.Context, req resource.ReadReq
 }
 
 func (r *customDataPointResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	resp.Diagnostics.AddError(
-		"Authsignal Custom Data Points cannot be updated and this function should never be called.",
-		"Please raise this as an issue on our GitHub repository.",
-	)
+	var plan customDataPointResourceModel
+	diags := req.Plan.Get(ctx, &plan)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	var customDataPointToUpdate = authsignal.CustomDataPoint{
+		IsPublic: authsignal.SetValue(plan.IsPublic.ValueBool()),
+	}
+
+	customDataPoint, _, err := r.client.UpdateCustomDataPoint(plan.Id.ValueString(), customDataPointToUpdate)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error updating custom data point",
+			"Could not update custom data point, unexpected error: "+err.Error(),
+		)
+		return
+	}
+
+	plan.IsPublic = types.BoolValue(customDataPoint.IsPublic)
+
+	diags = resp.State.Set(ctx, plan)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 }
 
 func (r *customDataPointResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {

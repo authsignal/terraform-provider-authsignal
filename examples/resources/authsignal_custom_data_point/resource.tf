@@ -39,4 +39,3 @@ resource "authsignal_custom_data_point" "my_public_data_point" {
   description = "My public data point"
   is_public   = true
 }
-

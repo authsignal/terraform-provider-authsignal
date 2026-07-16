@@ -197,6 +197,7 @@ func (r *customDataPointResource) Update(ctx context.Context, req resource.Updat
 		return
 	}
 
+	// All other attributes force replacement, so is_public is the only updatable field.
 	var customDataPointToUpdate = authsignal.CustomDataPoint{
 		IsPublic: authsignal.SetValue(plan.IsPublic.ValueBool()),
 	}
@@ -206,6 +207,14 @@ func (r *customDataPointResource) Update(ctx context.Context, req resource.Updat
 		resp.Diagnostics.AddError(
 			"Error updating custom data point",
 			"Could not update custom data point, unexpected error: "+err.Error(),
+		)
+		return
+	}
+
+	if customDataPoint == nil {
+		resp.Diagnostics.AddError(
+			"Unexpected Empty Response",
+			fmt.Sprintf("Received an empty response when updating custom data point ID %s.", plan.Id.ValueString()),
 		)
 		return
 	}

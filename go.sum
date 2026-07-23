@@ -21,8 +21,8 @@ github.com/apparentlymart/go-textseg/v15 v15.0.0 h1:uYvfpb3DyLSCGWnctWKGj857c6ew
 github.com/apparentlymart/go-textseg/v15 v15.0.0/go.mod h1:K8XmNZdhEBkdlyDdvbmmsvpAG721bKi0joRfFdHIWJ4=
 github.com/armon/go-radix v1.0.0 h1:F4z6KzEeeQIMeLFa97iZU6vupzoecKdU5TX24SNppXI=
 github.com/armon/go-radix v1.0.0/go.mod h1:ufUuZ+zHj4x4TnLV4JWEpy2hxWSpsRywHrMgIH9cCH8=
-github.com/authsignal/authsignal-management-go/v4 v4.1.0 h1:5BpWvYEWu8HG5w38ugJf37gT+bRMlgH9iUvy25SDHfk=
-github.com/authsignal/authsignal-management-go/v4 v4.1.0/go.mod h1:CfSWBfj5PC3HVagzfk5Vcjv6Hp8tRJJ8ERV6lVU4PJQ=
+github.com/authsignal/authsignal-management-go/v4 v4.2.0 h1:8AFwKq1Bcabl1nXSX2p1pFyfz9Ay/y31Lar6DEwKR3Y=
+github.com/authsignal/authsignal-management-go/v4 v4.2.0/go.mod h1:CfSWBfj5PC3HVagzfk5Vcjv6Hp8tRJJ8ERV6lVU4PJQ=
 github.com/bgentry/speakeasy v0.1.0 h1:ByYyxL9InA1OWqxJqqp2A5pYHUrCiAL6K3J+LKSsQkY=
 github.com/bgentry/speakeasy v0.1.0/go.mod h1:+zsyZBPWlz7T6j88CTgSN5bM796AkVf0kBD4zp0CCIs=
 github.com/bmatcuk/doublestar/v4 v4.9.1 h1:X8jg9rRZmJd4yRy7ZeNDRnM+T3ZfHv15JiBJ/avrEXE=

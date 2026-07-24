@@ -3,12 +3,12 @@
 page_title: "authsignal_message_overrides Resource - terraform-provider-authsignal"
 subcategory: ""
 description: |-
-  Manages a tenant's pre-built UI message overrides. This is a full-replacement, tenant-wide singleton: the configured value is the complete set of overrides, and applying removes any override not present. Use the authsignal_message_overrides_catalog data source to discover valid override IDs and locales.
+  Manages a tenant's pre-built UI message overrides. This is a full-replacement, tenant-wide singleton: the configured value is the complete set of overrides, and applying removes any override not present. If the tenant already has overrides configured outside Terraform (e.g. in the admin portal), import the resource first (terraform import authsignal_message_overrides.<name> "") instead of creating it, so the plan shows what will change. Use the authsignal_message_overrides_catalog data source to discover valid override IDs and locales.
 ---
 
 # authsignal_message_overrides (Resource)
 
-Manages a tenant's pre-built UI message overrides. This is a full-replacement, tenant-wide singleton: the configured value is the complete set of overrides, and applying removes any override not present. Use the `authsignal_message_overrides_catalog` data source to discover valid override IDs and locales.
+Manages a tenant's pre-built UI message overrides. This is a full-replacement, tenant-wide singleton: the configured value is the complete set of overrides, and applying removes any override not present. If the tenant already has overrides configured outside Terraform (e.g. in the admin portal), import the resource first (`terraform import authsignal_message_overrides.<name> ""`) instead of creating it, so the plan shows what will change. Use the `authsignal_message_overrides_catalog` data source to discover valid override IDs and locales.
 
 ## Example Usage
 

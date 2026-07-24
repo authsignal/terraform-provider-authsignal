@@ -168,6 +168,7 @@ func (p *authsignalProvider) DataSources(_ context.Context) []func() datasource.
 		NewThemeDataSource,
 		NewValueListDataSource,
 		NewCustomDataPointDataSource,
+		NewMessageOverridesDataSource,
 		NewMessageOverridesCatalogDataSource,
 	}
 }

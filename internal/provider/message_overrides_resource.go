@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"reflect"
 
 	"github.com/authsignal/authsignal-management-go/v4"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -39,7 +40,7 @@ func (r *messageOverridesResource) Metadata(_ context.Context, req resource.Meta
 
 func (r *messageOverridesResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: "Manages a tenant's pre-built UI message overrides. This is a full-replacement, tenant-wide singleton: the configured value is the complete set of overrides, and applying removes any override not present. Use the `authsignal_message_overrides_catalog` data source to discover valid override IDs and locales.",
+		Description: "Manages a tenant's pre-built UI message overrides. This is a full-replacement, tenant-wide singleton: the configured value is the complete set of overrides, and applying removes any override not present. If the tenant already has overrides configured outside Terraform (e.g. in the admin portal), import the resource first (`terraform import authsignal_message_overrides.<name> \"\"`) instead of creating it, so the plan shows what will change. Use the `authsignal_message_overrides_catalog` data source to discover valid override IDs and locales.",
 		Attributes: map[string]schema.Attribute{
 			"overrides": schema.MapAttribute{
 				Description: "Override copy keyed by locale (e.g. `en`, `pt-br`), then by message override ID (e.g. `sms-code-entry.heading`). Omit to clear all overrides.",
@@ -80,7 +81,29 @@ func (r *messageOverridesResource) Create(ctx context.Context, req resource.Crea
 		return
 	}
 
-	_, _, err := r.client.UpdateMessageOverrides(authsignal.MessageOverridesBody{MessageOverrides: overrides})
+	// Message overrides are a tenant-wide singleton, so a create is a full replacement. Guard against
+	// silently wiping overrides configured outside Terraform (e.g. in the admin portal): if the tenant
+	// already has overrides that differ from the plan, require an import first so the plan shows the diff.
+	existing, _, err := r.client.GetMessageOverrides()
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Unable to Read Authsignal Message Overrides",
+			err.Error(),
+		)
+		return
+	}
+
+	if len(existing.MessageOverrides) > 0 && !reflect.DeepEqual(existing.MessageOverrides, overrides) {
+		resp.Diagnostics.AddError(
+			"Tenant already has message overrides configured",
+			"This tenant already has message overrides set, and creating this resource would replace them. "+
+				"Import the existing resource first so the plan shows what will change:\n\n"+
+				"  terraform import authsignal_message_overrides.<name> \"\"",
+		)
+		return
+	}
+
+	_, _, err = r.client.UpdateMessageOverrides(authsignal.MessageOverridesBody{MessageOverrides: overrides})
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating message overrides",

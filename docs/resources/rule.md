@@ -59,10 +59,10 @@ resource "authsignal_rule" "test" {
 
 ### Optional
 
-- `default_verification_method` (String) Ignore the user's preference and choose which authenticator the Pre-built UI will present by default. Allowed values: `SMS`, `AUTHENTICATOR_APP`, `EMAIL_MAGIC_LINK`, `EMAIL_OTP`, `PUSH`, `SECURITY_KEY`, `PASSKEY`, `VERIFF`, `IPROOV`, `REDROCK`, `IDVERSE`.
+- `default_verification_method` (String) Ignore the user's preference and choose which authenticator the Pre-built UI will present by default. Allowed values: `SMS`, `AUTHENTICATOR_APP`, `EMAIL_MAGIC_LINK`, `EMAIL_OTP`, `DEVICE`, `PUSH`, `QR_CODE`, `IN_APP`, `SECURITY_KEY`, `PASSKEY`, `VERIFF`, `IPROOV`, `PALM_BIOMETRICS_RR`, `IDVERSE`, `ONFIDO`, `APPLE_ID_TOKEN`, `GOOGLE_ID_TOKEN`, `WHATSAPP`, `DIGITAL_CREDENTIAL`, `OIDC_PROVIDER`.
 - `description` (String) A description of the rule.
 - `prompt_to_enroll_verification_methods` (List of String) If this is set then users will be prompted to add a passkey after a challenge is completed. Allowed values: `[PASSKEY]`.
-- `verification_methods` (List of String) A list of permitted authenticators that can be used if the type of the rule is 'CHALLENGE'. Allowed values: `SMS`, `AUTHENTICATOR_APP`, `EMAIL_MAGIC_LINK`, `EMAIL_OTP`, `PUSH`, `SECURITY_KEY`, `PASSKEY`, `VERIFF`, `IPROOV`, `REDROCK`, `IDVERSE`.
+- `verification_methods` (List of String) A list of permitted authenticators that can be used if the type of the rule is 'CHALLENGE'. Allowed values: `SMS`, `AUTHENTICATOR_APP`, `EMAIL_MAGIC_LINK`, `EMAIL_OTP`, `DEVICE`, `PUSH`, `QR_CODE`, `IN_APP`, `SECURITY_KEY`, `PASSKEY`, `VERIFF`, `IPROOV`, `PALM_BIOMETRICS_RR`, `IDVERSE`, `ONFIDO`, `APPLE_ID_TOKEN`, `GOOGLE_ID_TOKEN`, `WHATSAPP`, `DIGITAL_CREDENTIAL`, `OIDC_PROVIDER`.
 
 ### Read-Only
 

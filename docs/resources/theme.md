@@ -184,8 +184,8 @@ Optional:
 
 Optional:
 
-- `content_alignment` (String) Allowed values: `left`, `center`.
-- `logo_alignment` (String) Allowed values: `left`, `center`.
+- `content_alignment` (String) Allowed values: `left`, `center`, `right`.
+- `logo_alignment` (String) Allowed values: `left`, `center`, `right`.
 - `logo_height` (Number)
 - `logo_position` (String) Allowed values: `inside`, `outside`.
 - `padding` (Number)
@@ -254,8 +254,8 @@ Optional:
 
 Optional:
 
-- `content_alignment` (String) Allowed values: `left`, `center`.
-- `logo_alignment` (String) Allowed values: `left`, `center`.
+- `content_alignment` (String) Allowed values: `left`, `center`, `right`.
+- `logo_alignment` (String) Allowed values: `left`, `center`, `right`.
 - `logo_height` (Number)
 - `logo_position` (String) Allowed values: `inside`, `outside`.
 - `padding` (Number)

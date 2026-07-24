@@ -90,10 +90,10 @@ func (d *ruleResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 			},
 			"verification_methods": schema.ListAttribute{
 				ElementType: types.StringType,
-				Description: "A list of permitted authenticators that can be used if the type of the rule is 'CHALLENGE'. Allowed values: `SMS`, `AUTHENTICATOR_APP`, `EMAIL_MAGIC_LINK`, `EMAIL_OTP`, `PUSH`, `SECURITY_KEY`, `PASSKEY`, `VERIFF`, `IPROOV`, `REDROCK`, `IDVERSE`.",
+				Description: "A list of permitted authenticators that can be used if the type of the rule is 'CHALLENGE'. Allowed values: `SMS`, `AUTHENTICATOR_APP`, `EMAIL_MAGIC_LINK`, `EMAIL_OTP`, `DEVICE`, `PUSH`, `QR_CODE`, `IN_APP`, `SECURITY_KEY`, `PASSKEY`, `VERIFF`, `IPROOV`, `PALM_BIOMETRICS_RR`, `IDVERSE`, `ONFIDO`, `APPLE_ID_TOKEN`, `GOOGLE_ID_TOKEN`, `WHATSAPP`, `DIGITAL_CREDENTIAL`, `OIDC_PROVIDER`.",
 				Optional:    true,
 				Validators: []validator.List{
-					listvalidator.ValueStringsAre(stringvalidator.OneOf([]string{"SMS", "AUTHENTICATOR_APP", "EMAIL_MAGIC_LINK", "EMAIL_OTP", "PUSH", "SECURITY_KEY", "PASSKEY", "VERIFF", "IPROOV", "REDROCK", "IDVERSE"}...)),
+					listvalidator.ValueStringsAre(stringvalidator.OneOf(allowedVerificationMethods...)),
 				},
 			},
 			"prompt_to_enroll_verification_methods": schema.ListAttribute{
@@ -105,10 +105,10 @@ func (d *ruleResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 				},
 			},
 			"default_verification_method": schema.StringAttribute{
-				Description: "Ignore the user's preference and choose which authenticator the Pre-built UI will present by default. Allowed values: `SMS`, `AUTHENTICATOR_APP`, `EMAIL_MAGIC_LINK`, `EMAIL_OTP`, `PUSH`, `SECURITY_KEY`, `PASSKEY`, `VERIFF`, `IPROOV`, `REDROCK`, `IDVERSE`.",
+				Description: "Ignore the user's preference and choose which authenticator the Pre-built UI will present by default. Allowed values: `SMS`, `AUTHENTICATOR_APP`, `EMAIL_MAGIC_LINK`, `EMAIL_OTP`, `DEVICE`, `PUSH`, `QR_CODE`, `IN_APP`, `SECURITY_KEY`, `PASSKEY`, `VERIFF`, `IPROOV`, `PALM_BIOMETRICS_RR`, `IDVERSE`, `ONFIDO`, `APPLE_ID_TOKEN`, `GOOGLE_ID_TOKEN`, `WHATSAPP`, `DIGITAL_CREDENTIAL`, `OIDC_PROVIDER`.",
 				Optional:    true,
 				Validators: []validator.String{
-					stringvalidator.OneOf([]string{"SMS", "AUTHENTICATOR_APP", "EMAIL_MAGIC_LINK", "EMAIL_OTP", "PUSH", "SECURITY_KEY", "PASSKEY", "VERIFF", "IPROOV", "REDROCK", "IDVERSE"}...),
+					stringvalidator.OneOf(allowedVerificationMethods...),
 				},
 			},
 			"conditions": schema.StringAttribute{

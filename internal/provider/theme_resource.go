@@ -82,20 +82,20 @@ func (r *themeResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 			"container": schema.SingleNestedAttribute{
 				Attributes: map[string]schema.Attribute{
 					"content_alignment": schema.StringAttribute{
-						Description: "Allowed values: `left`, `center`.",
+						Description: "Allowed values: `left`, `center`, `right`.",
 						Optional:    true,
 						Validators: []validator.String{
-							stringvalidator.OneOf([]string{"left", "center"}...),
+							stringvalidator.OneOf([]string{"left", "center", "right"}...),
 						},
 					},
 					"padding": schema.Int64Attribute{
 						Optional: true,
 					},
 					"logo_alignment": schema.StringAttribute{
-						Description: "Allowed values: `left`, `center`.",
+						Description: "Allowed values: `left`, `center`, `right`.",
 						Optional:    true,
 						Validators: []validator.String{
-							stringvalidator.OneOf([]string{"left", "center"}...),
+							stringvalidator.OneOf([]string{"left", "center", "right"}...),
 						},
 					},
 					"logo_position": schema.StringAttribute{
@@ -256,20 +256,20 @@ func (r *themeResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 					"container": schema.SingleNestedAttribute{
 						Attributes: map[string]schema.Attribute{
 							"content_alignment": schema.StringAttribute{
-								Description: "Allowed values: `left`, `center`.",
+								Description: "Allowed values: `left`, `center`, `right`.",
 								Optional:    true,
 								Validators: []validator.String{
-									stringvalidator.OneOf([]string{"left", "center"}...),
+									stringvalidator.OneOf([]string{"left", "center", "right"}...),
 								},
 							},
 							"padding": schema.Int64Attribute{
 								Optional: true,
 							},
 							"logo_alignment": schema.StringAttribute{
-								Description: "Allowed values: `left`, `center`.",
+								Description: "Allowed values: `left`, `center`, `right`.",
 								Optional:    true,
 								Validators: []validator.String{
-									stringvalidator.OneOf([]string{"left", "center"}...),
+									stringvalidator.OneOf([]string{"left", "center", "right"}...),
 								},
 							},
 							"logo_position": schema.StringAttribute{

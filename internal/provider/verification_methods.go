@@ -1,0 +1,24 @@
+package provider
+
+var allowedVerificationMethods = []string{
+	"SMS",
+	"AUTHENTICATOR_APP",
+	"EMAIL_MAGIC_LINK",
+	"EMAIL_OTP",
+	"DEVICE",
+	"PUSH",
+	"QR_CODE",
+	"IN_APP",
+	"SECURITY_KEY",
+	"PASSKEY",
+	"VERIFF",
+	"IPROOV",
+	"PALM_BIOMETRICS_RR",
+	"IDVERSE",
+	"ONFIDO",
+	"APPLE_ID_TOKEN",
+	"GOOGLE_ID_TOKEN",
+	"WHATSAPP",
+	"DIGITAL_CREDENTIAL",
+	"OIDC_PROVIDER",
+}

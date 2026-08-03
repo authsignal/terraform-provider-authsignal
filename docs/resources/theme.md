@@ -63,6 +63,19 @@ resource "authsignal_theme" "theme" {
     logo_position     = "inside"
     logo_height       = 2
   }
+  typography = {
+    text = {
+      faces = [
+        { url = "<url to a font file>", weight = "400" },
+        { url = "<url to a font file>", weight = "700" },
+      ]
+    }
+    display = {
+      faces = [
+        { url = "<url to a variable font file>", weight = "100 900" },
+      ]
+    }
+  }
   dark_mode = {
     logo_url      = "<url to an image>"
     favicon_url   = "<url to an image>"
@@ -133,7 +146,7 @@ resource "authsignal_theme" "theme" {
 - `logo_url` (String) The URL of an image to be used as a logo for the tenant.
 - `page_background` (Attributes) (see [below for nested schema](#nestedatt--page_background))
 - `primary_color` (String) The primary color for the tenant.
-- `typography` (Attributes) (see [below for nested schema](#nestedatt--typography))
+- `typography` (Attributes) The fonts used in the pre-built UI. A typeface is shared by light and dark mode. (see [below for nested schema](#nestedatt--typography))
 - `watermark_url` (String) The URL of an image to be used as a watermark at the bottom of Authsignal's pre-built UI.
 
 <a id="nestedatt--borders"></a>
@@ -203,7 +216,6 @@ Optional:
 - `logo_url` (String) The URL of an image to be used as a logo for the tenant.
 - `page_background` (Attributes) (see [below for nested schema](#nestedatt--dark_mode--page_background))
 - `primary_color` (String) The primary color for the tenant.
-- `typography` (Attributes) (see [below for nested schema](#nestedatt--dark_mode--typography))
 - `watermark_url` (String) The URL of an image to be used as a watermark at the bottom of Authsignal's pre-built UI.
 
 <a id="nestedatt--dark_mode--borders"></a>
@@ -270,21 +282,6 @@ Optional:
 - `background_image_url` (String) The URL of an image which will be used as the background in the pre-built UI.
 
 
-<a id="nestedatt--dark_mode--typography"></a>
-### Nested Schema for `dark_mode.typography`
-
-Optional:
-
-- `display` (Attributes) (see [below for nested schema](#nestedatt--dark_mode--typography--display))
-
-<a id="nestedatt--dark_mode--typography--display"></a>
-### Nested Schema for `dark_mode.typography.display`
-
-Optional:
-
-- `font_url` (String) The URL of a font file to be used for the tenant.
-
-
 
 
 <a id="nestedatt--page_background"></a>
@@ -301,15 +298,47 @@ Optional:
 
 Optional:
 
-- `display` (Attributes) (see [below for nested schema](#nestedatt--typography--display))
+- `display` (Attributes) The typeface used for headings. (see [below for nested schema](#nestedatt--typography--display))
+- `text` (Attributes) The typeface used for body text and UI labels. (see [below for nested schema](#nestedatt--typography--text))
 
 <a id="nestedatt--typography--display"></a>
 ### Nested Schema for `typography.display`
 
 Optional:
 
-- `font_url` (String) The URL of a font file to be used for the tenant.
+- `faces` (Attributes List) The font files making up this typeface, one per weight. At most 6. (see [below for nested schema](#nestedatt--typography--display--faces))
+- `font_url` (String, Deprecated) The URL of a single font file to be used for this typeface.
 
+<a id="nestedatt--typography--display--faces"></a>
+### Nested Schema for `typography.display.faces`
+
+Required:
+
+- `url` (String) The URL of a font file.
+
+Optional:
+
+- `weight` (String) The weight this file covers. Either a single value such as `400`, or an ascending range such as `100 900` for a variable font.
+
+
+<a id="nestedatt--typography--text"></a>
+### Nested Schema for `typography.text`
+
+Optional:
+
+- `faces` (Attributes List) The font files making up this typeface, one per weight. At most 6. (see [below for nested schema](#nestedatt--typography--text--faces))
+- `font_url` (String, Deprecated) The URL of a single font file to be used for this typeface.
+
+<a id="nestedatt--typography--text--faces"></a>
+### Nested Schema for `typography.text.faces`
+
+Required:
+
+- `url` (String) The URL of a font file.
+
+Optional:
+
+- `weight` (String) The weight this file covers. Either a single value such as `400`, or an ascending range such as `100 900` for a variable font.
 ## Import
 
 Import is supported using the following syntax:

@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/authsignal/authsignal-management-go/v4"
+	"github.com/authsignal/authsignal-management-go/v5"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
@@ -25,6 +25,32 @@ type themeDataSource struct {
 
 func (d *themeDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_theme"
+}
+
+func typefaceDataSourceAttributes() map[string]schema.Attribute {
+	return map[string]schema.Attribute{
+		"faces": schema.ListNestedAttribute{
+			Description: "The font files making up this typeface, one per weight.",
+			NestedObject: schema.NestedAttributeObject{
+				Attributes: map[string]schema.Attribute{
+					"url": schema.StringAttribute{
+						Description: "The URL of a font file.",
+						Computed:    true,
+					},
+					"weight": schema.StringAttribute{
+						Description: "The weight this file covers. Either a single value such as `400`, or an ascending range such as `100 900` for a variable font.",
+						Computed:    true,
+					},
+				},
+			},
+			Computed: true,
+		},
+		"font_url": schema.StringAttribute{
+			Description:        "The URL of a single font file to be used for this typeface.",
+			DeprecationMessage: "Use `faces` instead, which carries a weight for each font file.",
+			Computed:           true,
+		},
+	}
 }
 
 func (d *themeDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, resp *datasource.SchemaResponse) {
@@ -97,15 +123,17 @@ func (d *themeDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, 
 				Computed: true,
 			},
 			"typography": schema.SingleNestedAttribute{
+				Description: "The fonts used in the pre-built UI. A typeface is shared by light and dark mode.",
 				Attributes: map[string]schema.Attribute{
+					"text": schema.SingleNestedAttribute{
+						Description: "The typeface used for body text and UI labels.",
+						Attributes:  typefaceDataSourceAttributes(),
+						Computed:    true,
+					},
 					"display": schema.SingleNestedAttribute{
-						Attributes: map[string]schema.Attribute{
-							"font_url": schema.StringAttribute{
-								Description: "The URL of a font file to be used for the tenant.",
-								Computed:    true,
-							},
-						},
-						Computed: true,
+						Description: "The typeface used for headings.",
+						Attributes:  typefaceDataSourceAttributes(),
+						Computed:    true,
 					},
 				},
 				Computed: true,
@@ -253,20 +281,6 @@ func (d *themeDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, 
 								Computed: true,
 							},
 							"logo_height": schema.Int64Attribute{
-								Computed: true,
-							},
-						},
-						Computed: true,
-					},
-					"typography": schema.SingleNestedAttribute{
-						Attributes: map[string]schema.Attribute{
-							"display": schema.SingleNestedAttribute{
-								Attributes: map[string]schema.Attribute{
-									"font_url": schema.StringAttribute{
-										Description: "The URL of a font file to be used for the tenant.",
-										Computed:    true,
-									},
-								},
 								Computed: true,
 							},
 						},

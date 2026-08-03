@@ -1,7 +1,7 @@
 package provider
 
 import (
-	"github.com/authsignal/authsignal-management-go/v4"
+	"github.com/authsignal/authsignal-management-go/v5"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
@@ -108,6 +108,7 @@ func (m themeModel) AttributeValues() map[string]attr.Value {
 }
 
 // DARK MODE
+// A typeface is shared by both colour modes, so there is no dark mode typography.
 type darkModeModel struct {
 	LogoUrl        types.String `tfsdk:"logo_url"`
 	WatermarkUrl   types.String `tfsdk:"watermark_url"`
@@ -116,7 +117,6 @@ type darkModeModel struct {
 	Colors         types.Object `tfsdk:"colors"`
 	Container      types.Object `tfsdk:"container"`
 	Borders        types.Object `tfsdk:"borders"`
-	Typography     types.Object `tfsdk:"typography"`
 	PageBackground types.Object `tfsdk:"page_background"`
 }
 
@@ -169,12 +169,6 @@ func (m *darkModeModel) CreateObject(input authsignal.DarkModeResponse) types.Ob
 		isNull = 0
 	}
 
-	var typography typographyModel
-	m.Typography = typography.CreateObject(input.Typography)
-	if !m.Typography.IsNull() {
-		isNull = 0
-	}
-
 	var pageBackground pageBackgroundModel
 	m.PageBackground = pageBackground.CreateObject(input.PageBackground)
 	if !m.PageBackground.IsNull() {
@@ -198,7 +192,6 @@ func (m darkModeModel) AttributeTypes() map[string]attr.Type {
 		"colors":          types.ObjectType{AttrTypes: colorsModel{}.AttributeTypes()},
 		"container":       types.ObjectType{AttrTypes: containerModel{}.AttributeTypes()},
 		"borders":         types.ObjectType{AttrTypes: bordersModel{}.AttributeTypes()},
-		"typography":      types.ObjectType{AttrTypes: typographyModel{}.AttributeTypes()},
 		"page_background": types.ObjectType{AttrTypes: pageBackgroundModel{}.AttributeTypes()},
 	}
 }
@@ -212,7 +205,6 @@ func (m darkModeModel) AttributeValues() map[string]attr.Value {
 	elements["colors"] = m.Colors
 	elements["container"] = m.Container
 	elements["borders"] = m.Borders
-	elements["typography"] = m.Typography
 	elements["page_background"] = m.PageBackground
 
 	return elements
@@ -631,13 +623,65 @@ func (m bordersModel) AttributeValues() map[string]attr.Value {
 	return elements
 }
 
-// DISPLAY
-type displayModel struct {
+// FONT FACE
+type fontFaceModel struct {
+	Url    types.String `tfsdk:"url"`
+	Weight types.String `tfsdk:"weight"`
+}
+
+func (m *fontFaceModel) CreateObject(input authsignal.FontFaceResponse) types.Object {
+	m.Url = types.StringValue(input.Url)
+
+	if len(input.Weight) > 0 {
+		m.Weight = types.StringValue(string(input.Weight))
+	} else {
+		m.Weight = types.StringNull()
+	}
+
+	object, _ := types.ObjectValue(m.AttributeTypes(), m.AttributeValues())
+	return object
+}
+
+func (m fontFaceModel) AttributeTypes() map[string]attr.Type {
+	return map[string]attr.Type{
+		"url":    types.StringType,
+		"weight": types.StringType,
+	}
+}
+
+func (m fontFaceModel) AttributeValues() map[string]attr.Value {
+	elements := map[string]attr.Value{}
+	elements["url"] = m.Url
+	elements["weight"] = m.Weight
+	return elements
+}
+
+func fontFaceObjectType() types.ObjectType {
+	return types.ObjectType{AttrTypes: fontFaceModel{}.AttributeTypes()}
+}
+
+// TYPEFACE
+type typefaceModel struct {
+	Faces   types.List   `tfsdk:"faces"`
 	FontUrl types.String `tfsdk:"font_url"`
 }
 
-func (m *displayModel) CreateObject(input authsignal.DisplayResponse) types.Object {
+func (m *typefaceModel) CreateObject(input authsignal.TypefaceResponse) types.Object {
 	isNull := 1
+
+	if len(input.Faces) > 0 {
+		isNull = 0
+
+		faces := make([]attr.Value, 0, len(input.Faces))
+		for _, face := range input.Faces {
+			var fontFace fontFaceModel
+			faces = append(faces, fontFace.CreateObject(face))
+		}
+
+		m.Faces, _ = types.ListValue(fontFaceObjectType(), faces)
+	} else {
+		m.Faces = types.ListNull(fontFaceObjectType())
+	}
 
 	if len(input.FontUrl) > 0 {
 		isNull = 0
@@ -654,27 +698,36 @@ func (m *displayModel) CreateObject(input authsignal.DisplayResponse) types.Obje
 	return object
 }
 
-func (m displayModel) AttributeTypes() map[string]attr.Type {
+func (m typefaceModel) AttributeTypes() map[string]attr.Type {
 	return map[string]attr.Type{
+		"faces":    types.ListType{ElemType: fontFaceObjectType()},
 		"font_url": types.StringType,
 	}
 }
 
-func (m displayModel) AttributeValues() map[string]attr.Value {
+func (m typefaceModel) AttributeValues() map[string]attr.Value {
 	elements := map[string]attr.Value{}
+	elements["faces"] = m.Faces
 	elements["font_url"] = m.FontUrl
 	return elements
 }
 
 // TYPOGRAPHY
 type typographyModel struct {
+	Text    types.Object `tfsdk:"text"`
 	Display types.Object `tfsdk:"display"`
 }
 
 func (m *typographyModel) CreateObject(input authsignal.TypographyResponse) types.Object {
 	isNull := 1
 
-	var display displayModel
+	var text typefaceModel
+	m.Text = text.CreateObject(input.Text)
+	if !m.Text.IsNull() {
+		isNull = 0
+	}
+
+	var display typefaceModel
 	m.Display = display.CreateObject(input.Display)
 	if !m.Display.IsNull() {
 		isNull = 0
@@ -690,12 +743,14 @@ func (m *typographyModel) CreateObject(input authsignal.TypographyResponse) type
 
 func (m typographyModel) AttributeTypes() map[string]attr.Type {
 	return map[string]attr.Type{
-		"display": types.ObjectType{AttrTypes: displayModel{}.AttributeTypes()},
+		"text":    types.ObjectType{AttrTypes: typefaceModel{}.AttributeTypes()},
+		"display": types.ObjectType{AttrTypes: typefaceModel{}.AttributeTypes()},
 	}
 }
 
 func (m typographyModel) AttributeValues() map[string]attr.Value {
 	elements := map[string]attr.Value{}
+	elements["text"] = m.Text
 	elements["display"] = m.Display
 	return elements
 }

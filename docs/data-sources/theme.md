@@ -32,7 +32,7 @@ data "authsignal_theme" "theme" {
 - `name` (String) The name of the tenant which is visible to users.
 - `page_background` (Attributes) (see [below for nested schema](#nestedatt--page_background))
 - `primary_color` (String) The primary color for the tenant.
-- `typography` (Attributes) (see [below for nested schema](#nestedatt--typography))
+- `typography` (Attributes) The fonts used in the pre-built UI. A typeface is shared by light and dark mode. (see [below for nested schema](#nestedatt--typography))
 - `watermark_url` (String) The URL of an image to be used as a watermark at the bottom of Authsignal's pre-built UI.
 
 <a id="nestedatt--borders"></a>
@@ -102,7 +102,6 @@ Read-Only:
 - `logo_url` (String) The URL of an image to be used as a logo for the tenant.
 - `page_background` (Attributes) (see [below for nested schema](#nestedatt--dark_mode--page_background))
 - `primary_color` (String) The primary color for the tenant.
-- `typography` (Attributes) (see [below for nested schema](#nestedatt--dark_mode--typography))
 - `watermark_url` (String) The URL of an image to be used as a watermark at the bottom of Authsignal's pre-built UI.
 
 <a id="nestedatt--dark_mode--borders"></a>
@@ -169,21 +168,6 @@ Read-Only:
 - `background_image_url` (String) The URL of an image which will be used as the background in the pre-built UI.
 
 
-<a id="nestedatt--dark_mode--typography"></a>
-### Nested Schema for `dark_mode.typography`
-
-Read-Only:
-
-- `display` (Attributes) (see [below for nested schema](#nestedatt--dark_mode--typography--display))
-
-<a id="nestedatt--dark_mode--typography--display"></a>
-### Nested Schema for `dark_mode.typography.display`
-
-Read-Only:
-
-- `font_url` (String) The URL of a font file to be used for the tenant.
-
-
 
 
 <a id="nestedatt--page_background"></a>
@@ -200,11 +184,38 @@ Read-Only:
 
 Read-Only:
 
-- `display` (Attributes) (see [below for nested schema](#nestedatt--typography--display))
+- `display` (Attributes) The typeface used for headings. (see [below for nested schema](#nestedatt--typography--display))
+- `text` (Attributes) The typeface used for body text and UI labels. (see [below for nested schema](#nestedatt--typography--text))
 
 <a id="nestedatt--typography--display"></a>
 ### Nested Schema for `typography.display`
 
 Read-Only:
 
-- `font_url` (String) The URL of a font file to be used for the tenant.
+- `faces` (Attributes List) The font files making up this typeface, one per weight. (see [below for nested schema](#nestedatt--typography--display--faces))
+- `font_url` (String, Deprecated) The URL of a single font file to be used for this typeface.
+
+<a id="nestedatt--typography--display--faces"></a>
+### Nested Schema for `typography.display.faces`
+
+Read-Only:
+
+- `url` (String) The URL of a font file.
+- `weight` (String) The weight this file covers. Either a single value such as `400`, or an ascending range such as `100 900` for a variable font.
+
+
+<a id="nestedatt--typography--text"></a>
+### Nested Schema for `typography.text`
+
+Read-Only:
+
+- `faces` (Attributes List) The font files making up this typeface, one per weight. (see [below for nested schema](#nestedatt--typography--text--faces))
+- `font_url` (String, Deprecated) The URL of a single font file to be used for this typeface.
+
+<a id="nestedatt--typography--text--faces"></a>
+### Nested Schema for `typography.text.faces`
+
+Read-Only:
+
+- `url` (String) The URL of a font file.
+- `weight` (String) The weight this file covers. Either a single value such as `400`, or an ascending range such as `100 900` for a variable font.

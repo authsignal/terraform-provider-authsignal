@@ -169,7 +169,6 @@ Read-Only:
 
 
 
-
 <a id="nestedatt--page_background"></a>
 ### Nested Schema for `page_background`
 
@@ -202,6 +201,7 @@ Read-Only:
 
 - `url` (String) The URL of a font file.
 - `weight` (String) The weight this file covers. Either a single value such as `400`, or an ascending range such as `100 900` for a variable font.
+
 
 
 <a id="nestedatt--typography--text"></a>

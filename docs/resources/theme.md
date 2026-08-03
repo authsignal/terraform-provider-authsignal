@@ -283,7 +283,6 @@ Optional:
 
 
 
-
 <a id="nestedatt--page_background"></a>
 ### Nested Schema for `page_background`
 
@@ -321,6 +320,7 @@ Optional:
 - `weight` (String) The weight this file covers. Either a single value such as `400`, or an ascending range such as `100 900` for a variable font.
 
 
+
 <a id="nestedatt--typography--text"></a>
 ### Nested Schema for `typography.text`
 
@@ -339,6 +339,7 @@ Required:
 Optional:
 
 - `weight` (String) The weight this file covers. Either a single value such as `400`, or an ascending range such as `100 900` for a variable font.
+
 ## Import
 
 Import is supported using the following syntax:

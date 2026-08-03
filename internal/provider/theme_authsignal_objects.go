@@ -3,8 +3,10 @@ package provider
 import (
 	"context"
 
-	"github.com/authsignal/authsignal-management-go/v4"
+	"github.com/authsignal/authsignal-management-go/v5"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 )
 
@@ -103,26 +105,59 @@ func buildAuthsignalColorsCreateObject(colors colorsModel) authsignal.Colors {
 	return authsignalColors
 }
 
-func buildAuthsignalDisplayCreateObject(display displayModel) authsignal.Display {
-	var authsignalDisplay authsignal.Display
+func buildAuthsignalFontFaces(ctx context.Context, faces types.List) ([]authsignal.FontFace, diag.Diagnostics) {
+	var faceModels []fontFaceModel
 
-	if len(display.FontUrl.ValueString()) > 0 {
-		authsignalDisplay.FontUrl = authsignal.SetValue(display.FontUrl.ValueString())
+	diags := faces.ElementsAs(ctx, &faceModels, false)
+	if diags.HasError() {
+		return nil, diags
 	}
 
-	return authsignalDisplay
+	authsignalFaces := make([]authsignal.FontFace, 0, len(faceModels))
+
+	for _, face := range faceModels {
+		authsignalFaces = append(authsignalFaces, authsignal.FontFace{
+			Url:    face.Url.ValueString(),
+			Weight: authsignal.FontWeight(face.Weight.ValueString()),
+		})
+	}
+
+	return authsignalFaces, diags
+}
+
+func buildAuthsignalTypefaceCreateObject(ctx context.Context, resp *resource.CreateResponse, typeface typefaceModel) authsignal.Typeface {
+	var authsignalTypeface authsignal.Typeface
+
+	if !typeface.Faces.IsNull() {
+		faces, diags := buildAuthsignalFontFaces(ctx, typeface.Faces)
+		resp.Diagnostics.Append(diags...)
+		authsignalTypeface.Faces = authsignal.SetValue(faces)
+	}
+
+	if len(typeface.FontUrl.ValueString()) > 0 {
+		authsignalTypeface.FontUrl = authsignal.SetValue(typeface.FontUrl.ValueString())
+	}
+
+	return authsignalTypeface
 }
 
 func buildAuthsignalTypographyCreateObject(ctx context.Context, resp *resource.CreateResponse, typography typographyModel) authsignal.Typography {
 	var authsignalTypography authsignal.Typography
-	var displayValues displayModel
+	var textValues typefaceModel
+	var displayValues typefaceModel
+
+	if !typography.Text.IsNull() {
+		diags := typography.Text.As(ctx, &textValues, basetypes.ObjectAsOptions{})
+		resp.Diagnostics.Append(diags...)
+	}
 
 	if !typography.Display.IsNull() {
 		diags := typography.Display.As(ctx, &displayValues, basetypes.ObjectAsOptions{})
 		resp.Diagnostics.Append(diags...)
 	}
 
-	authsignalTypography.Display = authsignal.SetValue(buildAuthsignalDisplayCreateObject(displayValues))
+	authsignalTypography.Text = authsignal.SetValue(buildAuthsignalTypefaceCreateObject(ctx, resp, textValues))
+	authsignalTypography.Display = authsignal.SetValue(buildAuthsignalTypefaceCreateObject(ctx, resp, displayValues))
 
 	return authsignalTypography
 }
@@ -206,7 +241,6 @@ func buildAuthsignalThemeCreateObject(ctx context.Context, resp *resource.Create
 	var darkModeColorsValues colorsModel
 	var darkModeBordersValues bordersModel
 	var darkModeContainerValues containerModel
-	var darkModeTypographyValues typographyModel
 	var darkModePageBackgroundValues pageBackgroundModel
 
 	if !input.DarkMode.IsNull() {
@@ -230,11 +264,6 @@ func buildAuthsignalThemeCreateObject(ctx context.Context, resp *resource.Create
 
 		if !darkModeValues.PageBackground.IsNull() {
 			diags = darkModeValues.PageBackground.As(ctx, &darkModePageBackgroundValues, basetypes.ObjectAsOptions{})
-			resp.Diagnostics.Append(diags...)
-		}
-
-		if !darkModeValues.Typography.IsNull() {
-			diags = darkModeValues.Typography.As(ctx, &darkModeTypographyValues, basetypes.ObjectAsOptions{})
 			resp.Diagnostics.Append(diags...)
 		}
 	}
@@ -275,7 +304,6 @@ func buildAuthsignalThemeCreateObject(ctx context.Context, resp *resource.Create
 	authsignalDarkMode.Borders = authsignal.SetValue(buildAuthsignalBordersCreateObject(darkModeBordersValues))
 	authsignalDarkMode.Container = authsignal.SetValue(buildAuthsignalContainerCreateObject(darkModeContainerValues))
 	authsignalDarkMode.PageBackground = authsignal.SetValue(buildAuthsignalPageBackgroundCreateObject(darkModePageBackgroundValues))
-	authsignalDarkMode.Typography = authsignal.SetValue(buildAuthsignalTypographyCreateObject(ctx, resp, darkModeTypographyValues))
 
 	if len(darkModeValues.LogoUrl.ValueString()) > 0 {
 		authsignalDarkMode.LogoUrl = authsignal.SetValue(darkModeValues.LogoUrl.ValueString())
@@ -464,28 +492,43 @@ func buildAuthsignalColorsUpdateObject(colors colorsModel) authsignal.Colors {
 	return authsignalColors
 }
 
-func buildAuthsignalDisplayUpdateObject(display displayModel) authsignal.Display {
-	var authsignalDisplay authsignal.Display
+func buildAuthsignalTypefaceUpdateObject(ctx context.Context, resp *resource.UpdateResponse, typeface typefaceModel) authsignal.Typeface {
+	var authsignalTypeface authsignal.Typeface
 
-	if len(display.FontUrl.ValueString()) > 0 {
-		authsignalDisplay.FontUrl = authsignal.SetValue(display.FontUrl.ValueString())
+	if !typeface.Faces.IsNull() {
+		faces, diags := buildAuthsignalFontFaces(ctx, typeface.Faces)
+		resp.Diagnostics.Append(diags...)
+		authsignalTypeface.Faces = authsignal.SetValue(faces)
 	} else {
-		authsignalDisplay.FontUrl = authsignal.SetNull(display.FontUrl.ValueString())
+		authsignalTypeface.Faces = authsignal.SetNull([]authsignal.FontFace{})
 	}
 
-	return authsignalDisplay
+	if len(typeface.FontUrl.ValueString()) > 0 {
+		authsignalTypeface.FontUrl = authsignal.SetValue(typeface.FontUrl.ValueString())
+	} else {
+		authsignalTypeface.FontUrl = authsignal.SetNull(typeface.FontUrl.ValueString())
+	}
+
+	return authsignalTypeface
 }
 
 func buildAuthsignalTypographyUpdateObject(ctx context.Context, resp *resource.UpdateResponse, typography typographyModel) authsignal.Typography {
 	var authsignalTypography authsignal.Typography
-	var displayValues displayModel
+	var textValues typefaceModel
+	var displayValues typefaceModel
+
+	if !typography.Text.IsNull() {
+		diags := typography.Text.As(ctx, &textValues, basetypes.ObjectAsOptions{})
+		resp.Diagnostics.Append(diags...)
+	}
 
 	if !typography.Display.IsNull() {
 		diags := typography.Display.As(ctx, &displayValues, basetypes.ObjectAsOptions{})
 		resp.Diagnostics.Append(diags...)
 	}
 
-	authsignalTypography.Display = authsignal.SetValue(buildAuthsignalDisplayUpdateObject(displayValues))
+	authsignalTypography.Text = authsignal.SetValue(buildAuthsignalTypefaceUpdateObject(ctx, resp, textValues))
+	authsignalTypography.Display = authsignal.SetValue(buildAuthsignalTypefaceUpdateObject(ctx, resp, displayValues))
 
 	return authsignalTypography
 }
@@ -597,7 +640,6 @@ func buildAuthsignalThemeUpdateObject(ctx context.Context, resp *resource.Update
 	var darkModeColorsValues colorsModel
 	var darkModeBordersValues bordersModel
 	var darkModeContainerValues containerModel
-	var darkModeTypographyValues typographyModel
 	var darkModePageBackgroundValues pageBackgroundModel
 
 	if !input.DarkMode.IsNull() {
@@ -621,11 +663,6 @@ func buildAuthsignalThemeUpdateObject(ctx context.Context, resp *resource.Update
 
 		if !darkModeValues.PageBackground.IsNull() {
 			diags = darkModeValues.PageBackground.As(ctx, &darkModePageBackgroundValues, basetypes.ObjectAsOptions{})
-			resp.Diagnostics.Append(diags...)
-		}
-
-		if !darkModeValues.Typography.IsNull() {
-			diags = darkModeValues.Typography.As(ctx, &darkModeTypographyValues, basetypes.ObjectAsOptions{})
 			resp.Diagnostics.Append(diags...)
 		}
 	}
@@ -666,7 +703,6 @@ func buildAuthsignalThemeUpdateObject(ctx context.Context, resp *resource.Update
 	authsignalDarkMode.Borders = authsignal.SetValue(buildAuthsignalBordersUpdateObject(darkModeBordersValues))
 	authsignalDarkMode.Container = authsignal.SetValue(buildAuthsignalContainerUpdateObject(darkModeContainerValues))
 	authsignalDarkMode.PageBackground = authsignal.SetValue(buildAuthsignalPageBackgroundUpdateObject(darkModePageBackgroundValues))
-	authsignalDarkMode.Typography = authsignal.SetValue(buildAuthsignalTypographyUpdateObject(ctx, resp, darkModeTypographyValues))
 
 	if len(darkModeValues.LogoUrl.ValueString()) > 0 {
 		authsignalDarkMode.LogoUrl = authsignal.SetValue(darkModeValues.LogoUrl.ValueString())
@@ -764,19 +800,20 @@ func buildAuthsignalColorsDeleteObject(colors colorsModel) authsignal.Colors {
 	return authsignalColors
 }
 
-func buildAuthsignalDisplayDeleteObject(display displayModel) authsignal.Display {
-	var authsignalDisplay authsignal.Display
+func buildAuthsignalTypefaceDeleteObject() authsignal.Typeface {
+	var authsignalTypeface authsignal.Typeface
 
-	authsignalDisplay.FontUrl = authsignal.SetNull(display.FontUrl.ValueString())
+	authsignalTypeface.Faces = authsignal.SetNull([]authsignal.FontFace{})
+	authsignalTypeface.FontUrl = authsignal.SetNull("")
 
-	return authsignalDisplay
+	return authsignalTypeface
 }
 
 func buildAuthsignalTypographyDeleteObject() authsignal.Typography {
 	var authsignalTypography authsignal.Typography
-	var displayValues displayModel
 
-	authsignalTypography.Display = authsignal.SetValue(buildAuthsignalDisplayDeleteObject(displayValues))
+	authsignalTypography.Text = authsignal.SetValue(buildAuthsignalTypefaceDeleteObject())
+	authsignalTypography.Display = authsignal.SetValue(buildAuthsignalTypefaceDeleteObject())
 
 	return authsignalTypography
 }
@@ -833,7 +870,6 @@ func buildAuthsignalThemeDeleteObject(input themeModel) authsignal.Theme {
 	authsignalDarkMode.Borders = authsignal.SetValue(buildAuthsignalBordersDeleteObject(darkModeBordersValues))
 	authsignalDarkMode.Container = authsignal.SetValue(buildAuthsignalContainerDeleteObject(darkModeContainerValues))
 	authsignalDarkMode.PageBackground = authsignal.SetValue(buildAuthsignalPageBackgroundDeleteObject(darkModePageBackgroundValues))
-	authsignalDarkMode.Typography = authsignal.SetValue(buildAuthsignalTypographyDeleteObject())
 
 	authsignalDarkMode.LogoUrl = authsignal.SetNull(darkModeValues.LogoUrl.ValueString())
 	authsignalDarkMode.WatermarkUrl = authsignal.SetNull(darkModeValues.WatermarkUrl.ValueString())

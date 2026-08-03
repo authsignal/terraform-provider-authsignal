@@ -48,6 +48,19 @@ resource "authsignal_theme" "theme" {
     logo_position     = "inside"
     logo_height       = 2
   }
+  typography = {
+    text = {
+      faces = [
+        { url = "<url to a font file>", weight = "400" },
+        { url = "<url to a font file>", weight = "700" },
+      ]
+    }
+    display = {
+      faces = [
+        { url = "<url to a variable font file>", weight = "100 900" },
+      ]
+    }
+  }
   dark_mode = {
     logo_url      = "<url to an image>"
     favicon_url   = "<url to an image>"

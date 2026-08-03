@@ -3,8 +3,10 @@ package provider
 import (
 	"context"
 	"fmt"
+	"regexp"
 
-	"github.com/authsignal/authsignal-management-go/v4"
+	"github.com/authsignal/authsignal-management-go/v5"
+	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -17,6 +19,41 @@ var (
 	_ resource.ResourceWithConfigure   = &themeResource{}
 	_ resource.ResourceWithImportState = &themeResource{}
 )
+
+// Shape only. The API additionally rejects a range that does not ascend.
+var fontWeightPattern = regexp.MustCompile(`^(?:[1-9][0-9]{0,2}|1000)(?: (?:[1-9][0-9]{0,2}|1000))?$`)
+
+func typefaceResourceAttributes() map[string]schema.Attribute {
+	return map[string]schema.Attribute{
+		"faces": schema.ListNestedAttribute{
+			Description: fmt.Sprintf("The font files making up this typeface, one per weight. At most %d.", authsignal.MaxFontFacesPerTypeface),
+			NestedObject: schema.NestedAttributeObject{
+				Attributes: map[string]schema.Attribute{
+					"url": schema.StringAttribute{
+						Description: "The URL of a font file.",
+						Required:    true,
+					},
+					"weight": schema.StringAttribute{
+						Description: "The weight this file covers. Either a single value such as `400`, or an ascending range such as `100 900` for a variable font.",
+						Optional:    true,
+						Validators: []validator.String{
+							stringvalidator.RegexMatches(fontWeightPattern, "must be a weight from 1 to 1000, such as `400`, or a range such as `100 900`"),
+						},
+					},
+				},
+			},
+			Optional: true,
+			Validators: []validator.List{
+				listvalidator.SizeAtMost(authsignal.MaxFontFacesPerTypeface),
+			},
+		},
+		"font_url": schema.StringAttribute{
+			Description:        "The URL of a single font file to be used for this typeface.",
+			DeprecationMessage: "Use `faces` instead, which carries a weight for each font file.",
+			Optional:           true,
+		},
+	}
+}
 
 func NewThemeResource() resource.Resource {
 	return &themeResource{}
@@ -112,15 +149,17 @@ func (r *themeResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 				Optional: true,
 			},
 			"typography": schema.SingleNestedAttribute{
+				Description: "The fonts used in the pre-built UI. A typeface is shared by light and dark mode.",
 				Attributes: map[string]schema.Attribute{
+					"text": schema.SingleNestedAttribute{
+						Description: "The typeface used for body text and UI labels.",
+						Attributes:  typefaceResourceAttributes(),
+						Optional:    true,
+					},
 					"display": schema.SingleNestedAttribute{
-						Attributes: map[string]schema.Attribute{
-							"font_url": schema.StringAttribute{
-								Description: "The URL of a font file to be used for the tenant.",
-								Optional:    true,
-							},
-						},
-						Optional: true,
+						Description: "The typeface used for headings.",
+						Attributes:  typefaceResourceAttributes(),
+						Optional:    true,
 					},
 				},
 				Optional: true,
@@ -280,20 +319,6 @@ func (r *themeResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 								},
 							},
 							"logo_height": schema.Int64Attribute{
-								Optional: true,
-							},
-						},
-						Optional: true,
-					},
-					"typography": schema.SingleNestedAttribute{
-						Attributes: map[string]schema.Attribute{
-							"display": schema.SingleNestedAttribute{
-								Attributes: map[string]schema.Attribute{
-									"font_url": schema.StringAttribute{
-										Description: "The URL of a font file to be used for the tenant.",
-										Optional:    true,
-									},
-								},
 								Optional: true,
 							},
 						},

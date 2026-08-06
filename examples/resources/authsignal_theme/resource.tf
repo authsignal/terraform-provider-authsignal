@@ -61,6 +61,12 @@ resource "authsignal_theme" "theme" {
       ]
     }
   }
+  links = {
+    underline = true
+  }
+  shadows = {
+    enabled = false
+  }
   dark_mode = {
     logo_url      = "<url to an image>"
     favicon_url   = "<url to an image>"

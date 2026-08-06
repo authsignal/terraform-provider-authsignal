@@ -162,6 +162,26 @@ func buildAuthsignalTypographyCreateObject(ctx context.Context, resp *resource.C
 	return authsignalTypography
 }
 
+func buildAuthsignalLinksCreateObject(links linksModel) authsignal.Links {
+	var authsignalLinks authsignal.Links
+
+	if !links.Underline.IsNull() {
+		authsignalLinks.Underline = authsignal.SetValue(links.Underline.ValueBool())
+	}
+
+	return authsignalLinks
+}
+
+func buildAuthsignalShadowsCreateObject(shadows shadowsModel) authsignal.Shadows {
+	var authsignalShadows authsignal.Shadows
+
+	if !shadows.Enabled.IsNull() {
+		authsignalShadows.Enabled = authsignal.SetValue(shadows.Enabled.ValueBool())
+	}
+
+	return authsignalShadows
+}
+
 func buildAuthsignalContainerCreateObject(container containerModel) authsignal.Container {
 	var authsignalContainer authsignal.Container
 
@@ -272,6 +292,8 @@ func buildAuthsignalThemeCreateObject(ctx context.Context, resp *resource.Create
 	var bordersValues bordersModel
 	var containerValues containerModel
 	var typographyValues typographyModel
+	var linksValues linksModel
+	var shadowsValues shadowsModel
 	var pageBackgroundValues pageBackgroundModel
 
 	if !input.Colors.IsNull() {
@@ -291,6 +313,16 @@ func buildAuthsignalThemeCreateObject(ctx context.Context, resp *resource.Create
 
 	if !input.Typography.IsNull() {
 		diags := input.Typography.As(ctx, &typographyValues, basetypes.ObjectAsOptions{})
+		resp.Diagnostics.Append(diags...)
+	}
+
+	if !input.Links.IsNull() {
+		diags := input.Links.As(ctx, &linksValues, basetypes.ObjectAsOptions{})
+		resp.Diagnostics.Append(diags...)
+	}
+
+	if !input.Shadows.IsNull() {
+		diags := input.Shadows.As(ctx, &shadowsValues, basetypes.ObjectAsOptions{})
 		resp.Diagnostics.Append(diags...)
 	}
 
@@ -328,6 +360,8 @@ func buildAuthsignalThemeCreateObject(ctx context.Context, resp *resource.Create
 	authsignalTheme.Container = authsignal.SetValue(buildAuthsignalContainerCreateObject(containerValues))
 	authsignalTheme.PageBackground = authsignal.SetValue(buildAuthsignalPageBackgroundCreateObject(pageBackgroundValues))
 	authsignalTheme.Typography = authsignal.SetValue(buildAuthsignalTypographyCreateObject(ctx, resp, typographyValues))
+	authsignalTheme.Links = authsignal.SetValue(buildAuthsignalLinksCreateObject(linksValues))
+	authsignalTheme.Shadows = authsignal.SetValue(buildAuthsignalShadowsCreateObject(shadowsValues))
 	authsignalTheme.DarkMode = authsignal.SetValue(authsignalDarkMode)
 
 	if len(input.Name.ValueString()) > 0 {
@@ -533,6 +567,30 @@ func buildAuthsignalTypographyUpdateObject(ctx context.Context, resp *resource.U
 	return authsignalTypography
 }
 
+func buildAuthsignalLinksUpdateObject(links linksModel) authsignal.Links {
+	var authsignalLinks authsignal.Links
+
+	if !links.Underline.IsNull() {
+		authsignalLinks.Underline = authsignal.SetValue(links.Underline.ValueBool())
+	} else {
+		authsignalLinks.Underline = authsignal.SetNull(false)
+	}
+
+	return authsignalLinks
+}
+
+func buildAuthsignalShadowsUpdateObject(shadows shadowsModel) authsignal.Shadows {
+	var authsignalShadows authsignal.Shadows
+
+	if !shadows.Enabled.IsNull() {
+		authsignalShadows.Enabled = authsignal.SetValue(shadows.Enabled.ValueBool())
+	} else {
+		authsignalShadows.Enabled = authsignal.SetNull(false)
+	}
+
+	return authsignalShadows
+}
+
 func buildAuthsignalContainerUpdateObject(container containerModel) authsignal.Container {
 	var authsignalContainer authsignal.Container
 
@@ -671,6 +729,8 @@ func buildAuthsignalThemeUpdateObject(ctx context.Context, resp *resource.Update
 	var bordersValues bordersModel
 	var containerValues containerModel
 	var typographyValues typographyModel
+	var linksValues linksModel
+	var shadowsValues shadowsModel
 	var pageBackgroundValues pageBackgroundModel
 
 	if !input.Colors.IsNull() {
@@ -690,6 +750,16 @@ func buildAuthsignalThemeUpdateObject(ctx context.Context, resp *resource.Update
 
 	if !input.Typography.IsNull() {
 		diags := input.Typography.As(ctx, &typographyValues, basetypes.ObjectAsOptions{})
+		resp.Diagnostics.Append(diags...)
+	}
+
+	if !input.Links.IsNull() {
+		diags := input.Links.As(ctx, &linksValues, basetypes.ObjectAsOptions{})
+		resp.Diagnostics.Append(diags...)
+	}
+
+	if !input.Shadows.IsNull() {
+		diags := input.Shadows.As(ctx, &shadowsValues, basetypes.ObjectAsOptions{})
 		resp.Diagnostics.Append(diags...)
 	}
 
@@ -735,6 +805,8 @@ func buildAuthsignalThemeUpdateObject(ctx context.Context, resp *resource.Update
 	authsignalTheme.Container = authsignal.SetValue(buildAuthsignalContainerUpdateObject(containerValues))
 	authsignalTheme.PageBackground = authsignal.SetValue(buildAuthsignalPageBackgroundUpdateObject(pageBackgroundValues))
 	authsignalTheme.Typography = authsignal.SetValue(buildAuthsignalTypographyUpdateObject(ctx, resp, typographyValues))
+	authsignalTheme.Links = authsignal.SetValue(buildAuthsignalLinksUpdateObject(linksValues))
+	authsignalTheme.Shadows = authsignal.SetValue(buildAuthsignalShadowsUpdateObject(shadowsValues))
 	authsignalTheme.DarkMode = authsignal.SetValue(authsignalDarkMode)
 
 	if len(input.Name.ValueString()) > 0 {
@@ -818,6 +890,22 @@ func buildAuthsignalTypographyDeleteObject() authsignal.Typography {
 	return authsignalTypography
 }
 
+func buildAuthsignalLinksDeleteObject() authsignal.Links {
+	var authsignalLinks authsignal.Links
+
+	authsignalLinks.Underline = authsignal.SetNull(false)
+
+	return authsignalLinks
+}
+
+func buildAuthsignalShadowsDeleteObject() authsignal.Shadows {
+	var authsignalShadows authsignal.Shadows
+
+	authsignalShadows.Enabled = authsignal.SetNull(false)
+
+	return authsignalShadows
+}
+
 func buildAuthsignalContainerDeleteObject(container containerModel) authsignal.Container {
 	var authsignalContainer authsignal.Container
 
@@ -883,6 +971,8 @@ func buildAuthsignalThemeDeleteObject(input themeModel) authsignal.Theme {
 	authsignalTheme.Container = authsignal.SetValue(buildAuthsignalContainerDeleteObject(containerValues))
 	authsignalTheme.PageBackground = authsignal.SetValue(buildAuthsignalPageBackgroundDeleteObject(pageBackgroundValues))
 	authsignalTheme.Typography = authsignal.SetValue(buildAuthsignalTypographyDeleteObject())
+	authsignalTheme.Links = authsignal.SetValue(buildAuthsignalLinksDeleteObject())
+	authsignalTheme.Shadows = authsignal.SetValue(buildAuthsignalShadowsDeleteObject())
 	authsignalTheme.DarkMode = authsignal.SetValue(authsignalDarkMode)
 
 	authsignalTheme.LogoUrl = authsignal.SetNull(input.LogoUrl.ValueString())

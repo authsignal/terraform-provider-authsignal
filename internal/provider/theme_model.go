@@ -18,6 +18,8 @@ type themeModel struct {
 	Container      types.Object `tfsdk:"container"`
 	Borders        types.Object `tfsdk:"borders"`
 	Typography     types.Object `tfsdk:"typography"`
+	Links          types.Object `tfsdk:"links"`
+	Shadows        types.Object `tfsdk:"shadows"`
 	PageBackground types.Object `tfsdk:"page_background"`
 }
 
@@ -64,6 +66,12 @@ func (m *themeModel) CreateObject(input authsignal.ThemeResponse) types.Object {
 	var typography typographyModel
 	m.Typography = typography.CreateObject(input.Typography)
 
+	var links linksModel
+	m.Links = links.CreateObject(input.Links)
+
+	var shadows shadowsModel
+	m.Shadows = shadows.CreateObject(input.Shadows)
+
 	var pageBackground pageBackgroundModel
 	m.PageBackground = pageBackground.CreateObject(input.PageBackground)
 
@@ -86,6 +94,8 @@ func (m themeModel) AttributeTypes() map[string]attr.Type {
 		"container":       types.ObjectType{AttrTypes: containerModel{}.AttributeTypes()},
 		"borders":         types.ObjectType{AttrTypes: bordersModel{}.AttributeTypes()},
 		"typography":      types.ObjectType{AttrTypes: typographyModel{}.AttributeTypes()},
+		"links":           types.ObjectType{AttrTypes: linksModel{}.AttributeTypes()},
+		"shadows":         types.ObjectType{AttrTypes: shadowsModel{}.AttributeTypes()},
 		"page_background": types.ObjectType{AttrTypes: pageBackgroundModel{}.AttributeTypes()},
 	}
 }
@@ -101,6 +111,8 @@ func (m themeModel) AttributeValues() map[string]attr.Value {
 	elements["container"] = m.Container
 	elements["borders"] = m.Borders
 	elements["typography"] = m.Typography
+	elements["links"] = m.Links
+	elements["shadows"] = m.Shadows
 	elements["page_background"] = m.PageBackground
 	elements["dark_mode"] = m.DarkMode
 
@@ -752,6 +764,65 @@ func (m typographyModel) AttributeValues() map[string]attr.Value {
 	elements := map[string]attr.Value{}
 	elements["text"] = m.Text
 	elements["display"] = m.Display
+	return elements
+}
+
+// LINKS
+type linksModel struct {
+	Underline types.Bool `tfsdk:"underline"`
+}
+
+// Unlike the rest of the theme, `false` is a value rather than emptiness. Only nil means unset.
+func (m *linksModel) CreateObject(input authsignal.LinksResponse) types.Object {
+	if input.Underline == nil {
+		m.Underline = types.BoolNull()
+		return types.ObjectNull(m.AttributeTypes())
+	}
+
+	m.Underline = types.BoolValue(*input.Underline)
+
+	object, _ := types.ObjectValue(m.AttributeTypes(), m.AttributeValues())
+	return object
+}
+
+func (m linksModel) AttributeTypes() map[string]attr.Type {
+	return map[string]attr.Type{
+		"underline": types.BoolType,
+	}
+}
+
+func (m linksModel) AttributeValues() map[string]attr.Value {
+	elements := map[string]attr.Value{}
+	elements["underline"] = m.Underline
+	return elements
+}
+
+// SHADOWS
+type shadowsModel struct {
+	Enabled types.Bool `tfsdk:"enabled"`
+}
+
+func (m *shadowsModel) CreateObject(input authsignal.ShadowsResponse) types.Object {
+	if input.Enabled == nil {
+		m.Enabled = types.BoolNull()
+		return types.ObjectNull(m.AttributeTypes())
+	}
+
+	m.Enabled = types.BoolValue(*input.Enabled)
+
+	object, _ := types.ObjectValue(m.AttributeTypes(), m.AttributeValues())
+	return object
+}
+
+func (m shadowsModel) AttributeTypes() map[string]attr.Type {
+	return map[string]attr.Type{
+		"enabled": types.BoolType,
+	}
+}
+
+func (m shadowsModel) AttributeValues() map[string]attr.Value {
+	elements := map[string]attr.Value{}
+	elements["enabled"] = m.Enabled
 	return elements
 }
 

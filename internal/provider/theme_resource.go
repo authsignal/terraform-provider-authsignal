@@ -164,6 +164,26 @@ func (r *themeResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 				},
 				Optional: true,
 			},
+			"links": schema.SingleNestedAttribute{
+				Description: "How links are drawn in the pre-built UI. Shared by light and dark mode.",
+				Attributes: map[string]schema.Attribute{
+					"underline": schema.BoolAttribute{
+						Description: "Whether links are underlined.",
+						Optional:    true,
+					},
+				},
+				Optional: true,
+			},
+			"shadows": schema.SingleNestedAttribute{
+				Description: "How shadows are drawn in the pre-built UI. Shared by light and dark mode.",
+				Attributes: map[string]schema.Attribute{
+					"enabled": schema.BoolAttribute{
+						Description: "Whether elements such as cards and buttons cast a shadow.",
+						Optional:    true,
+					},
+				},
+				Optional: true,
+			},
 			"page_background": schema.SingleNestedAttribute{
 				Attributes: map[string]schema.Attribute{
 					"background_color": schema.StringAttribute{

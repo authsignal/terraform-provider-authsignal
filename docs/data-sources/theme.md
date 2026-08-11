@@ -86,6 +86,7 @@ Read-Only:
 Read-Only:
 
 - `content_alignment` (String)
+- `exit_position` (String) Where the exit control sits: in the header band, or below the content. Shared by light and dark mode.
 - `logo_alignment` (String)
 - `logo_height` (Number)
 - `logo_position` (String)

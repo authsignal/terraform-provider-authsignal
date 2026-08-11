@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/authsignal/authsignal-management-go/v5"
+	"github.com/authsignal/authsignal-management-go/v6"
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
 	"github.com/hashicorp/terraform-plugin-framework/datasource/schema"
 	"github.com/hashicorp/terraform-plugin-log/tflog"
@@ -118,6 +118,10 @@ func (d *themeDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, 
 					},
 					"logo_height": schema.Int64Attribute{
 						Computed: true,
+					},
+					"exit_position": schema.StringAttribute{
+						Description: "Where the exit control sits: in the header band, or below the content. Shared by light and dark mode.",
+						Computed:    true,
 					},
 				},
 				Computed: true,

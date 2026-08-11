@@ -5,12 +5,13 @@ import (
 	"fmt"
 	"regexp"
 
-	"github.com/authsignal/authsignal-management-go/v5"
+	"github.com/authsignal/authsignal-management-go/v6"
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 )
 
@@ -145,8 +146,20 @@ func (r *themeResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 					"logo_height": schema.Int64Attribute{
 						Optional: true,
 					},
+					"exit_position": schema.StringAttribute{
+						Description: "Where the exit control sits: in the header band, or below the content. Shared by light and dark mode. Leaving it out keeps whatever the theme editor set, so clear it there rather than here. Allowed values: `top`, `bottom`.",
+						Optional:    true,
+						Computed:    true,
+						Validators: []validator.String{
+							stringvalidator.OneOf([]string{"top", "bottom"}...),
+						},
+					},
 				},
 				Optional: true,
+				Computed: true,
+				PlanModifiers: []planmodifier.Object{
+					containerKeepsExitPosition{},
+				},
 			},
 			"typography": schema.SingleNestedAttribute{
 				Description: "The fonts used in the pre-built UI. A typeface is shared by light and dark mode.",

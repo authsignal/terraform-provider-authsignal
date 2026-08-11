@@ -1,7 +1,7 @@
 package provider
 
 import (
-	"github.com/authsignal/authsignal-management-go/v5"
+	"github.com/authsignal/authsignal-management-go/v6"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
@@ -169,7 +169,7 @@ func (m *darkModeModel) CreateObject(input authsignal.DarkModeResponse) types.Ob
 		isNull = 0
 	}
 
-	var container containerModel
+	var container modeContainerModel
 	m.Container = container.CreateObject(input.Container)
 	if !m.Container.IsNull() {
 		isNull = 0
@@ -202,7 +202,7 @@ func (m darkModeModel) AttributeTypes() map[string]attr.Type {
 		"favicon_url":     types.StringType,
 		"primary_color":   types.StringType,
 		"colors":          types.ObjectType{AttrTypes: colorsModel{}.AttributeTypes()},
-		"container":       types.ObjectType{AttrTypes: containerModel{}.AttributeTypes()},
+		"container":       types.ObjectType{AttrTypes: modeContainerModel{}.AttributeTypes()},
 		"borders":         types.ObjectType{AttrTypes: bordersModel{}.AttributeTypes()},
 		"page_background": types.ObjectType{AttrTypes: pageBackgroundModel{}.AttributeTypes()},
 	}
@@ -468,7 +468,95 @@ func (m colorsModel) AttributeValues() map[string]attr.Value {
 }
 
 // CONTAINER
+// ExitPosition sits here and not on modeContainerModel. Where the exit control sits is theme-wide,
+// so the API rejects it under dark_mode.
 type containerModel struct {
+	ContentAlignment types.String `tfsdk:"content_alignment"`
+	Padding          types.Int64  `tfsdk:"padding"`
+	LogoAlignment    types.String `tfsdk:"logo_alignment"`
+	LogoPosition     types.String `tfsdk:"logo_position"`
+	LogoHeight       types.Int64  `tfsdk:"logo_height"`
+	ExitPosition     types.String `tfsdk:"exit_position"`
+}
+
+func (m *containerModel) CreateObject(input authsignal.ContainerResponse) types.Object {
+	isNull := 1
+	if len(input.ContentAlignment) > 0 {
+		isNull = 0
+		m.ContentAlignment = types.StringValue(input.ContentAlignment)
+	} else {
+		m.ContentAlignment = types.StringNull()
+	}
+
+	if input.Padding != 0 {
+		isNull = 0
+		m.Padding = types.Int64Value(input.Padding)
+	} else {
+		m.Padding = types.Int64Null()
+	}
+
+	if len(input.LogoAlignment) > 0 {
+		isNull = 0
+		m.LogoAlignment = types.StringValue(input.LogoAlignment)
+	} else {
+		m.LogoAlignment = types.StringNull()
+	}
+
+	if len(input.LogoPosition) > 0 {
+		isNull = 0
+		m.LogoPosition = types.StringValue(input.LogoPosition)
+	} else {
+		m.LogoPosition = types.StringNull()
+	}
+
+	if input.LogoHeight != 0 {
+		isNull = 0
+		m.LogoHeight = types.Int64Value(input.LogoHeight)
+	} else {
+		m.LogoHeight = types.Int64Null()
+	}
+
+	if len(input.ExitPosition) > 0 {
+		isNull = 0
+		m.ExitPosition = types.StringValue(input.ExitPosition)
+	} else {
+		m.ExitPosition = types.StringNull()
+	}
+
+	if isNull == 1 {
+		return types.ObjectNull(m.AttributeTypes())
+	}
+
+	object, _ := types.ObjectValue(m.AttributeTypes(), m.AttributeValues())
+	return object
+}
+
+func (m containerModel) AttributeTypes() map[string]attr.Type {
+	return map[string]attr.Type{
+		"content_alignment": types.StringType,
+		"padding":           types.Int64Type,
+		"logo_alignment":    types.StringType,
+		"logo_position":     types.StringType,
+		"logo_height":       types.Int64Type,
+		"exit_position":     types.StringType,
+	}
+}
+
+func (m containerModel) AttributeValues() map[string]attr.Value {
+	elements := map[string]attr.Value{}
+	elements["content_alignment"] = m.ContentAlignment
+	elements["padding"] = m.Padding
+	elements["logo_alignment"] = m.LogoAlignment
+	elements["logo_position"] = m.LogoPosition
+	elements["logo_height"] = m.LogoHeight
+	elements["exit_position"] = m.ExitPosition
+	return elements
+}
+
+// MODE CONTAINER
+// The shape a dark mode container takes: every design token the theme container has, less the
+// theme-wide exit position.
+type modeContainerModel struct {
 	ContentAlignment types.String `tfsdk:"content_alignment"`
 	Padding          types.Int64  `tfsdk:"padding"`
 	LogoAlignment    types.String `tfsdk:"logo_alignment"`
@@ -476,7 +564,7 @@ type containerModel struct {
 	LogoHeight       types.Int64  `tfsdk:"logo_height"`
 }
 
-func (m *containerModel) CreateObject(input authsignal.ContainerResponse) types.Object {
+func (m *modeContainerModel) CreateObject(input authsignal.ModeContainerResponse) types.Object {
 	isNull := 1
 	if len(input.ContentAlignment) > 0 {
 		isNull = 0
@@ -521,7 +609,7 @@ func (m *containerModel) CreateObject(input authsignal.ContainerResponse) types.
 	return object
 }
 
-func (m containerModel) AttributeTypes() map[string]attr.Type {
+func (m modeContainerModel) AttributeTypes() map[string]attr.Type {
 	return map[string]attr.Type{
 		"content_alignment": types.StringType,
 		"padding":           types.Int64Type,
@@ -531,7 +619,7 @@ func (m containerModel) AttributeTypes() map[string]attr.Type {
 	}
 }
 
-func (m containerModel) AttributeValues() map[string]attr.Value {
+func (m modeContainerModel) AttributeValues() map[string]attr.Value {
 	elements := map[string]attr.Value{}
 	elements["content_alignment"] = m.ContentAlignment
 	elements["padding"] = m.Padding

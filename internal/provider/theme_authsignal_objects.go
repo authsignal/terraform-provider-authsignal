@@ -3,7 +3,7 @@ package provider
 import (
 	"context"
 
-	"github.com/authsignal/authsignal-management-go/v5"
+	"github.com/authsignal/authsignal-management-go/v6"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -205,6 +205,36 @@ func buildAuthsignalContainerCreateObject(container containerModel) authsignal.C
 		authsignalContainer.LogoHeight = authsignal.SetValue(container.LogoHeight.ValueInt64())
 	}
 
+	if len(container.ExitPosition.ValueString()) > 0 {
+		authsignalContainer.ExitPosition = authsignal.SetValue(container.ExitPosition.ValueString())
+	}
+
+	return authsignalContainer
+}
+
+func buildAuthsignalModeContainerCreateObject(container modeContainerModel) authsignal.ModeContainer {
+	var authsignalContainer authsignal.ModeContainer
+
+	if len(container.ContentAlignment.ValueString()) > 0 {
+		authsignalContainer.ContentAlignment = authsignal.SetValue(container.ContentAlignment.ValueString())
+	}
+
+	if container.Padding.ValueInt64() != 0 {
+		authsignalContainer.Padding = authsignal.SetValue(container.Padding.ValueInt64())
+	}
+
+	if len(container.LogoAlignment.ValueString()) > 0 {
+		authsignalContainer.LogoAlignment = authsignal.SetValue(container.LogoAlignment.ValueString())
+	}
+
+	if len(container.LogoPosition.ValueString()) > 0 {
+		authsignalContainer.LogoPosition = authsignal.SetValue(container.LogoPosition.ValueString())
+	}
+
+	if container.LogoHeight.ValueInt64() != 0 {
+		authsignalContainer.LogoHeight = authsignal.SetValue(container.LogoHeight.ValueInt64())
+	}
+
 	return authsignalContainer
 }
 
@@ -260,7 +290,7 @@ func buildAuthsignalThemeCreateObject(ctx context.Context, resp *resource.Create
 	var darkModeValues darkModeModel
 	var darkModeColorsValues colorsModel
 	var darkModeBordersValues bordersModel
-	var darkModeContainerValues containerModel
+	var darkModeContainerValues modeContainerModel
 	var darkModePageBackgroundValues pageBackgroundModel
 
 	if !input.DarkMode.IsNull() {
@@ -334,7 +364,7 @@ func buildAuthsignalThemeCreateObject(ctx context.Context, resp *resource.Create
 	var authsignalDarkMode authsignal.DarkMode
 	authsignalDarkMode.Colors = authsignal.SetValue(buildAuthsignalColorsCreateObject(darkModeColorsValues))
 	authsignalDarkMode.Borders = authsignal.SetValue(buildAuthsignalBordersCreateObject(darkModeBordersValues))
-	authsignalDarkMode.Container = authsignal.SetValue(buildAuthsignalContainerCreateObject(darkModeContainerValues))
+	authsignalDarkMode.Container = authsignal.SetValue(buildAuthsignalModeContainerCreateObject(darkModeContainerValues))
 	authsignalDarkMode.PageBackground = authsignal.SetValue(buildAuthsignalPageBackgroundCreateObject(darkModePageBackgroundValues))
 
 	if len(darkModeValues.LogoUrl.ValueString()) > 0 {
@@ -624,6 +654,48 @@ func buildAuthsignalContainerUpdateObject(container containerModel) authsignal.C
 		authsignalContainer.LogoHeight = authsignal.SetNull(container.LogoHeight.ValueInt64())
 	}
 
+	// Deliberately without a null branch. An exit position Terraform has not been given belongs to
+	// whoever set it in the Portal, and a null would clear it on every apply.
+	if len(container.ExitPosition.ValueString()) > 0 {
+		authsignalContainer.ExitPosition = authsignal.SetValue(container.ExitPosition.ValueString())
+	}
+
+	return authsignalContainer
+}
+
+func buildAuthsignalModeContainerUpdateObject(container modeContainerModel) authsignal.ModeContainer {
+	var authsignalContainer authsignal.ModeContainer
+
+	if len(container.ContentAlignment.ValueString()) > 0 {
+		authsignalContainer.ContentAlignment = authsignal.SetValue(container.ContentAlignment.ValueString())
+	} else {
+		authsignalContainer.ContentAlignment = authsignal.SetNull(container.ContentAlignment.ValueString())
+	}
+
+	if container.Padding.ValueInt64() != 0 {
+		authsignalContainer.Padding = authsignal.SetValue(container.Padding.ValueInt64())
+	} else {
+		authsignalContainer.Padding = authsignal.SetNull(container.Padding.ValueInt64())
+	}
+
+	if len(container.LogoAlignment.ValueString()) > 0 {
+		authsignalContainer.LogoAlignment = authsignal.SetValue(container.LogoAlignment.ValueString())
+	} else {
+		authsignalContainer.LogoAlignment = authsignal.SetNull(container.LogoAlignment.ValueString())
+	}
+
+	if len(container.LogoPosition.ValueString()) > 0 {
+		authsignalContainer.LogoPosition = authsignal.SetValue(container.LogoPosition.ValueString())
+	} else {
+		authsignalContainer.LogoPosition = authsignal.SetNull(container.LogoPosition.ValueString())
+	}
+
+	if container.LogoHeight.ValueInt64() != 0 {
+		authsignalContainer.LogoHeight = authsignal.SetValue(container.LogoHeight.ValueInt64())
+	} else {
+		authsignalContainer.LogoHeight = authsignal.SetNull(container.LogoHeight.ValueInt64())
+	}
+
 	return authsignalContainer
 }
 
@@ -697,7 +769,7 @@ func buildAuthsignalThemeUpdateObject(ctx context.Context, resp *resource.Update
 	var darkModeValues darkModeModel
 	var darkModeColorsValues colorsModel
 	var darkModeBordersValues bordersModel
-	var darkModeContainerValues containerModel
+	var darkModeContainerValues modeContainerModel
 	var darkModePageBackgroundValues pageBackgroundModel
 
 	if !input.DarkMode.IsNull() {
@@ -771,7 +843,7 @@ func buildAuthsignalThemeUpdateObject(ctx context.Context, resp *resource.Update
 	var authsignalDarkMode authsignal.DarkMode
 	authsignalDarkMode.Colors = authsignal.SetValue(buildAuthsignalColorsUpdateObject(darkModeColorsValues))
 	authsignalDarkMode.Borders = authsignal.SetValue(buildAuthsignalBordersUpdateObject(darkModeBordersValues))
-	authsignalDarkMode.Container = authsignal.SetValue(buildAuthsignalContainerUpdateObject(darkModeContainerValues))
+	authsignalDarkMode.Container = authsignal.SetValue(buildAuthsignalModeContainerUpdateObject(darkModeContainerValues))
 	authsignalDarkMode.PageBackground = authsignal.SetValue(buildAuthsignalPageBackgroundUpdateObject(darkModePageBackgroundValues))
 
 	if len(darkModeValues.LogoUrl.ValueString()) > 0 {
@@ -906,8 +978,21 @@ func buildAuthsignalShadowsDeleteObject() authsignal.Shadows {
 	return authsignalShadows
 }
 
+// ExitPosition is left out on purpose: Terraform never owned it, so a delete does not clear it.
 func buildAuthsignalContainerDeleteObject(container containerModel) authsignal.Container {
 	var authsignalContainer authsignal.Container
+
+	authsignalContainer.ContentAlignment = authsignal.SetNull(container.ContentAlignment.ValueString())
+	authsignalContainer.Padding = authsignal.SetNull(container.Padding.ValueInt64())
+	authsignalContainer.LogoAlignment = authsignal.SetNull(container.LogoAlignment.ValueString())
+	authsignalContainer.LogoPosition = authsignal.SetNull(container.LogoPosition.ValueString())
+	authsignalContainer.LogoHeight = authsignal.SetNull(container.LogoHeight.ValueInt64())
+
+	return authsignalContainer
+}
+
+func buildAuthsignalModeContainerDeleteObject(container modeContainerModel) authsignal.ModeContainer {
+	var authsignalContainer authsignal.ModeContainer
 
 	authsignalContainer.ContentAlignment = authsignal.SetNull(container.ContentAlignment.ValueString())
 	authsignalContainer.Padding = authsignal.SetNull(container.Padding.ValueInt64())
@@ -945,7 +1030,7 @@ func buildAuthsignalThemeDeleteObject(input themeModel) authsignal.Theme {
 	var darkModeValues darkModeModel
 	var darkModeColorsValues colorsModel
 	var darkModeBordersValues bordersModel
-	var darkModeContainerValues containerModel
+	var darkModeContainerValues modeContainerModel
 	var darkModePageBackgroundValues pageBackgroundModel
 
 	var colorsValues colorsModel
@@ -956,7 +1041,7 @@ func buildAuthsignalThemeDeleteObject(input themeModel) authsignal.Theme {
 	var authsignalDarkMode authsignal.DarkMode
 	authsignalDarkMode.Colors = authsignal.SetValue(buildAuthsignalColorsDeleteObject(darkModeColorsValues))
 	authsignalDarkMode.Borders = authsignal.SetValue(buildAuthsignalBordersDeleteObject(darkModeBordersValues))
-	authsignalDarkMode.Container = authsignal.SetValue(buildAuthsignalContainerDeleteObject(darkModeContainerValues))
+	authsignalDarkMode.Container = authsignal.SetValue(buildAuthsignalModeContainerDeleteObject(darkModeContainerValues))
 	authsignalDarkMode.PageBackground = authsignal.SetValue(buildAuthsignalPageBackgroundDeleteObject(darkModePageBackgroundValues))
 
 	authsignalDarkMode.LogoUrl = authsignal.SetNull(darkModeValues.LogoUrl.ValueString())

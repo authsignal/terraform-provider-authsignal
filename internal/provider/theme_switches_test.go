@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/authsignal/authsignal-management-go/v5"
+	"github.com/authsignal/authsignal-management-go/v6"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 

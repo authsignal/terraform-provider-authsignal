@@ -47,6 +47,7 @@ resource "authsignal_theme" "theme" {
     logo_alignment    = "center"
     logo_position     = "inside"
     logo_height       = 2
+    exit_position     = "bottom"
   }
   typography = {
     text = {

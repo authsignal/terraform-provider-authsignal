@@ -34,7 +34,7 @@ func (r *preBuiltUiSettingsResource) Metadata(_ context.Context, req resource.Me
 
 func (r *preBuiltUiSettingsResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: "Manages the pre-built UI settings of the tenant the provider is configured against. These settings live on the tenant, which already exists and cannot be created or destroyed through this API, so applying this resource updates the settings it declares and leaves the rest of the tenant alone, and destroying it stops managing those settings without changing them. A setting left out of the configuration is not managed by Terraform.",
+		Description: "Manages a tenant's pre-built UI settings. The tenant itself already exists and cannot be created or deleted through this API, so this resource only ever updates settings. Applying it changes the settings configured here and leaves the rest of the tenant untouched. Destroying it stops Terraform managing those settings rather than resetting them. A setting left out of the configuration stays unmanaged, so it can still be set in the admin portal.",
 		Attributes: map[string]schema.Attribute{
 			"hide_success_screen_on_enrollment": schema.BoolAttribute{
 				Description: "Whether the pre-built UI skips the success screen shown after a user enrolls an authenticator.",

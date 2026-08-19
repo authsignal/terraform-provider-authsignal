@@ -3,12 +3,12 @@
 page_title: "authsignal_pre_built_ui_settings Resource - terraform-provider-authsignal"
 subcategory: ""
 description: |-
-  Manages the pre-built UI settings of the tenant the provider is configured against. These settings live on the tenant, which already exists and cannot be created or destroyed through this API, so applying this resource updates the settings it declares and leaves the rest of the tenant alone, and destroying it stops managing those settings without changing them. A setting left out of the configuration is not managed by Terraform.
+  Manages a tenant's pre-built UI settings. The tenant itself already exists and cannot be created or deleted through this API, so this resource only ever updates settings. Applying it changes the settings configured here and leaves the rest of the tenant untouched. Destroying it stops Terraform managing those settings rather than resetting them. A setting left out of the configuration stays unmanaged, so it can still be set in the admin portal.
 ---
 
 # authsignal_pre_built_ui_settings (Resource)
 
-Manages the pre-built UI settings of the tenant the provider is configured against. These settings live on the tenant, which already exists and cannot be created or destroyed through this API, so applying this resource updates the settings it declares and leaves the rest of the tenant alone, and destroying it stops managing those settings without changing them. A setting left out of the configuration is not managed by Terraform.
+Manages a tenant's pre-built UI settings. The tenant itself already exists and cannot be created or deleted through this API, so this resource only ever updates settings. Applying it changes the settings configured here and leaves the rest of the tenant untouched. Destroying it stops Terraform managing those settings rather than resetting them. A setting left out of the configuration stays unmanaged, so it can still be set in the admin portal.
 
 ## Example Usage
 
@@ -32,6 +32,6 @@ Import is supported using the following syntax:
 The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
 
 ```shell
-# The provider is configured against a single tenant, so there is nothing to key the import on. An empty string is needed for the command to run.
+# A tenant has one set of pre-built UI settings, so there is no ID to import by. The empty string is required for the command to run.
 terraform import authsignal_pre_built_ui_settings.pre_built_ui_settings ""
 ```

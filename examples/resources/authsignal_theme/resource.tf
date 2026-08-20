@@ -61,6 +61,11 @@ resource "authsignal_theme" "theme" {
         { url = "<url to a variable font file>", weight = "100 900" },
       ]
     }
+    button = {
+      faces = [
+        { url = "<url to a font file>", weight = "500" },
+      ]
+    }
   }
   links = {
     underline = true

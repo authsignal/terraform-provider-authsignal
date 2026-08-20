@@ -202,8 +202,27 @@ Read-Only:
 
 Read-Only:
 
+- `button` (Attributes) The typeface used for button labels. (see [below for nested schema](#nestedatt--typography--button))
 - `display` (Attributes) The typeface used for headings. (see [below for nested schema](#nestedatt--typography--display))
 - `text` (Attributes) The typeface used for body text and UI labels. (see [below for nested schema](#nestedatt--typography--text))
+
+<a id="nestedatt--typography--button"></a>
+### Nested Schema for `typography.button`
+
+Read-Only:
+
+- `faces` (Attributes List) The font files making up this typeface, one per weight. (see [below for nested schema](#nestedatt--typography--button--faces))
+- `font_url` (String, Deprecated) The URL of a single font file to be used for this typeface.
+
+<a id="nestedatt--typography--button--faces"></a>
+### Nested Schema for `typography.button.faces`
+
+Read-Only:
+
+- `url` (String) The URL of a font file.
+- `weight` (String) The weight this file covers. Either a single value such as `400`, or an ascending range such as `100 900` for a variable font.
+
+
 
 <a id="nestedatt--typography--display"></a>
 ### Nested Schema for `typography.display`

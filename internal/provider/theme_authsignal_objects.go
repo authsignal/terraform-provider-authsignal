@@ -145,6 +145,7 @@ func buildAuthsignalTypographyCreateObject(ctx context.Context, resp *resource.C
 	var authsignalTypography authsignal.Typography
 	var textValues typefaceModel
 	var displayValues typefaceModel
+	var buttonValues typefaceModel
 
 	if !typography.Text.IsNull() {
 		diags := typography.Text.As(ctx, &textValues, basetypes.ObjectAsOptions{})
@@ -156,8 +157,14 @@ func buildAuthsignalTypographyCreateObject(ctx context.Context, resp *resource.C
 		resp.Diagnostics.Append(diags...)
 	}
 
+	if !typography.Button.IsNull() {
+		diags := typography.Button.As(ctx, &buttonValues, basetypes.ObjectAsOptions{})
+		resp.Diagnostics.Append(diags...)
+	}
+
 	authsignalTypography.Text = authsignal.SetValue(buildAuthsignalTypefaceCreateObject(ctx, resp, textValues))
 	authsignalTypography.Display = authsignal.SetValue(buildAuthsignalTypefaceCreateObject(ctx, resp, displayValues))
+	authsignalTypography.Button = authsignal.SetValue(buildAuthsignalTypefaceCreateObject(ctx, resp, buttonValues))
 
 	return authsignalTypography
 }
@@ -580,6 +587,7 @@ func buildAuthsignalTypographyUpdateObject(ctx context.Context, resp *resource.U
 	var authsignalTypography authsignal.Typography
 	var textValues typefaceModel
 	var displayValues typefaceModel
+	var buttonValues typefaceModel
 
 	if !typography.Text.IsNull() {
 		diags := typography.Text.As(ctx, &textValues, basetypes.ObjectAsOptions{})
@@ -591,8 +599,14 @@ func buildAuthsignalTypographyUpdateObject(ctx context.Context, resp *resource.U
 		resp.Diagnostics.Append(diags...)
 	}
 
+	if !typography.Button.IsNull() {
+		diags := typography.Button.As(ctx, &buttonValues, basetypes.ObjectAsOptions{})
+		resp.Diagnostics.Append(diags...)
+	}
+
 	authsignalTypography.Text = authsignal.SetValue(buildAuthsignalTypefaceUpdateObject(ctx, resp, textValues))
 	authsignalTypography.Display = authsignal.SetValue(buildAuthsignalTypefaceUpdateObject(ctx, resp, displayValues))
+	authsignalTypography.Button = authsignal.SetValue(buildAuthsignalTypefaceUpdateObject(ctx, resp, buttonValues))
 
 	return authsignalTypography
 }
@@ -958,6 +972,7 @@ func buildAuthsignalTypographyDeleteObject() authsignal.Typography {
 
 	authsignalTypography.Text = authsignal.SetValue(buildAuthsignalTypefaceDeleteObject())
 	authsignalTypography.Display = authsignal.SetValue(buildAuthsignalTypefaceDeleteObject())
+	authsignalTypography.Button = authsignal.SetValue(buildAuthsignalTypefaceDeleteObject())
 
 	return authsignalTypography
 }

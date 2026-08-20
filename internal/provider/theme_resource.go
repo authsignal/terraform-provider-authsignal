@@ -174,6 +174,11 @@ func (r *themeResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 						Attributes:  typefaceResourceAttributes(),
 						Optional:    true,
 					},
+					"button": schema.SingleNestedAttribute{
+						Description: "The typeface used for button labels.",
+						Attributes:  typefaceResourceAttributes(),
+						Optional:    true,
+					},
 				},
 				Optional: true,
 			},

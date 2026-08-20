@@ -816,6 +816,7 @@ func (m typefaceModel) AttributeValues() map[string]attr.Value {
 type typographyModel struct {
 	Text    types.Object `tfsdk:"text"`
 	Display types.Object `tfsdk:"display"`
+	Button  types.Object `tfsdk:"button"`
 }
 
 func (m *typographyModel) CreateObject(input authsignal.TypographyResponse) types.Object {
@@ -833,6 +834,12 @@ func (m *typographyModel) CreateObject(input authsignal.TypographyResponse) type
 		isNull = 0
 	}
 
+	var button typefaceModel
+	m.Button = button.CreateObject(input.Button)
+	if !m.Button.IsNull() {
+		isNull = 0
+	}
+
 	if isNull == 1 {
 		return types.ObjectNull(m.AttributeTypes())
 	}
@@ -845,6 +852,7 @@ func (m typographyModel) AttributeTypes() map[string]attr.Type {
 	return map[string]attr.Type{
 		"text":    types.ObjectType{AttrTypes: typefaceModel{}.AttributeTypes()},
 		"display": types.ObjectType{AttrTypes: typefaceModel{}.AttributeTypes()},
+		"button":  types.ObjectType{AttrTypes: typefaceModel{}.AttributeTypes()},
 	}
 }
 
@@ -852,6 +860,7 @@ func (m typographyModel) AttributeValues() map[string]attr.Value {
 	elements := map[string]attr.Value{}
 	elements["text"] = m.Text
 	elements["display"] = m.Display
+	elements["button"] = m.Button
 	return elements
 }
 

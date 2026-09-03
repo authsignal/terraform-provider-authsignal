@@ -1,11 +1,15 @@
 package provider
 
 import (
+	"context"
 	"encoding/json"
 	"testing"
 
 	"github.com/authsignal/authsignal-management-go/v6"
+	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
+	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 )
 
 func TestSwitchesReadFalseAsAValueRatherThanAsAbsence(t *testing.T) {
@@ -86,5 +90,49 @@ func TestSwitchesSendFalseRatherThanClearingIt(t *testing.T) {
 				t.Fatalf("bad json. expected: %v. got : %v", testCase.expectedJson, string(jsonBody))
 			}
 		})
+	}
+}
+
+// The shadow switch takes a value per colour mode. The link underline does not.
+func TestTheShadowSwitchIsTakenPerColourMode(t *testing.T) {
+	response := &resource.SchemaResponse{}
+	NewThemeResource().(*themeResource).Schema(context.Background(), resource.SchemaRequest{}, response)
+
+	darkMode := response.Schema.Attributes["dark_mode"].(schema.SingleNestedAttribute)
+
+	darkModeShadows, found := darkMode.Attributes["shadows"].(schema.SingleNestedAttribute)
+	if !found {
+		t.Fatalf("expected dark mode to take a shadow switch")
+	}
+
+	if _, found := darkModeShadows.Attributes["enabled"]; !found {
+		t.Fatalf("expected the dark mode shadows to take an enabled switch")
+	}
+
+	if _, found := darkMode.Attributes["links"]; found {
+		t.Fatalf("expected dark mode to have no links")
+	}
+}
+
+// A dark mode carrying nothing but a shadow switch is still a dark mode, or the switch reads back as
+// unset and leaves a permanent diff.
+func TestADarkModeShadowSwitchIsReadBackOnItsOwn(t *testing.T) {
+	off := false
+
+	var darkMode darkModeModel
+	object := darkMode.CreateObject(authsignal.DarkModeResponse{Shadows: authsignal.ShadowsResponse{Enabled: &off}})
+
+	if object.IsNull() {
+		t.Fatalf("expected a dark mode object carrying the shadow switch")
+	}
+
+	var shadows shadowsModel
+	diags := darkMode.Shadows.As(context.Background(), &shadows, basetypes.ObjectAsOptions{})
+	if diags.HasError() {
+		t.Fatalf("failed to read the dark mode shadows: %v", diags)
+	}
+
+	if shadows.Enabled.IsNull() || shadows.Enabled.ValueBool() {
+		t.Fatalf("bad dark mode shadows. expected: off. got : %v", shadows.Enabled)
 	}
 }

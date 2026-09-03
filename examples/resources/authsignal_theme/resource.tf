@@ -71,7 +71,7 @@ resource "authsignal_theme" "theme" {
     underline = true
   }
   shadows = {
-    enabled = false
+    enabled = true
   }
   dark_mode = {
     logo_url      = "<url to an image>"
@@ -121,6 +121,9 @@ resource "authsignal_theme" "theme" {
       logo_alignment    = "center"
       logo_position     = "inside"
       logo_height       = 2
+    }
+    shadows = {
+      enabled = false
     }
   }
 }

@@ -120,7 +120,8 @@ func (m themeModel) AttributeValues() map[string]attr.Value {
 }
 
 // DARK MODE
-// A typeface is shared by both colour modes, so there is no dark mode typography.
+// A typeface and the link underline hold across both colour modes, so dark mode carries neither.
+// Elevation is a shadow on a light page and a border on a dark one, so shadows are per mode.
 type darkModeModel struct {
 	LogoUrl        types.String `tfsdk:"logo_url"`
 	WatermarkUrl   types.String `tfsdk:"watermark_url"`
@@ -130,6 +131,7 @@ type darkModeModel struct {
 	Container      types.Object `tfsdk:"container"`
 	Borders        types.Object `tfsdk:"borders"`
 	PageBackground types.Object `tfsdk:"page_background"`
+	Shadows        types.Object `tfsdk:"shadows"`
 }
 
 func (m *darkModeModel) CreateObject(input authsignal.DarkModeResponse) types.Object {
@@ -187,6 +189,12 @@ func (m *darkModeModel) CreateObject(input authsignal.DarkModeResponse) types.Ob
 		isNull = 0
 	}
 
+	var shadows shadowsModel
+	m.Shadows = shadows.CreateObject(input.Shadows)
+	if !m.Shadows.IsNull() {
+		isNull = 0
+	}
+
 	if isNull == 1 {
 		return types.ObjectNull(m.AttributeTypes())
 	}
@@ -205,6 +213,7 @@ func (m darkModeModel) AttributeTypes() map[string]attr.Type {
 		"container":       types.ObjectType{AttrTypes: modeContainerModel{}.AttributeTypes()},
 		"borders":         types.ObjectType{AttrTypes: bordersModel{}.AttributeTypes()},
 		"page_background": types.ObjectType{AttrTypes: pageBackgroundModel{}.AttributeTypes()},
+		"shadows":         types.ObjectType{AttrTypes: shadowsModel{}.AttributeTypes()},
 	}
 }
 
@@ -218,6 +227,7 @@ func (m darkModeModel) AttributeValues() map[string]attr.Value {
 	elements["container"] = m.Container
 	elements["borders"] = m.Borders
 	elements["page_background"] = m.PageBackground
+	elements["shadows"] = m.Shadows
 
 	return elements
 }

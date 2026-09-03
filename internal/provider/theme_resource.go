@@ -193,7 +193,7 @@ func (r *themeResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 				Optional: true,
 			},
 			"shadows": schema.SingleNestedAttribute{
-				Description: "How shadows are drawn in the pre-built UI. Shared by light and dark mode.",
+				Description: "How shadows are drawn in the pre-built UI. Dark mode inherits this unless `dark_mode.shadows` sets its own.",
 				Attributes: map[string]schema.Attribute{
 					"enabled": schema.BoolAttribute{
 						Description: "Whether elements such as cards and buttons cast a shadow.",
@@ -442,6 +442,16 @@ func (r *themeResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 							},
 							"focus": schema.StringAttribute{
 								Optional: true,
+							},
+						},
+						Optional: true,
+					},
+					"shadows": schema.SingleNestedAttribute{
+						Description: "How shadows are drawn in dark mode. Without it, dark mode inherits the theme's `shadows`.",
+						Attributes: map[string]schema.Attribute{
+							"enabled": schema.BoolAttribute{
+								Description: "Whether elements such as cards and buttons cast a shadow.",
+								Optional:    true,
 							},
 						},
 						Optional: true,

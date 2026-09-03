@@ -299,6 +299,7 @@ func buildAuthsignalThemeCreateObject(ctx context.Context, resp *resource.Create
 	var darkModeBordersValues bordersModel
 	var darkModeContainerValues modeContainerModel
 	var darkModePageBackgroundValues pageBackgroundModel
+	var darkModeShadowsValues shadowsModel
 
 	if !input.DarkMode.IsNull() {
 		diags := input.DarkMode.As(ctx, &darkModeValues, basetypes.ObjectAsOptions{})
@@ -321,6 +322,11 @@ func buildAuthsignalThemeCreateObject(ctx context.Context, resp *resource.Create
 
 		if !darkModeValues.PageBackground.IsNull() {
 			diags = darkModeValues.PageBackground.As(ctx, &darkModePageBackgroundValues, basetypes.ObjectAsOptions{})
+			resp.Diagnostics.Append(diags...)
+		}
+
+		if !darkModeValues.Shadows.IsNull() {
+			diags = darkModeValues.Shadows.As(ctx, &darkModeShadowsValues, basetypes.ObjectAsOptions{})
 			resp.Diagnostics.Append(diags...)
 		}
 	}
@@ -373,6 +379,7 @@ func buildAuthsignalThemeCreateObject(ctx context.Context, resp *resource.Create
 	authsignalDarkMode.Borders = authsignal.SetValue(buildAuthsignalBordersCreateObject(darkModeBordersValues))
 	authsignalDarkMode.Container = authsignal.SetValue(buildAuthsignalModeContainerCreateObject(darkModeContainerValues))
 	authsignalDarkMode.PageBackground = authsignal.SetValue(buildAuthsignalPageBackgroundCreateObject(darkModePageBackgroundValues))
+	authsignalDarkMode.Shadows = authsignal.SetValue(buildAuthsignalShadowsCreateObject(darkModeShadowsValues))
 
 	if len(darkModeValues.LogoUrl.ValueString()) > 0 {
 		authsignalDarkMode.LogoUrl = authsignal.SetValue(darkModeValues.LogoUrl.ValueString())
@@ -785,6 +792,7 @@ func buildAuthsignalThemeUpdateObject(ctx context.Context, resp *resource.Update
 	var darkModeBordersValues bordersModel
 	var darkModeContainerValues modeContainerModel
 	var darkModePageBackgroundValues pageBackgroundModel
+	var darkModeShadowsValues shadowsModel
 
 	if !input.DarkMode.IsNull() {
 		diags := input.DarkMode.As(ctx, &darkModeValues, basetypes.ObjectAsOptions{})
@@ -807,6 +815,11 @@ func buildAuthsignalThemeUpdateObject(ctx context.Context, resp *resource.Update
 
 		if !darkModeValues.PageBackground.IsNull() {
 			diags = darkModeValues.PageBackground.As(ctx, &darkModePageBackgroundValues, basetypes.ObjectAsOptions{})
+			resp.Diagnostics.Append(diags...)
+		}
+
+		if !darkModeValues.Shadows.IsNull() {
+			diags = darkModeValues.Shadows.As(ctx, &darkModeShadowsValues, basetypes.ObjectAsOptions{})
 			resp.Diagnostics.Append(diags...)
 		}
 	}
@@ -859,6 +872,7 @@ func buildAuthsignalThemeUpdateObject(ctx context.Context, resp *resource.Update
 	authsignalDarkMode.Borders = authsignal.SetValue(buildAuthsignalBordersUpdateObject(darkModeBordersValues))
 	authsignalDarkMode.Container = authsignal.SetValue(buildAuthsignalModeContainerUpdateObject(darkModeContainerValues))
 	authsignalDarkMode.PageBackground = authsignal.SetValue(buildAuthsignalPageBackgroundUpdateObject(darkModePageBackgroundValues))
+	authsignalDarkMode.Shadows = authsignal.SetValue(buildAuthsignalShadowsUpdateObject(darkModeShadowsValues))
 
 	if len(darkModeValues.LogoUrl.ValueString()) > 0 {
 		authsignalDarkMode.LogoUrl = authsignal.SetValue(darkModeValues.LogoUrl.ValueString())
@@ -1058,6 +1072,7 @@ func buildAuthsignalThemeDeleteObject(input themeModel) authsignal.Theme {
 	authsignalDarkMode.Borders = authsignal.SetValue(buildAuthsignalBordersDeleteObject(darkModeBordersValues))
 	authsignalDarkMode.Container = authsignal.SetValue(buildAuthsignalModeContainerDeleteObject(darkModeContainerValues))
 	authsignalDarkMode.PageBackground = authsignal.SetValue(buildAuthsignalPageBackgroundDeleteObject(darkModePageBackgroundValues))
+	authsignalDarkMode.Shadows = authsignal.SetValue(buildAuthsignalShadowsDeleteObject())
 
 	authsignalDarkMode.LogoUrl = authsignal.SetNull(darkModeValues.LogoUrl.ValueString())
 	authsignalDarkMode.WatermarkUrl = authsignal.SetNull(darkModeValues.WatermarkUrl.ValueString())

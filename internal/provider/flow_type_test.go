@@ -5,7 +5,9 @@ import (
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/path"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
+	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
@@ -55,13 +57,6 @@ func TestFlowValueSemanticEquality(t *testing.T) {
 			equal: true,
 		},
 		{
-			name: "html escaping",
-			other: `[{"nodeId":"r","nodeType":"RULE","parentNodeIds":[],"ruleChildNodeIds":[["a","c"],["b","c"]],"elseChildNodeId":"c",
-			   "rules":[{"ruleId":"a","name":"A","conditions":{"and":[{"==":[{"var":"ip.isAnonymous"},true]}]}},{"ruleId":"b","name":"B"}]},
-			  {"nodeId":"c","nodeType":"COMPLETE","parentNodeIds":["r"],"weight":1}]`,
-			equal: true,
-		},
-		{
 			name: "a condition changed",
 			other: `[{"nodeId":"r","nodeType":"RULE","parentNodeIds":[],"ruleChildNodeIds":[["a","c"],["b","c"]],"elseChildNodeId":"c",
 			   "rules":[{"ruleId":"a","name":"A","conditions":{"and":[{"==":[{"var":"ip.isAnonymous"},false]}]}},{"ruleId":"b","name":"B"}]},
@@ -107,6 +102,17 @@ func TestFlowValueSemanticEquality(t *testing.T) {
 				t.Fatalf("expected equal=%v, got %v", testCase.equal, equal)
 			}
 		})
+	}
+}
+
+// jsonencode and Go's json.Marshal both HTML-escape, but a hand-written file need not.
+func TestFlowValueHtmlEscapingIsNotAChange(t *testing.T) {
+	escaped := `[{"nodeId":"r","nodeType":"RULE","ruleChildNodeIds":[["a","c"]],"elseChildNodeId":"c","rules":[{"ruleId":"a","name":"Tom \u0026 Jerry \u003c3"}]},{"nodeId":"c","nodeType":"COMPLETE"}]`
+	literal := `[{"nodeId":"r","nodeType":"RULE","ruleChildNodeIds":[["a","c"]],"elseChildNodeId":"c","rules":[{"ruleId":"a","name":"Tom & Jerry <3"}]},{"nodeId":"c","nodeType":"COMPLETE"}]`
+
+	equal, diags := NewFlowValue(escaped).StringSemanticEquals(context.Background(), NewFlowValue(literal))
+	if diags.HasError() || !equal {
+		t.Fatalf("expected HTML-escaped and literal characters to compare equal, equal=%v diags=%v", equal, diags)
 	}
 }
 
@@ -224,4 +230,78 @@ func containsDetail(response *validator.StringResponse, detail string) bool {
 	}
 
 	return false
+}
+
+// The RequiresReplaceIf modifier only reaches the provider's function when plan and state differ
+// on an existing resource, so the requests below mimic that with non-null raw plan and state.
+func TestActionTypeReplaceDecision(t *testing.T) {
+	ctx := context.Background()
+	existing := tftypes.NewValue(tftypes.Object{}, map[string]tftypes.Value{})
+
+	testCases := []struct {
+		name            string
+		config          types.String
+		plan            types.String
+		state           types.String
+		requiresReplace bool
+		errors          bool
+	}{
+		{
+			name:   "state from a provider without action_type is not a type change",
+			config: types.StringNull(),
+			plan:   types.StringValue(actionTypeLegacy),
+			state:  types.StringNull(),
+		},
+		{
+			name:   "flow action on the server, action_type not configured, fails the plan",
+			config: types.StringNull(),
+			plan:   types.StringValue(actionTypeLegacy),
+			state:  types.StringValue(actionTypeMultiStep),
+			errors: true,
+		},
+		{
+			name:            "explicit LEGACY over a flow action replaces",
+			config:          types.StringValue(actionTypeLegacy),
+			plan:            types.StringValue(actionTypeLegacy),
+			state:           types.StringValue(actionTypeMultiStep),
+			requiresReplace: true,
+		},
+		{
+			name:            "explicit flow type over a legacy action replaces",
+			config:          types.StringValue(actionTypeMultiStep),
+			plan:            types.StringValue(actionTypeMultiStep),
+			state:           types.StringValue(actionTypeLegacy),
+			requiresReplace: true,
+		},
+		{
+			name:   "unchanged type does nothing",
+			config: types.StringValue(actionTypeMultiStep),
+			plan:   types.StringValue(actionTypeMultiStep),
+			state:  types.StringValue(actionTypeMultiStep),
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			request := planmodifier.StringRequest{
+				Path:        path.Root("action_type"),
+				ConfigValue: testCase.config,
+				PlanValue:   testCase.plan,
+				StateValue:  testCase.state,
+				Plan:        tfsdk.Plan{Raw: existing},
+				State:       tfsdk.State{Raw: existing},
+			}
+			response := &planmodifier.StringResponse{PlanValue: testCase.plan}
+
+			actionTypeRequiresReplace().PlanModifyString(ctx, request, response)
+
+			if response.RequiresReplace != testCase.requiresReplace {
+				t.Fatalf("expected requiresReplace=%v, got %v", testCase.requiresReplace, response.RequiresReplace)
+			}
+
+			if response.Diagnostics.HasError() != testCase.errors {
+				t.Fatalf("expected errors=%v, got %v", testCase.errors, response.Diagnostics)
+			}
+		})
+	}
 }

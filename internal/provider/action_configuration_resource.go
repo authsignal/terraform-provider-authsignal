@@ -47,6 +47,36 @@ type actionConfigurationResourceModel struct {
 	FlowVersion                       types.Int64  `tfsdk:"flow_version"`
 }
 
+// actionTypeRequiresReplace replaces the action when its type changes, with two exceptions. State
+// written by a provider without action_type has it null; that is not a type change and must not
+// replace every legacy action. And a legacy action managed without action_type in the configuration
+// that someone converted to a flow in the portal refreshes to MULTI_STEP_AUTHENTICATION; planning a
+// replace there would revive it as LEGACY and stop the flow, so the plan fails and asks for an
+// explicit decision instead. An explicit action_type = "LEGACY" still replaces.
+func actionTypeRequiresReplace() planmodifier.String {
+	return stringplanmodifier.RequiresReplaceIf(
+		func(_ context.Context, req planmodifier.StringRequest, resp *stringplanmodifier.RequiresReplaceIfFuncResponse) {
+			if req.StateValue.IsNull() || req.StateValue.IsUnknown() {
+				return
+			}
+
+			if req.ConfigValue.IsNull() && isFlowActionType(req.StateValue.ValueString()) {
+				resp.Diagnostics.AddAttributeError(
+					req.Path,
+					"Action type not set for a flow action",
+					"This action is a "+actionTypeMultiStep+" flow on the server but action_type is not set in the configuration, which means "+actionTypeLegacy+". "+
+						"Set action_type = \""+actionTypeMultiStep+"\" and flow to manage the flow, or set action_type = \""+actionTypeLegacy+"\" explicitly to replace the action with a legacy one.",
+				)
+				return
+			}
+
+			resp.RequiresReplace = true
+		},
+		"The action type cannot be changed once the action exists.",
+		"The action type cannot be changed once the action exists.",
+	)
+}
+
 func (r *actionConfigurationResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_action_configuration"
 }
@@ -77,15 +107,7 @@ func (r *actionConfigurationResource) Schema(_ context.Context, _ resource.Schem
 					stringvalidator.OneOf(actionTypeLegacy, actionTypeMultiStep),
 				},
 				PlanModifiers: []planmodifier.String{
-					// State written by a provider without action_type has it null; that is not a
-					// type change and must not replace every legacy action.
-					stringplanmodifier.RequiresReplaceIf(
-						func(_ context.Context, req planmodifier.StringRequest, resp *stringplanmodifier.RequiresReplaceIfFuncResponse) {
-							resp.RequiresReplace = !req.StateValue.IsNull() && !req.StateValue.IsUnknown()
-						},
-						"The action type cannot be changed once the action exists.",
-						"The action type cannot be changed once the action exists.",
-					),
+					actionTypeRequiresReplace(),
 				},
 			},
 			"default_user_action_result": schema.StringAttribute{
@@ -233,7 +255,9 @@ func (r *actionConfigurationResource) Create(ctx context.Context, req resource.C
 		actionConfigurationToCreate.ActionCode = authsignal.SetValue(actionConfigurationActionCode)
 	}
 
-	// Always sent: re-creating an archived flow action as a legacy one must not keep its nodes.
+	// Always sent: creating an action code that was archived revives the record and only the fields
+	// sent override what it kept, so the type must be sent for a revived action to take the
+	// configured type rather than the one it had.
 	actionType := plan.ActionType.ValueString()
 	if len(actionType) == 0 {
 		actionType = actionTypeLegacy

@@ -155,6 +155,7 @@ func TestLiftFlowReportsEachInvariantWithItsPath(t *testing.T) {
 	}{
 		{"not json", `{`, "", "not valid JSON"},
 		{"not an array", `{"nodeId":"x"}`, "", "must be a JSON array"},
+		{"empty array", `[]`, "", "at least one node"},
 		{"node not an object", `["x"]`, "[0]", "must be a JSON object"},
 		{"missing nodeId", `[{"nodeType":"COMPLETE"}]`, "[0].nodeId", "non-empty string"},
 		{"missing nodeType", `[{"nodeId":"c"}]`, "[0].nodeType", "non-empty string"},
@@ -167,6 +168,8 @@ func TestLiftFlowReportsEachInvariantWithItsPath(t *testing.T) {
 		{"bad ruleId characters", wrap(ruleNode(`[{"ruleId":"has space","name":"A"}]`, `[["has space","c"]]`)), "[0].rules[0].ruleId", "1-64 characters"},
 		{"ruleId too long", wrap(ruleNode(`[{"ruleId":"`+strings.Repeat("a", 65)+`","name":"A"}]`, `[["a","c"]]`)), "[0].rules[0].ruleId", "1-64 characters"},
 		{"empty name", wrap(ruleNode(`[{"ruleId":"a","name":""}]`, `[["a","c"]]`)), "[0].rules[0].name", "non-empty string"},
+		{"name with a character the API rejects", wrap(ruleNode(`[{"ruleId":"a","name":"Rule ~ tilde"}]`, `[["a","c"]]`)), "[0].rules[0].name", "1-256 characters"},
+		{"name too long", wrap(ruleNode(`[{"ruleId":"a","name":"`+strings.Repeat("n", 257)+`"}]`, `[["a","c"]]`)), "[0].rules[0].name", "1-256 characters"},
 		{"conditions not an object", wrap(ruleNode(`[{"ruleId":"a","name":"A","conditions":[1]}]`, `[["a","c"]]`)), "[0].rules[0].conditions", "JSON object or absent"},
 		{"unknown rule key", wrap(ruleNode(`[{"ruleId":"a","name":"A","description":"x"}]`, `[["a","c"]]`)), "[0].rules[0].description", "unknown key"},
 		{"arm references undefined rule", wrap(ruleNode(`[{"ruleId":"a","name":"A"}]`, `[["a","c"],["b","c"]]`)), "[0].ruleChildNodeIds[1]", `references rule "b"`},
@@ -194,6 +197,15 @@ func TestLiftFlowReportsEachInvariantWithItsPath(t *testing.T) {
 
 			t.Fatalf("expected an error at %q containing %q, got %v", testCase.path, testCase.message, errs)
 		})
+	}
+}
+
+func TestLiftFlowAcceptsRuleNamesWithTheApisPunctuation(t *testing.T) {
+	flow := `[{"nodeId":"r","nodeType":"RULE","ruleChildNodeIds":[["a","c"]],"elseChildNodeId":"c",
+	  "rules":[{"ruleId":"a","name":"Rule #1: is (\"risky\") & <new>? [$100+ / -50%] {ok}; yes!"}]},{"nodeId":"c","nodeType":"COMPLETE"}]`
+
+	if _, errs := liftFlow(flow); len(errs) > 0 {
+		t.Fatalf("the API accepts this name, so must the validator: %v", errs)
 	}
 }
 

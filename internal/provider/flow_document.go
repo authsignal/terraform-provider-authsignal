@@ -23,7 +23,11 @@ const (
 	flowMaxRules     = 98
 )
 
-var flowRuleIdPattern = regexp.MustCompile(`^[a-zA-Z0-9_-]{1,64}$`)
+var (
+	flowRuleIdPattern = regexp.MustCompile(`^[a-zA-Z0-9_-]{1,64}$`)
+	// The API's pattern for rule names, minus the empty string it would otherwise allow.
+	flowRuleNamePattern = regexp.MustCompile(`^[\w !?@#$%^&*(){}:;"'<>,.+=/\-\[\]]{1,256}$`)
+)
 
 // flowError is one broken invariant, located by the JSON path of the offending value within the
 // flow array (for example `[0].rules[1].ruleId`). An empty path means the document as a whole.
@@ -63,6 +67,10 @@ func liftFlow(flowJson string) (flowDocument, []flowError) {
 	rawNodes, ok := raw.([]any)
 	if !ok {
 		return flowDocument{}, []flowError{{Message: "a flow must be a JSON array of action nodes"}}
+	}
+
+	if len(rawNodes) == 0 {
+		return flowDocument{}, []flowError{{Message: "a flow needs at least one node"}}
 	}
 
 	doc := flowDocument{
@@ -220,6 +228,9 @@ func liftNodeRules(rawRules any, hasRules bool, nodePath string, ruleIdPaths map
 		name, ok := rule["name"].(string)
 		if !ok || name == "" {
 			errs = append(errs, flowError{rulePath + ".name", "must be a non-empty string"})
+			valid = false
+		} else if !flowRuleNamePattern.MatchString(name) {
+			errs = append(errs, flowError{rulePath + ".name", "must be 1-256 characters of letters, digits, spaces and common punctuation"})
 			valid = false
 		}
 

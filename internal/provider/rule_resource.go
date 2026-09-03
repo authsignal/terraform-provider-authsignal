@@ -54,6 +54,9 @@ func (r *ruleResource) Metadata(_ context.Context, req resource.MetadataRequest,
 
 func (d *ruleResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
+		Description: "Manages a rule of a `LEGACY` action configuration. " +
+			"The rules of a `MULTI_STEP_AUTHENTICATION` action belong to its flow: define them inside the `RULE` nodes of the action's `flow` attribute instead. " +
+			"Publishing that flow removes any rule on the action that the flow does not reference, including rules created with this resource.",
 		Attributes: map[string]schema.Attribute{
 			"action_code": schema.StringAttribute{
 				Description: "The name of the action that users perform which you will track. (e.g 'login')",

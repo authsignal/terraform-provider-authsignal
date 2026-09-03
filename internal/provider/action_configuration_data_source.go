@@ -27,6 +27,7 @@ type actionConfigurationDataSource struct {
 
 type actionConfigurationDataSourceModel struct {
 	ActionCode                        types.String `tfsdk:"action_code"`
+	ActionType                        types.String `tfsdk:"action_type"`
 	TenantId                          types.String `tfsdk:"tenant_id"`
 	DefaultUserActionResult           types.String `tfsdk:"default_user_action_result"`
 	LastActionCreatedAt               types.String `tfsdk:"last_action_created_at"`
@@ -34,6 +35,8 @@ type actionConfigurationDataSourceModel struct {
 	VerificationMethods               types.List   `tfsdk:"verification_methods"`
 	PromptToEnrollVerificationMethods types.List   `tfsdk:"prompt_to_enroll_verification_methods"`
 	DefaultVerificationMethod         types.String `tfsdk:"default_verification_method"`
+	Flow                              FlowValue    `tfsdk:"flow"`
+	FlowVersion                       types.Int64  `tfsdk:"flow_version"`
 }
 
 func (d *actionConfigurationDataSource) Metadata(_ context.Context, req datasource.MetadataRequest, resp *datasource.MetadataResponse) {
@@ -46,6 +49,10 @@ func (d *actionConfigurationDataSource) Schema(_ context.Context, _ datasource.S
 			"action_code": schema.StringAttribute{
 				Description: "The name of the action that users perform which you will track. (e.g 'login')",
 				Required:    true,
+			},
+			"action_type": schema.StringAttribute{
+				Description: "How the action decides its outcome: `LEGACY` evaluates the rules managed with `authsignal_rule`; `MULTI_STEP_AUTHENTICATION` runs the flow in `flow`.",
+				Computed:    true,
 			},
 			"default_user_action_result": schema.StringAttribute{
 				Description: "The default action behavior if no rules match. (i.e 'CHALLENGE').",
@@ -75,6 +82,15 @@ func (d *actionConfigurationDataSource) Schema(_ context.Context, _ datasource.S
 			},
 			"default_verification_method": schema.StringAttribute{
 				Description: "Ignore the user's preference and choose which authenticator the Pre-built UI will present by default.",
+				Computed:    true,
+			},
+			"flow": schema.StringAttribute{
+				CustomType:  FlowType{},
+				Description: "The flow of a `MULTI_STEP_AUTHENTICATION` action as JSON: its action nodes, with the rules each `RULE` node references embedded in a `rules` array. Null for `LEGACY` actions.",
+				Computed:    true,
+			},
+			"flow_version": schema.Int64Attribute{
+				Description: "The version of the published flow. Null for `LEGACY` actions and for a flow that has never been published.",
 				Computed:    true,
 			},
 		},
@@ -121,8 +137,17 @@ func (d *actionConfigurationDataSource) Read(ctx context.Context, req datasource
 		return
 	}
 
+	fields, diags := readFlowFields(ctx, d.client, actionConfiguration, NewFlowNull())
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	actionConfigurationState := actionConfigurationDataSourceModel{
 		ActionCode:                        types.StringValue(actionConfiguration.ActionCode),
+		ActionType:                        fields.ActionType,
+		Flow:                              fields.Flow,
+		FlowVersion:                       fields.FlowVersion,
 		TenantId:                          types.StringValue(actionConfiguration.TenantId),
 		DefaultUserActionResult:           types.StringValue(actionConfiguration.DefaultUserActionResult),
 		LastActionCreatedAt:               types.StringValue(actionConfiguration.LastActionCreatedAt),

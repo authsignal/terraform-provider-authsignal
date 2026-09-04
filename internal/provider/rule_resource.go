@@ -54,6 +54,9 @@ func (r *ruleResource) Metadata(_ context.Context, req resource.MetadataRequest,
 
 func (d *ruleResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
+		Description: "Manages a rule of a `CLASSIC` action configuration. " +
+			"The rules of a `FLOW` action belong in the top-level `rules` array of the action's `flow` attribute and are referenced by its `RULE` nodes. " +
+			"Publishing that flow removes any rule on the action that the flow does not reference, including rules created with this resource.",
 		Attributes: map[string]schema.Attribute{
 			"action_code": schema.StringAttribute{
 				Description: "The name of the action that users perform which you will track. (e.g 'login')",

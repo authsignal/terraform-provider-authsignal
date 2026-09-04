@@ -12,15 +12,17 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringdefault"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
 var (
-	_ resource.Resource                = &actionConfigurationResource{}
-	_ resource.ResourceWithConfigure   = &actionConfigurationResource{}
-	_ resource.ResourceWithImportState = &actionConfigurationResource{}
+	_ resource.Resource                   = &actionConfigurationResource{}
+	_ resource.ResourceWithConfigure      = &actionConfigurationResource{}
+	_ resource.ResourceWithImportState    = &actionConfigurationResource{}
+	_ resource.ResourceWithValidateConfig = &actionConfigurationResource{}
 )
 
 func NewActionConfigurationResource() resource.Resource {
@@ -33,6 +35,7 @@ type actionConfigurationResource struct {
 
 type actionConfigurationResourceModel struct {
 	ActionCode                        types.String `tfsdk:"action_code"`
+	ActionType                        types.String `tfsdk:"action_type"`
 	LastActionCreatedAt               types.String `tfsdk:"last_action_created_at"`
 	TenantId                          types.String `tfsdk:"tenant_id"`
 	DefaultUserActionResult           types.String `tfsdk:"default_user_action_result"`
@@ -40,6 +43,38 @@ type actionConfigurationResourceModel struct {
 	VerificationMethods               types.List   `tfsdk:"verification_methods"`
 	PromptToEnrollVerificationMethods types.List   `tfsdk:"prompt_to_enroll_verification_methods"`
 	DefaultVerificationMethod         types.String `tfsdk:"default_verification_method"`
+	Flow                              FlowValue    `tfsdk:"flow"`
+	FlowVersion                       types.Int64  `tfsdk:"flow_version"`
+}
+
+// actionTypeRequiresReplace replaces the action when its type changes, with two exceptions. State
+// written by a provider without action_type has it null; that is not a type change and must not
+// replace every classic action. And a classic action managed without action_type in the
+// configuration that someone converted to a flow in the portal refreshes to FLOW; planning a
+// replace there would revive it as CLASSIC and stop the flow, so the plan fails and asks for an
+// explicit decision instead. An explicit action_type = "CLASSIC" still replaces.
+func actionTypeRequiresReplace() planmodifier.String {
+	return stringplanmodifier.RequiresReplaceIf(
+		func(_ context.Context, req planmodifier.StringRequest, resp *stringplanmodifier.RequiresReplaceIfFuncResponse) {
+			if req.StateValue.IsNull() || req.StateValue.IsUnknown() {
+				return
+			}
+
+			if req.ConfigValue.IsNull() && isFlowActionType(req.StateValue.ValueString()) {
+				resp.Diagnostics.AddAttributeError(
+					req.Path,
+					"Action type not set for a flow action",
+					"This action is a "+actionTypeFlow+" action on the server but action_type is not set in the configuration, which means "+actionTypeClassic+". "+
+						"Set action_type = \""+actionTypeFlow+"\" and flow to manage the flow, or set action_type = \""+actionTypeClassic+"\" explicitly to replace the action with a classic one.",
+				)
+				return
+			}
+
+			resp.RequiresReplace = true
+		},
+		"The action type cannot be changed once the action exists.",
+		"The action type cannot be changed once the action exists.",
+	)
 }
 
 func (r *actionConfigurationResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -48,12 +83,31 @@ func (r *actionConfigurationResource) Metadata(_ context.Context, req resource.M
 
 func (r *actionConfigurationResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
+		Description: "Manages an action configuration. " +
+			"A `CLASSIC` action (the default) evaluates a flat list of rules, managed separately with `authsignal_rule`. " +
+			"A `FLOW` action runs a flow: the `flow` attribute holds one JSON document with an `actionNodes` array " +
+			"and the flat `rules` array those nodes reference. This is exactly the document the admin portal's flow builder exports, " +
+			"so `flow = file(\"flow-sign-in.json\")` reproduces a flow on any tenant. " +
+			"On a flow action the flow owns the rules: publishing it creates and updates the rules in `rules` and removes any rule its nodes do not reference, " +
+			"so do not manage the rules of a flow action with `authsignal_rule`.",
 		Attributes: map[string]schema.Attribute{
 			"action_code": schema.StringAttribute{
 				Description: "The name of the action that users perform which you will track. (e.g 'login')",
 				Required:    true,
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
+				},
+			},
+			"action_type": schema.StringAttribute{
+				Description: "How the action decides its outcome. `CLASSIC` (the default) evaluates the rules managed with `authsignal_rule`; `FLOW` runs the flow given in `flow`. The type cannot be changed once the action exists, so changing it replaces the action. Allowed values: `CLASSIC`, `FLOW`.",
+				Optional:    true,
+				Computed:    true,
+				Default:     stringdefault.StaticString(actionTypeClassic),
+				Validators: []validator.String{
+					stringvalidator.OneOf(actionTypeClassic, actionTypeFlow),
+				},
+				PlanModifiers: []planmodifier.String{
+					actionTypeRequiresReplace(),
 				},
 			},
 			"default_user_action_result": schema.StringAttribute{
@@ -101,7 +155,63 @@ func (r *actionConfigurationResource) Schema(_ context.Context, _ resource.Schem
 					stringvalidator.OneOf(allowedVerificationMethods...),
 				},
 			},
+			"flow": schema.StringAttribute{
+				CustomType: FlowType{},
+				Description: "The flow of a `FLOW` action, as JSON: an object with `actionNodes`, the graph the action runs, and `rules`, the flat list of `{ruleId, name, conditions}` its `RULE` nodes reference by `ruleChildNodeIds`. " +
+					"This is the document the API publishes and the admin portal's flow builder exports, so load it with `file()` or write it with `jsonencode()`. " +
+					"Differences in formatting, key order and rule order are not changes; a change to any node or rule publishes a new flow version. " +
+					"Rules that belong to a flow live in this document; do not also declare them as `authsignal_rule` resources on the same action, or every apply will prune and recreate them and show a permanent diff. " +
+					"`authsignal_rule` stays the way to manage the rules of a `CLASSIC` action. " +
+					"Required when `action_type` is `FLOW` and must not be set otherwise.",
+				Optional: true,
+				Validators: []validator.String{
+					flowValidator{},
+				},
+			},
+			"flow_version": schema.Int64Attribute{
+				Description: "The version of the published flow. Increments every time the flow is published, by Terraform or in the admin portal. Null for `CLASSIC` actions and for a flow action that has never been published.",
+				Computed:    true,
+				PlanModifiers: []planmodifier.Int64{
+					flowVersionFollowsFlow{},
+				},
+			},
 		},
+	}
+}
+
+// ValidateConfig ties flow to the action type: a flow action needs one, a classic action cannot have
+// one. Unknown values are left for apply time.
+func (r *actionConfigurationResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
+	var config actionConfigurationResourceModel
+	resp.Diagnostics.Append(req.Config.Get(ctx, &config)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	if config.ActionType.IsUnknown() || config.Flow.IsUnknown() {
+		return
+	}
+
+	// The default is not applied to the configuration; a null action_type means CLASSIC.
+	actionType := actionTypeClassic
+	if !config.ActionType.IsNull() {
+		actionType = config.ActionType.ValueString()
+	}
+
+	if isFlowActionType(actionType) && config.Flow.IsNull() {
+		resp.Diagnostics.AddAttributeError(
+			path.Root("flow"),
+			"Missing action flow",
+			"A `"+actionTypeFlow+"` action needs a flow. Set `flow` to the flow exported from the admin portal, for example `flow = file(\"${path.module}/flow-sign-in.json\")`.",
+		)
+	}
+
+	if !isFlowActionType(actionType) && !config.Flow.IsNull() {
+		resp.Diagnostics.AddAttributeError(
+			path.Root("flow"),
+			"Unexpected action flow",
+			"`flow` can only be set when `action_type` is `"+actionTypeFlow+"`. A `"+actionTypeClassic+"` action evaluates the rules managed with `authsignal_rule` instead.",
+		)
 	}
 }
 
@@ -147,6 +257,15 @@ func (r *actionConfigurationResource) Create(ctx context.Context, req resource.C
 		actionConfigurationToCreate.ActionCode = authsignal.SetValue(actionConfigurationActionCode)
 	}
 
+	// Always sent: creating an action code that was archived revives the record and only the fields
+	// sent override what it kept, so the type must be sent for a revived action to take the
+	// configured type rather than the one it had.
+	actionType := plan.ActionType.ValueString()
+	if len(actionType) == 0 {
+		actionType = actionTypeClassic
+	}
+	actionConfigurationToCreate.ActionType = authsignal.SetValue(actionType)
+
 	var actionConfigurationDefaultUserActionResult = plan.DefaultUserActionResult.ValueString()
 	if len(actionConfigurationDefaultUserActionResult) > 0 {
 		actionConfigurationToCreate.DefaultUserActionResult = authsignal.SetValue(actionConfigurationDefaultUserActionResult)
@@ -181,6 +300,56 @@ func (r *actionConfigurationResource) Create(ctx context.Context, req resource.C
 	plan.DefaultUserActionResult = types.StringValue(actionConfiguration.DefaultUserActionResult)
 	plan.TenantId = types.StringValue(actionConfiguration.TenantId)
 	plan.LastActionCreatedAt = types.StringValue(actionConfiguration.LastActionCreatedAt)
+
+	if !isFlowActionType(actionType) {
+		plan.ActionType = types.StringValue(actionTypeClassic)
+		plan.Flow = NewFlowNull()
+		plan.FlowVersion = types.Int64Null()
+
+		diags = resp.State.Set(ctx, plan)
+		resp.Diagnostics.Append(diags...)
+		return
+	}
+
+	if !isFlowActionType(actionConfiguration.ActionType) {
+		resp.Diagnostics.AddError(
+			"Action was not created as a flow action",
+			fmt.Sprintf("The API created action configuration %s with action type %q instead of %q. Check that the Management API in this region supports flow-based actions.", plan.ActionCode.ValueString(), actionConfiguration.ActionType, actionTypeFlow),
+		)
+	}
+
+	// The action exists from here on. Save it before publishing so a failed publish leaves a
+	// tainted resource rather than an orphaned action.
+	plan.FlowVersion = types.Int64Null()
+	diags = resp.State.Set(ctx, plan)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	resp.Diagnostics.Append(publishFlow(r.client, plan.ActionCode.ValueString(), plan.Flow, nil)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	publishedActionConfiguration, _, err := r.client.GetActionConfiguration(plan.ActionCode.ValueString())
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error reading action configuration",
+			"Could not read action configuration code "+plan.ActionCode.ValueString()+" after publishing its flow: "+err.Error(),
+		)
+		return
+	}
+
+	fields, diags := readFlowFields(ctx, r.client, publishedActionConfiguration, plan.Flow)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	plan.ActionType = fields.ActionType
+	plan.Flow = fields.Flow
+	plan.FlowVersion = fields.FlowVersion
 
 	diags = resp.State.Set(ctx, plan)
 	resp.Diagnostics.Append(diags...)
@@ -233,11 +402,20 @@ func (r *actionConfigurationResource) Read(ctx context.Context, req resource.Rea
 		return
 	}
 
+	fields, diags := readFlowFields(ctx, r.client, actionConfiguration, state.Flow)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	state.DefaultUserActionResult = types.StringValue(actionConfiguration.DefaultUserActionResult)
 	state.LastActionCreatedAt = types.StringValue(actionConfiguration.LastActionCreatedAt)
 	state.TenantId = types.StringValue(actionConfiguration.TenantId)
 	state.VerificationMethods = verificationMethodsList
 	state.PromptToEnrollVerificationMethods = promptToEnrollVerificationMethodsList
+	state.ActionType = fields.ActionType
+	state.Flow = fields.Flow
+	state.FlowVersion = fields.FlowVersion
 
 	if actionConfiguration.MessagingTemplates != nil {
 		state.MessagingTemplates = types.StringValue(string(messagingTemplatesJson))
@@ -261,6 +439,13 @@ func (r *actionConfigurationResource) Read(ctx context.Context, req resource.Rea
 func (r *actionConfigurationResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
 	var plan actionConfigurationResourceModel
 	diags := req.Plan.Get(ctx, &plan)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	var state actionConfigurationResourceModel
+	diags = req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -334,6 +519,30 @@ func (r *actionConfigurationResource) Update(ctx context.Context, req resource.U
 		return
 	}
 
+	// The flow is published only when it changed in meaning; a formatting-only edit never
+	// publishes and never bumps flow_version. The version Terraform last read guards against
+	// overwriting a flow that was published elsewhere in the meantime.
+	if isFlowActionType(plan.ActionType.ValueString()) {
+		changed, diags := flowChanged(ctx, plan.Flow, state.Flow)
+		resp.Diagnostics.Append(diags...)
+		if resp.Diagnostics.HasError() {
+			return
+		}
+
+		if changed {
+			var expectedFlowVersion *int64
+			if !state.FlowVersion.IsNull() && !state.FlowVersion.IsUnknown() {
+				version := state.FlowVersion.ValueInt64()
+				expectedFlowVersion = &version
+			}
+
+			resp.Diagnostics.Append(publishFlow(r.client, plan.ActionCode.ValueString(), plan.Flow, expectedFlowVersion)...)
+			if resp.Diagnostics.HasError() {
+				return
+			}
+		}
+	}
+
 	updatedActionConfiguration, _, err := r.client.GetActionConfiguration(plan.ActionCode.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(
@@ -343,10 +552,19 @@ func (r *actionConfigurationResource) Update(ctx context.Context, req resource.U
 		return
 	}
 
+	fields, diags := readFlowFields(ctx, r.client, updatedActionConfiguration, plan.Flow)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	plan.ActionCode = types.StringValue(updatedActionConfiguration.ActionCode)
 	plan.DefaultUserActionResult = types.StringValue(updatedActionConfiguration.DefaultUserActionResult)
 	plan.TenantId = types.StringValue(updatedActionConfiguration.TenantId)
 	plan.LastActionCreatedAt = types.StringValue(updatedActionConfiguration.LastActionCreatedAt)
+	plan.ActionType = fields.ActionType
+	plan.Flow = fields.Flow
+	plan.FlowVersion = fields.FlowVersion
 
 	diags = resp.State.Set(ctx, plan)
 	resp.Diagnostics.Append(diags...)

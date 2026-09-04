@@ -27,9 +27,8 @@ const (
 )
 
 var (
-	flowRuleIdPattern = regexp.MustCompile(`^[a-zA-Z0-9_-]{1,64}$`)
-	// The API's pattern for rule names, minus the empty string it would otherwise allow.
-	flowRuleNamePattern = regexp.MustCompile(`^[\w !?@#$%^&*(){}:;"'<>,.+=/\-\[\]]{1,256}$`)
+	flowRuleIdPattern   = regexp.MustCompile(`^[a-zA-Z0-9_-]{1,64}$`)
+	flowRuleNamePattern = regexp.MustCompile(`^[\w !?@#$%^&*(){}:;"'<>,.+=/\-\[\]]{0,256}$`)
 )
 
 // flowError is one broken invariant, located by the JSON path of the offending value within the
@@ -240,11 +239,11 @@ func parseRules(raw any) ([]flowRule, []flowError) {
 		}
 
 		name, ok := rule["name"].(string)
-		if !ok || name == "" {
-			errs = append(errs, flowError{path + ".name", "must be a non-empty string"})
+		if !ok {
+			errs = append(errs, flowError{path + ".name", "must be a string"})
 			valid = false
 		} else if !flowRuleNamePattern.MatchString(name) {
-			errs = append(errs, flowError{path + ".name", "must be 1-256 characters of letters, digits, spaces and common punctuation"})
+			errs = append(errs, flowError{path + ".name", "must be 0-256 characters of letters, digits, spaces and common punctuation"})
 			valid = false
 		}
 
@@ -300,6 +299,8 @@ func checkFlowReferences(nodes []flowNode, rules []flowRule) []flowError {
 	for _, node := range nodes {
 		errs = append(errs, checkNodeTarget(node, "childNodeId", nodeIds)...)
 		errs = append(errs, checkNodeTarget(node, "elseChildNodeId", nodeIds)...)
+		errs = append(errs, checkNodeTargetPairs(node, "verificationMethodChildNodeIds", nodeIds)...)
+		errs = append(errs, checkNodeTargetPairs(node, "buttonChildNodeIds", nodeIds)...)
 
 		arms, armErrs := parseArms(node)
 		errs = append(errs, armErrs...)
@@ -324,6 +325,42 @@ func checkFlowReferences(nodes []flowNode, rules []flowRule) []flowError {
 	for _, rule := range rules {
 		if _, referenced := referencedBy[rule.rule.RuleId]; !referenced {
 			errs = append(errs, flowError{rule.path + ".ruleId", fmt.Sprintf("rule %q is not referenced by any node's ruleChildNodeIds", rule.rule.RuleId)})
+		}
+	}
+
+	return errs
+}
+
+func checkNodeTargetPairs(node flowNode, key string, nodeIds map[string]bool) []flowError {
+	raw, present := node.payload[key]
+	if !present {
+		return nil
+	}
+
+	path := node.path + "." + key
+	pairs, ok := raw.([]any)
+	if !ok {
+		return []flowError{{path, "must be an array of two-string pairs"}}
+	}
+
+	var errs []flowError
+	for i, rawPair := range pairs {
+		pairPath := fmt.Sprintf("%s[%d]", path, i)
+		pair, ok := rawPair.([]any)
+		if !ok || len(pair) != 2 {
+			errs = append(errs, flowError{pairPath, "must be a pair of two non-empty strings"})
+			continue
+		}
+
+		first, firstOk := pair[0].(string)
+		childNodeId, childOk := pair[1].(string)
+		if !firstOk || first == "" || !childOk || childNodeId == "" {
+			errs = append(errs, flowError{pairPath, "must be a pair of two non-empty strings"})
+			continue
+		}
+
+		if !nodeIds[childNodeId] {
+			errs = append(errs, flowError{pairPath + "[1]", fmt.Sprintf("no node has nodeId %q", childNodeId)})
 		}
 	}
 

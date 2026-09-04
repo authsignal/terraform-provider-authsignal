@@ -173,9 +173,9 @@ func TestParseFlowReportsEachInvariantWithItsPath(t *testing.T) {
 		{"rule not an object", document(nodes(complete), `["a"]`), "rules[0]", "must be a {ruleId, name, conditions} object"},
 		{"bad ruleId characters", document(nodes(ruleNode(`[["has space","c"]]`), complete), `[{"ruleId":"has space","name":"A"}]`), "rules[0].ruleId", "1-64 characters"},
 		{"ruleId too long", document(nodes(ruleNode(`[["a","c"]]`), complete), `[{"ruleId":"`+strings.Repeat("a", 65)+`","name":"A"}]`), "rules[0].ruleId", "1-64 characters"},
-		{"empty name", document(nodes(ruleNode(`[["a","c"]]`), complete), `[{"ruleId":"a","name":""}]`), "rules[0].name", "non-empty string"},
-		{"name with a character the API rejects", document(nodes(ruleNode(`[["a","c"]]`), complete), `[{"ruleId":"a","name":"Rule ~ tilde"}]`), "rules[0].name", "1-256 characters"},
-		{"name too long", document(nodes(ruleNode(`[["a","c"]]`), complete), `[{"ruleId":"a","name":"`+strings.Repeat("n", 257)+`"}]`), "rules[0].name", "1-256 characters"},
+		{"name not a string", document(nodes(ruleNode(`[["a","c"]]`), complete), `[{"ruleId":"a","name":1}]`), "rules[0].name", "must be a string"},
+		{"name with a character the API rejects", document(nodes(ruleNode(`[["a","c"]]`), complete), `[{"ruleId":"a","name":"Rule ~ tilde"}]`), "rules[0].name", "0-256 characters"},
+		{"name too long", document(nodes(ruleNode(`[["a","c"]]`), complete), `[{"ruleId":"a","name":"`+strings.Repeat("n", 257)+`"}]`), "rules[0].name", "0-256 characters"},
 		{"conditions not an object", document(nodes(ruleNode(`[["a","c"]]`), complete), `[{"ruleId":"a","name":"A","conditions":[1]}]`), "rules[0].conditions", "JSON object or absent"},
 		{"unknown rule key", document(nodes(ruleNode(`[["a","c"]]`), complete), `[{"ruleId":"a","name":"A","description":"x"}]`), "rules[0].description", "unknown key"},
 		{"ruleId defined twice", document(nodes(ruleNode(`[["a","c"]]`), complete), `[{"ruleId":"a","name":"A"},{"ruleId":"a","name":"A2"}]`), "rules[1].ruleId", "already defined at rules[0]"},
@@ -194,6 +194,10 @@ func TestParseFlowReportsEachInvariantWithItsPath(t *testing.T) {
 		{"childNodeId names no node", document(`[{"nodeId":"v","nodeType":"VERIFICATION","childNodeId":"gone"},`+complete+`]`, `[]`), "actionNodes[0].childNodeId", `no node has nodeId "gone"`},
 		{"elseChildNodeId names no node", document(nodes(`{"nodeId":"r","nodeType":"RULE","ruleChildNodeIds":[["a","c"]],"elseChildNodeId":"gone"}`, complete), `[{"ruleId":"a","name":"A"}]`), "actionNodes[0].elseChildNodeId", `no node has nodeId "gone"`},
 		{"arm target names no node", document(nodes(ruleNode(`[["a","gone"]]`), complete), `[{"ruleId":"a","name":"A"}]`), "actionNodes[0].ruleChildNodeIds[0][1]", `no node has nodeId "gone"`},
+		{"verification method target is not a pair", document(nodes(`{"nodeId":"v","nodeType":"VERIFICATION_METHOD_BRANCH","verificationMethodChildNodeIds":[["PASSKEY"]]}`, complete), `[]`), "actionNodes[0].verificationMethodChildNodeIds[0]", "pair of two non-empty strings"},
+		{"verification method target names no node", document(nodes(`{"nodeId":"v","nodeType":"VERIFICATION_METHOD_BRANCH","verificationMethodChildNodeIds":[["PASSKEY","gone"]]}`, complete), `[]`), "actionNodes[0].verificationMethodChildNodeIds[0][1]", `no node has nodeId "gone"`},
+		{"button target is not a pair", document(nodes(`{"nodeId":"s","nodeType":"CUSTOM_SCREEN","buttonChildNodeIds":[["continue"]]}`, complete), `[]`), "actionNodes[0].buttonChildNodeIds[0]", "pair of two non-empty strings"},
+		{"button target names no node", document(nodes(`{"nodeId":"s","nodeType":"CUSTOM_SCREEN","buttonChildNodeIds":[["continue","gone"]]}`, complete), `[]`), "actionNodes[0].buttonChildNodeIds[0][1]", `no node has nodeId "gone"`},
 	}
 
 	for _, testCase := range testCases {
@@ -222,6 +226,15 @@ func TestParseFlowAcceptsRuleNamesWithTheApisPunctuation(t *testing.T) {
 
 	if _, errs := parseFlow(flow); len(errs) > 0 {
 		t.Fatalf("the API accepts this name, so must the validator: %v", errs)
+	}
+}
+
+func TestParseFlowAcceptsAnEmptyRuleNameLikeTheApi(t *testing.T) {
+	flow := `{"actionNodes":[{"nodeId":"r","nodeType":"RULE","ruleChildNodeIds":[["a","c"]],"elseChildNodeId":"c"},{"nodeId":"c","nodeType":"COMPLETE"}],
+	  "rules":[{"ruleId":"a","name":""}]}`
+
+	if _, errs := parseFlow(flow); len(errs) > 0 {
+		t.Fatalf("the API accepts an empty rule name, so must the validator: %v", errs)
 	}
 }
 

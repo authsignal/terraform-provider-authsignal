@@ -17,7 +17,7 @@ resource "authsignal_action_configuration" "terraform-provider-test" {
 # same document the admin portal's flow builder exports and the API publishes.
 resource "authsignal_action_configuration" "sign_in" {
   action_code                = "sign-in"
-  action_type                = "MULTI_STEP_AUTHENTICATION"
+  action_type                = "FLOW"
   default_user_action_result = "CHALLENGE"
   flow                       = file("${path.module}/flow-sign-in.json")
 }
@@ -27,7 +27,7 @@ resource "authsignal_action_configuration" "sign_in" {
 #   - a literal `${` has to be escaped as `$${`, or Terraform reads it as an interpolation
 resource "authsignal_action_configuration" "high-risk-payment" {
   action_code                = "high-risk-payment"
-  action_type                = "MULTI_STEP_AUTHENTICATION"
+  action_type                = "FLOW"
   default_user_action_result = "CHALLENGE"
   flow = jsonencode({
     actionNodes = [

@@ -12,7 +12,7 @@ import (
 )
 
 func isFlowActionType(actionType string) bool {
-	return actionType == actionTypeMultiStep
+	return actionType == actionTypeFlow
 }
 
 // flowFields are the attributes an action configuration gains from its flow. The resource and the
@@ -23,18 +23,18 @@ type flowFields struct {
 	FlowVersion types.Int64
 }
 
-// readFlowFields maps a read action configuration to its flow attributes. A legacy action (any type
-// other than MULTI_STEP_AUTHENTICATION, including the empty string an older API returns) has no
-// flow and no rules are listed for it. A flow action's document is composed from its action nodes
-// and its rules; when the result means the same as the prior value, the prior string is kept so a
-// pretty-printed file never drifts. A rule the server holds but the configuration has dropped comes
+// readFlowFields maps a read action configuration to its flow attributes. A classic action (any
+// type other than FLOW, including the empty string an older API returns) has no flow and no rules
+// are listed for it. A flow action's document is composed from its action nodes and its rules; when
+// the result means the same as the prior value, the prior string is kept so a pretty-printed file
+// never drifts. A rule the server holds but the configuration has dropped comes
 // back in `rules` and shows as an ordinary difference, pruned by the next publish.
 func readFlowFields(ctx context.Context, client *authsignal.Client, actionConfiguration *authsignal.ActionConfigurationResponse, prior FlowValue) (flowFields, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
 	if !isFlowActionType(actionConfiguration.ActionType) {
 		return flowFields{
-			ActionType:  types.StringValue(actionTypeLegacy),
+			ActionType:  types.StringValue(actionTypeClassic),
 			Flow:        NewFlowNull(),
 			FlowVersion: types.Int64Null(),
 		}, diags
@@ -83,7 +83,7 @@ func readFlowFields(ctx context.Context, client *authsignal.Client, actionConfig
 	}
 
 	return flowFields{
-		ActionType:  types.StringValue(actionTypeMultiStep),
+		ActionType:  types.StringValue(actionTypeFlow),
 		Flow:        flow,
 		FlowVersion: flowVersion,
 	}, diags

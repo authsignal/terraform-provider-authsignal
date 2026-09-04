@@ -51,7 +51,7 @@ func (d *actionConfigurationDataSource) Schema(_ context.Context, _ datasource.S
 				Required:    true,
 			},
 			"action_type": schema.StringAttribute{
-				Description: "How the action decides its outcome: `LEGACY` evaluates the rules managed with `authsignal_rule`; `MULTI_STEP_AUTHENTICATION` runs the flow in `flow`.",
+				Description: "How the action decides its outcome: `CLASSIC` evaluates the rules managed with `authsignal_rule`; `FLOW` runs the flow in `flow`.",
 				Computed:    true,
 			},
 			"default_user_action_result": schema.StringAttribute{
@@ -86,11 +86,11 @@ func (d *actionConfigurationDataSource) Schema(_ context.Context, _ datasource.S
 			},
 			"flow": schema.StringAttribute{
 				CustomType:  FlowType{},
-				Description: "The flow of a `MULTI_STEP_AUTHENTICATION` action as JSON: an object with `actionNodes`, the graph the action runs, and `rules`, the flat list its `RULE` nodes reference. Null for `LEGACY` actions.",
+				Description: "The flow of a `FLOW` action as JSON: an object with `actionNodes`, the graph the action runs, and `rules`, the flat list its `RULE` nodes reference. Null for `CLASSIC` actions.",
 				Computed:    true,
 			},
 			"flow_version": schema.Int64Attribute{
-				Description: "The version of the published flow. Null for `LEGACY` actions and for a flow that has never been published.",
+				Description: "The version of the published flow. Null for `CLASSIC` actions and for a flow that has never been published.",
 				Computed:    true,
 			},
 		},

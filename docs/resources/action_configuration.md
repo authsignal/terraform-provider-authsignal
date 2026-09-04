@@ -3,12 +3,12 @@
 page_title: "authsignal_action_configuration Resource - terraform-provider-authsignal"
 subcategory: ""
 description: |-
-  Manages an action configuration. A LEGACY action (the default) evaluates a flat list of rules, managed separately with authsignal_rule. A MULTI_STEP_AUTHENTICATION action runs a flow: the flow attribute holds one JSON document with an actionNodes array and the flat rules array those nodes reference. This is exactly the document the admin portal's flow builder exports, so flow = file("flow-sign-in.json") reproduces a flow on any tenant. On a flow action the flow owns the rules: publishing it creates and updates the rules in rules and removes any rule its nodes do not reference, so do not manage the rules of a flow action with authsignal_rule.
+  Manages an action configuration. A CLASSIC action (the default) evaluates a flat list of rules, managed separately with authsignal_rule. A FLOW action runs a flow: the flow attribute holds one JSON document with an actionNodes array and the flat rules array those nodes reference. This is exactly the document the admin portal's flow builder exports, so flow = file("flow-sign-in.json") reproduces a flow on any tenant. On a flow action the flow owns the rules: publishing it creates and updates the rules in rules and removes any rule its nodes do not reference, so do not manage the rules of a flow action with authsignal_rule.
 ---
 
 # authsignal_action_configuration (Resource)
 
-Manages an action configuration. A `LEGACY` action (the default) evaluates a flat list of rules, managed separately with `authsignal_rule`. A `MULTI_STEP_AUTHENTICATION` action runs a flow: the `flow` attribute holds one JSON document with an `actionNodes` array and the flat `rules` array those nodes reference. This is exactly the document the admin portal's flow builder exports, so `flow = file("flow-sign-in.json")` reproduces a flow on any tenant. On a flow action the flow owns the rules: publishing it creates and updates the rules in `rules` and removes any rule its nodes do not reference, so do not manage the rules of a flow action with `authsignal_rule`.
+Manages an action configuration. A `CLASSIC` action (the default) evaluates a flat list of rules, managed separately with `authsignal_rule`. A `FLOW` action runs a flow: the `flow` attribute holds one JSON document with an `actionNodes` array and the flat `rules` array those nodes reference. This is exactly the document the admin portal's flow builder exports, so `flow = file("flow-sign-in.json")` reproduces a flow on any tenant. On a flow action the flow owns the rules: publishing it creates and updates the rules in `rules` and removes any rule its nodes do not reference, so do not manage the rules of a flow action with `authsignal_rule`.
 
 ## Example Usage
 
@@ -32,7 +32,7 @@ resource "authsignal_action_configuration" "terraform-provider-test" {
 # same document the admin portal's flow builder exports and the API publishes.
 resource "authsignal_action_configuration" "sign_in" {
   action_code                = "sign-in"
-  action_type                = "MULTI_STEP_AUTHENTICATION"
+  action_type                = "FLOW"
   default_user_action_result = "CHALLENGE"
   flow                       = file("${path.module}/flow-sign-in.json")
 }
@@ -42,7 +42,7 @@ resource "authsignal_action_configuration" "sign_in" {
 #   - a literal `${` has to be escaped as `$${`, or Terraform reads it as an interpolation
 resource "authsignal_action_configuration" "high-risk-payment" {
   action_code                = "high-risk-payment"
-  action_type                = "MULTI_STEP_AUTHENTICATION"
+  action_type                = "FLOW"
   default_user_action_result = "CHALLENGE"
   flow = jsonencode({
     actionNodes = [
@@ -93,16 +93,16 @@ resource "authsignal_action_configuration" "high-risk-payment" {
 
 ### Optional
 
-- `action_type` (String) How the action decides its outcome. `LEGACY` (the default) evaluates the rules managed with `authsignal_rule`; `MULTI_STEP_AUTHENTICATION` runs the flow given in `flow`. The type cannot be changed once the action exists, so changing it replaces the action. Allowed values: `LEGACY`, `MULTI_STEP_AUTHENTICATION`.
+- `action_type` (String) How the action decides its outcome. `CLASSIC` (the default) evaluates the rules managed with `authsignal_rule`; `FLOW` runs the flow given in `flow`. The type cannot be changed once the action exists, so changing it replaces the action. Allowed values: `CLASSIC`, `FLOW`.
 - `default_verification_method` (String) Ignore the user's preference and choose which authenticator the Pre-built UI will present by default. Allowed values: `SMS`, `AUTHENTICATOR_APP`, `EMAIL_MAGIC_LINK`, `EMAIL_OTP`, `DEVICE`, `PUSH`, `QR_CODE`, `IN_APP`, `SECURITY_KEY`, `PASSKEY`, `VERIFF`, `IPROOV`, `PALM_BIOMETRICS_RR`, `IDVERSE`, `ONFIDO`, `APPLE_ID_TOKEN`, `GOOGLE_ID_TOKEN`, `WHATSAPP`, `DIGITAL_CREDENTIAL`, `OIDC_PROVIDER`.
-- `flow` (String) The flow of a `MULTI_STEP_AUTHENTICATION` action, as JSON: an object with `actionNodes`, the graph the action runs, and `rules`, the flat list of `{ruleId, name, conditions}` its `RULE` nodes reference by `ruleChildNodeIds`. This is the document the API publishes and the admin portal's flow builder exports, so load it with `file()` or write it with `jsonencode()`. Differences in formatting, key order and rule order are not changes; a change to any node or rule publishes a new flow version. Rules that belong to a flow live in this document; do not also declare them as `authsignal_rule` resources on the same action, or every apply will prune and recreate them and show a permanent diff. `authsignal_rule` stays the way to manage the rules of a `LEGACY` action. Required when `action_type` is `MULTI_STEP_AUTHENTICATION` and must not be set otherwise.
+- `flow` (String) The flow of a `FLOW` action, as JSON: an object with `actionNodes`, the graph the action runs, and `rules`, the flat list of `{ruleId, name, conditions}` its `RULE` nodes reference by `ruleChildNodeIds`. This is the document the API publishes and the admin portal's flow builder exports, so load it with `file()` or write it with `jsonencode()`. Differences in formatting, key order and rule order are not changes; a change to any node or rule publishes a new flow version. Rules that belong to a flow live in this document; do not also declare them as `authsignal_rule` resources on the same action, or every apply will prune and recreate them and show a permanent diff. `authsignal_rule` stays the way to manage the rules of a `CLASSIC` action. Required when `action_type` is `FLOW` and must not be set otherwise.
 - `messaging_templates` (String) Optional messaging templates to be shown in Authsignal's pre-built UI.
 - `prompt_to_enroll_verification_methods` (List of String) If this is set then users will be prompted to add a passkey after a challenge is completed. Allowed values: `[PASSKEY]`.
 - `verification_methods` (List of String) A list of permitted authenticators that can be used if the result of the action is 'CHALLENGE'. Allowed values: `SMS`, `AUTHENTICATOR_APP`, `EMAIL_MAGIC_LINK`, `EMAIL_OTP`, `DEVICE`, `PUSH`, `QR_CODE`, `IN_APP`, `SECURITY_KEY`, `PASSKEY`, `VERIFF`, `IPROOV`, `PALM_BIOMETRICS_RR`, `IDVERSE`, `ONFIDO`, `APPLE_ID_TOKEN`, `GOOGLE_ID_TOKEN`, `WHATSAPP`, `DIGITAL_CREDENTIAL`, `OIDC_PROVIDER`.
 
 ### Read-Only
 
-- `flow_version` (Number) The version of the published flow. Increments every time the flow is published, by Terraform or in the admin portal. Null for `LEGACY` actions and for a flow action that has never been published.
+- `flow_version` (Number) The version of the published flow. Increments every time the flow is published, by Terraform or in the admin portal. Null for `CLASSIC` actions and for a flow action that has never been published.
 - `last_action_created_at` (String) The date of when an action was last tracked for any user.
 - `tenant_id` (String) The ID of your tenant. This can be found in the admin portal.
 

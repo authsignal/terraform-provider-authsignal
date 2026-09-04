@@ -21,8 +21,8 @@ import (
 // is not in the document: the provider adds it from the version it last read.
 
 const (
-	actionTypeLegacy    = "LEGACY"
-	actionTypeMultiStep = "MULTI_STEP_AUTHENTICATION"
+	actionTypeClassic = "CLASSIC"
+	actionTypeFlow    = "FLOW"
 
 	flowNodeTypeRule = "RULE"
 	flowMaxRules     = 98

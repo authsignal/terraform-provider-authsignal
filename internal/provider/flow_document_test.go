@@ -161,7 +161,7 @@ func TestParseFlowReportsEachInvariantWithItsPath(t *testing.T) {
 		{"an array, as the old shape was", `[{"nodeId":"c","nodeType":"COMPLETE"}]`, "", "must be a JSON object"},
 		{"actionNodes missing", `{"rules":[]}`, "actionNodes", "is required"},
 		{"rules missing", `{"actionNodes":[` + complete + `]}`, "rules", "is required"},
-		{"unknown top-level key", document(nodes(complete), `[]`)[:len(document(nodes(complete), `[]`))-1] + `,"actionType":"MULTI_STEP_AUTHENTICATION"}`, "actionType", "unknown key"},
+		{"unknown top-level key", document(nodes(complete), `[]`)[:len(document(nodes(complete), `[]`))-1] + `,"actionType":"FLOW"}`, "actionType", "unknown key"},
 		{"expectedFlowVersion is not part of the document", `{"actionNodes":[` + complete + `],"rules":[],"expectedFlowVersion":3}`, "expectedFlowVersion", "not part of a flow"},
 		{"actionNodes not an array", `{"actionNodes":{},"rules":[]}`, "actionNodes", "must be an array"},
 		{"actionNodes null", `{"actionNodes":null,"rules":[]}`, "actionNodes", "must be an array"},

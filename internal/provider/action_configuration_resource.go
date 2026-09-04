@@ -49,10 +49,10 @@ type actionConfigurationResourceModel struct {
 
 // actionTypeRequiresReplace replaces the action when its type changes, with two exceptions. State
 // written by a provider without action_type has it null; that is not a type change and must not
-// replace every legacy action. And a legacy action managed without action_type in the configuration
-// that someone converted to a flow in the portal refreshes to MULTI_STEP_AUTHENTICATION; planning a
-// replace there would revive it as LEGACY and stop the flow, so the plan fails and asks for an
-// explicit decision instead. An explicit action_type = "LEGACY" still replaces.
+// replace every classic action. And a classic action managed without action_type in the
+// configuration that someone converted to a flow in the portal refreshes to FLOW; planning a
+// replace there would revive it as CLASSIC and stop the flow, so the plan fails and asks for an
+// explicit decision instead. An explicit action_type = "CLASSIC" still replaces.
 func actionTypeRequiresReplace() planmodifier.String {
 	return stringplanmodifier.RequiresReplaceIf(
 		func(_ context.Context, req planmodifier.StringRequest, resp *stringplanmodifier.RequiresReplaceIfFuncResponse) {
@@ -64,8 +64,8 @@ func actionTypeRequiresReplace() planmodifier.String {
 				resp.Diagnostics.AddAttributeError(
 					req.Path,
 					"Action type not set for a flow action",
-					"This action is a "+actionTypeMultiStep+" flow on the server but action_type is not set in the configuration, which means "+actionTypeLegacy+". "+
-						"Set action_type = \""+actionTypeMultiStep+"\" and flow to manage the flow, or set action_type = \""+actionTypeLegacy+"\" explicitly to replace the action with a legacy one.",
+					"This action is a "+actionTypeFlow+" action on the server but action_type is not set in the configuration, which means "+actionTypeClassic+". "+
+						"Set action_type = \""+actionTypeFlow+"\" and flow to manage the flow, or set action_type = \""+actionTypeClassic+"\" explicitly to replace the action with a classic one.",
 				)
 				return
 			}
@@ -84,8 +84,8 @@ func (r *actionConfigurationResource) Metadata(_ context.Context, req resource.M
 func (r *actionConfigurationResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Description: "Manages an action configuration. " +
-			"A `LEGACY` action (the default) evaluates a flat list of rules, managed separately with `authsignal_rule`. " +
-			"A `MULTI_STEP_AUTHENTICATION` action runs a flow: the `flow` attribute holds one JSON document with an `actionNodes` array " +
+			"A `CLASSIC` action (the default) evaluates a flat list of rules, managed separately with `authsignal_rule`. " +
+			"A `FLOW` action runs a flow: the `flow` attribute holds one JSON document with an `actionNodes` array " +
 			"and the flat `rules` array those nodes reference. This is exactly the document the admin portal's flow builder exports, " +
 			"so `flow = file(\"flow-sign-in.json\")` reproduces a flow on any tenant. " +
 			"On a flow action the flow owns the rules: publishing it creates and updates the rules in `rules` and removes any rule its nodes do not reference, " +
@@ -99,12 +99,12 @@ func (r *actionConfigurationResource) Schema(_ context.Context, _ resource.Schem
 				},
 			},
 			"action_type": schema.StringAttribute{
-				Description: "How the action decides its outcome. `LEGACY` (the default) evaluates the rules managed with `authsignal_rule`; `MULTI_STEP_AUTHENTICATION` runs the flow given in `flow`. The type cannot be changed once the action exists, so changing it replaces the action. Allowed values: `LEGACY`, `MULTI_STEP_AUTHENTICATION`.",
+				Description: "How the action decides its outcome. `CLASSIC` (the default) evaluates the rules managed with `authsignal_rule`; `FLOW` runs the flow given in `flow`. The type cannot be changed once the action exists, so changing it replaces the action. Allowed values: `CLASSIC`, `FLOW`.",
 				Optional:    true,
 				Computed:    true,
-				Default:     stringdefault.StaticString(actionTypeLegacy),
+				Default:     stringdefault.StaticString(actionTypeClassic),
 				Validators: []validator.String{
-					stringvalidator.OneOf(actionTypeLegacy, actionTypeMultiStep),
+					stringvalidator.OneOf(actionTypeClassic, actionTypeFlow),
 				},
 				PlanModifiers: []planmodifier.String{
 					actionTypeRequiresReplace(),
@@ -157,19 +157,19 @@ func (r *actionConfigurationResource) Schema(_ context.Context, _ resource.Schem
 			},
 			"flow": schema.StringAttribute{
 				CustomType: FlowType{},
-				Description: "The flow of a `MULTI_STEP_AUTHENTICATION` action, as JSON: an object with `actionNodes`, the graph the action runs, and `rules`, the flat list of `{ruleId, name, conditions}` its `RULE` nodes reference by `ruleChildNodeIds`. " +
+				Description: "The flow of a `FLOW` action, as JSON: an object with `actionNodes`, the graph the action runs, and `rules`, the flat list of `{ruleId, name, conditions}` its `RULE` nodes reference by `ruleChildNodeIds`. " +
 					"This is the document the API publishes and the admin portal's flow builder exports, so load it with `file()` or write it with `jsonencode()`. " +
 					"Differences in formatting, key order and rule order are not changes; a change to any node or rule publishes a new flow version. " +
 					"Rules that belong to a flow live in this document; do not also declare them as `authsignal_rule` resources on the same action, or every apply will prune and recreate them and show a permanent diff. " +
-					"`authsignal_rule` stays the way to manage the rules of a `LEGACY` action. " +
-					"Required when `action_type` is `MULTI_STEP_AUTHENTICATION` and must not be set otherwise.",
+					"`authsignal_rule` stays the way to manage the rules of a `CLASSIC` action. " +
+					"Required when `action_type` is `FLOW` and must not be set otherwise.",
 				Optional: true,
 				Validators: []validator.String{
 					flowValidator{},
 				},
 			},
 			"flow_version": schema.Int64Attribute{
-				Description: "The version of the published flow. Increments every time the flow is published, by Terraform or in the admin portal. Null for `LEGACY` actions and for a flow action that has never been published.",
+				Description: "The version of the published flow. Increments every time the flow is published, by Terraform or in the admin portal. Null for `CLASSIC` actions and for a flow action that has never been published.",
 				Computed:    true,
 				PlanModifiers: []planmodifier.Int64{
 					flowVersionFollowsFlow{},
@@ -179,7 +179,7 @@ func (r *actionConfigurationResource) Schema(_ context.Context, _ resource.Schem
 	}
 }
 
-// ValidateConfig ties flow to the action type: a flow action needs one, a legacy action cannot have
+// ValidateConfig ties flow to the action type: a flow action needs one, a classic action cannot have
 // one. Unknown values are left for apply time.
 func (r *actionConfigurationResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
 	var config actionConfigurationResourceModel
@@ -192,8 +192,8 @@ func (r *actionConfigurationResource) ValidateConfig(ctx context.Context, req re
 		return
 	}
 
-	// The default is not applied to the configuration; a null action_type means LEGACY.
-	actionType := actionTypeLegacy
+	// The default is not applied to the configuration; a null action_type means CLASSIC.
+	actionType := actionTypeClassic
 	if !config.ActionType.IsNull() {
 		actionType = config.ActionType.ValueString()
 	}
@@ -202,7 +202,7 @@ func (r *actionConfigurationResource) ValidateConfig(ctx context.Context, req re
 		resp.Diagnostics.AddAttributeError(
 			path.Root("flow"),
 			"Missing action flow",
-			"A `"+actionTypeMultiStep+"` action needs a flow. Set `flow` to the flow exported from the admin portal, for example `flow = file(\"${path.module}/flow-sign-in.json\")`.",
+			"A `"+actionTypeFlow+"` action needs a flow. Set `flow` to the flow exported from the admin portal, for example `flow = file(\"${path.module}/flow-sign-in.json\")`.",
 		)
 	}
 
@@ -210,7 +210,7 @@ func (r *actionConfigurationResource) ValidateConfig(ctx context.Context, req re
 		resp.Diagnostics.AddAttributeError(
 			path.Root("flow"),
 			"Unexpected action flow",
-			"`flow` can only be set when `action_type` is `"+actionTypeMultiStep+"`. A `"+actionTypeLegacy+"` action evaluates the rules managed with `authsignal_rule` instead.",
+			"`flow` can only be set when `action_type` is `"+actionTypeFlow+"`. A `"+actionTypeClassic+"` action evaluates the rules managed with `authsignal_rule` instead.",
 		)
 	}
 }
@@ -262,7 +262,7 @@ func (r *actionConfigurationResource) Create(ctx context.Context, req resource.C
 	// configured type rather than the one it had.
 	actionType := plan.ActionType.ValueString()
 	if len(actionType) == 0 {
-		actionType = actionTypeLegacy
+		actionType = actionTypeClassic
 	}
 	actionConfigurationToCreate.ActionType = authsignal.SetValue(actionType)
 
@@ -302,7 +302,7 @@ func (r *actionConfigurationResource) Create(ctx context.Context, req resource.C
 	plan.LastActionCreatedAt = types.StringValue(actionConfiguration.LastActionCreatedAt)
 
 	if !isFlowActionType(actionType) {
-		plan.ActionType = types.StringValue(actionTypeLegacy)
+		plan.ActionType = types.StringValue(actionTypeClassic)
 		plan.Flow = NewFlowNull()
 		plan.FlowVersion = types.Int64Null()
 
@@ -314,7 +314,7 @@ func (r *actionConfigurationResource) Create(ctx context.Context, req resource.C
 	if !isFlowActionType(actionConfiguration.ActionType) {
 		resp.Diagnostics.AddError(
 			"Action was not created as a flow action",
-			fmt.Sprintf("The API created action configuration %s with action type %q instead of %q. Check that the Management API in this region supports flow-based actions.", plan.ActionCode.ValueString(), actionConfiguration.ActionType, actionTypeMultiStep),
+			fmt.Sprintf("The API created action configuration %s with action type %q instead of %q. Check that the Management API in this region supports flow-based actions.", plan.ActionCode.ValueString(), actionConfiguration.ActionType, actionTypeFlow),
 		)
 	}
 

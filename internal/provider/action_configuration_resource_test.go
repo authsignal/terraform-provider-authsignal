@@ -120,7 +120,7 @@ func TestAccActionConfigurationResource(t *testing.T) {
 	})
 }
 
-// testAccFlowConfig is a MULTI_STEP_AUTHENTICATION action with two RULE nodes and a COMPLETE node,
+// testAccFlowConfig is a FLOW action with two RULE nodes and a COMPLETE node,
 // and the flat rules array those nodes reference. The country code is the one thing the update step
 // changes. The rules are written before the nodes, and out of ruleId order, so the step also covers
 // that neither ordering is a difference.
@@ -128,7 +128,7 @@ func testAccFlowConfig(countryCode string) string {
 	return fmt.Sprintf(`
 		resource "authsignal_action_configuration" "flow" {
 			action_code                = "terraform-acceptance-test-flow"
-			action_type                = "MULTI_STEP_AUTHENTICATION"
+			action_type                = "FLOW"
 			default_user_action_result = "CHALLENGE"
 			flow = jsonencode({
 				rules = [
@@ -181,7 +181,7 @@ func TestAccActionConfigurationResource_flow(t *testing.T) {
 				Config: testAccFlowConfig("NZ"),
 				Check: resource.ComposeAggregateTestCheckFunc(
 					resource.TestCheckResourceAttr("authsignal_action_configuration.flow", "action_code", "terraform-acceptance-test-flow"),
-					resource.TestCheckResourceAttr("authsignal_action_configuration.flow", "action_type", "MULTI_STEP_AUTHENTICATION"),
+					resource.TestCheckResourceAttr("authsignal_action_configuration.flow", "action_type", "FLOW"),
 					resource.TestCheckResourceAttr("authsignal_action_configuration.flow", "default_user_action_result", "CHALLENGE"),
 					resource.TestCheckResourceAttrSet("authsignal_action_configuration.flow", "flow_version"),
 					resource.TestCheckResourceAttrWith("authsignal_action_configuration.flow", "flow_version", func(value string) error {

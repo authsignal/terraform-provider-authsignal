@@ -99,8 +99,20 @@ func TestFlowValueSemanticEquality(t *testing.T) {
 			equal: false,
 		},
 		{
+			name: "a null node field is not an absent field",
+			other: `{"actionNodes":[{"nodeId":"r","nodeType":"RULE","parentNodeIds":[],"ruleChildNodeIds":[["a","c"],["b","c"]],"elseChildNodeId":"c"},
+			   {"nodeId":"c","nodeType":"COMPLETE","parentNodeIds":["r"],"weight":1,"message":null}],
+			  "rules":[{"ruleId":"a","name":"A","conditions":{"and":[{"==":[{"var":"ip.isAnonymous"},true]}]}},{"ruleId":"b","name":"B"}]}`,
+			equal: false,
+		},
+		{
 			name:  "the old embedded shape is not this flow",
 			other: `[{"nodeId":"r","nodeType":"RULE","ruleChildNodeIds":[["a","c"]],"rules":[{"ruleId":"a","name":"A"}]}]`,
+			equal: false,
+		},
+		{
+			name:  "trailing JSON is not ignored",
+			other: base + ` {}`,
 			equal: false,
 		},
 	}
@@ -116,6 +128,16 @@ func TestFlowValueSemanticEquality(t *testing.T) {
 				t.Fatalf("expected equal=%v, got %v", testCase.equal, equal)
 			}
 		})
+	}
+}
+
+func TestFlowValueKeepsLargeAdjacentIntegersDistinct(t *testing.T) {
+	one := `{"actionNodes":[{"nodeId":"c","nodeType":"COMPLETE","weight":9007199254740992}],"rules":[]}`
+	two := `{"actionNodes":[{"nodeId":"c","nodeType":"COMPLETE","weight":9007199254740993}],"rules":[]}`
+
+	equal, diags := NewFlowValue(one).StringSemanticEquals(context.Background(), NewFlowValue(two))
+	if diags.HasError() || equal {
+		t.Fatalf("expected adjacent integers above 2^53 to differ, equal=%v diags=%v", equal, diags)
 	}
 }
 

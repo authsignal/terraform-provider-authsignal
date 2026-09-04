@@ -229,6 +229,7 @@ func TestAccActionConfigurationResource_flow(t *testing.T) {
 				ImportState:                          true,
 				ImportStateId:                        "terraform-acceptance-test-flow",
 				ImportStateVerify:                    true,
+				ImportStateVerifyIgnore:              []string{"flow"},
 				ImportStateVerifyIdentifierAttribute: "action_code",
 			},
 			// Delete testing automatically occurs in TestCase

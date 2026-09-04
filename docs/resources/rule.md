@@ -3,12 +3,12 @@
 page_title: "authsignal_rule Resource - terraform-provider-authsignal"
 subcategory: ""
 description: |-
-  Manages a rule of a LEGACY action configuration. The rules of a MULTI_STEP_AUTHENTICATION action belong to its flow: define them inside the RULE nodes of the action's flow attribute instead. Publishing that flow removes any rule on the action that the flow does not reference, including rules created with this resource.
+  Manages a rule of a LEGACY action configuration. The rules of a MULTI_STEP_AUTHENTICATION action belong in the top-level rules array of the action's flow attribute and are referenced by its RULE nodes. Publishing that flow removes any rule on the action that the flow does not reference, including rules created with this resource.
 ---
 
 # authsignal_rule (Resource)
 
-Manages a rule of a `LEGACY` action configuration. The rules of a `MULTI_STEP_AUTHENTICATION` action belong to its flow: define them inside the `RULE` nodes of the action's `flow` attribute instead. Publishing that flow removes any rule on the action that the flow does not reference, including rules created with this resource.
+Manages a rule of a `LEGACY` action configuration. The rules of a `MULTI_STEP_AUTHENTICATION` action belong in the top-level `rules` array of the action's `flow` attribute and are referenced by its `RULE` nodes. Publishing that flow removes any rule on the action that the flow does not reference, including rules created with this resource.
 
 ## Example Usage
 

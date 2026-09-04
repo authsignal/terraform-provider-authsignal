@@ -3,6 +3,8 @@ package provider
 import (
 	"encoding/json"
 	"fmt"
+	"io"
+	"math/big"
 	"reflect"
 	"regexp"
 	"sort"
@@ -83,6 +85,9 @@ func parseFlow(flowJson string) (flowDocument, []flowError) {
 	var raw any
 	if err := decoder.Decode(&raw); err != nil {
 		return flowDocument{}, []flowError{{Message: "not valid JSON: " + err.Error()}}
+	}
+	if err := decoder.Decode(new(any)); err != io.EOF {
+		return flowDocument{}, []flowError{{Message: "not valid JSON: trailing content after the flow document"}}
 	}
 
 	document, ok := raw.(map[string]any)
@@ -431,14 +436,33 @@ func parseArms(node flowNode) ([]flowArm, []flowError) {
 // returned them, and the action's rules projected down to the three keys a flow publishes. Rules
 // are sorted by ruleId so an unchanged flow reads back as the same string every time.
 func composeFlow(nodes []authsignal.ActionNode, rules []authsignal.RuleResponse) (string, error) {
+	return composeFlowWithRuleOrder(nodes, rules, nil)
+}
+
+func composeFlowWithRuleOrder(nodes []authsignal.ActionNode, rules []authsignal.RuleResponse, preferredRuleIds []string) (string, error) {
 	actionNodes := nodes
 	if actionNodes == nil {
 		actionNodes = []authsignal.ActionNode{}
 	}
 
+	preferredIndex := make(map[string]int, len(preferredRuleIds))
+	for i, ruleId := range preferredRuleIds {
+		preferredIndex[ruleId] = i
+	}
+
 	sorted := make([]authsignal.RuleResponse, len(rules))
 	copy(sorted, rules)
-	sort.SliceStable(sorted, func(i, j int) bool { return sorted[i].RuleId < sorted[j].RuleId })
+	sort.SliceStable(sorted, func(i, j int) bool {
+		iIndex, iPreferred := preferredIndex[sorted[i].RuleId]
+		jIndex, jPreferred := preferredIndex[sorted[j].RuleId]
+		if iPreferred && jPreferred {
+			return iIndex < jIndex
+		}
+		if iPreferred != jPreferred {
+			return iPreferred
+		}
+		return sorted[i].RuleId < sorted[j].RuleId
+	})
 
 	projected := make([]map[string]any, 0, len(sorted))
 	for _, rule := range sorted {
@@ -451,6 +475,23 @@ func composeFlow(nodes []authsignal.ActionNode, rules []authsignal.RuleResponse)
 	}
 
 	return string(flowJson), nil
+}
+
+func flowRuleIds(flowJson string) []string {
+	var document struct {
+		Rules []struct {
+			RuleId string `json:"ruleId"`
+		} `json:"rules"`
+	}
+	if err := json.Unmarshal([]byte(flowJson), &document); err != nil {
+		return nil
+	}
+
+	ruleIds := make([]string, len(document.Rules))
+	for i, rule := range document.Rules {
+		ruleIds[i] = rule.RuleId
+	}
+	return ruleIds
 }
 
 // projectFlowRule drops the fields the API derives for a rule, keeping the three a flow publishes.
@@ -492,6 +533,9 @@ func canonicalFlow(flowJson string) (any, bool) {
 	if err := decoder.Decode(&raw); err != nil {
 		return nil, false
 	}
+	if err := decoder.Decode(new(any)); err != io.EOF {
+		return nil, false
+	}
 
 	canonical, ok := canonicalValue(raw).(map[string]any)
 	if !ok {
@@ -501,6 +545,11 @@ func canonicalFlow(flowJson string) (any, bool) {
 	if rules, ok := canonical["rules"].([]any); ok {
 		sorted := make([]any, len(rules))
 		copy(sorted, rules)
+		for _, rawRule := range sorted {
+			if rule, ok := rawRule.(map[string]any); ok && rule["conditions"] == nil {
+				delete(rule, "conditions")
+			}
+		}
 		sort.SliceStable(sorted, func(i, j int) bool { return canonicalRuleId(sorted[i]) < canonicalRuleId(sorted[j]) })
 		canonical["rules"] = sorted
 	}
@@ -526,9 +575,6 @@ func canonicalValue(value any) any {
 	case map[string]any:
 		out := make(map[string]any, len(typed))
 		for key, entry := range typed {
-			if entry == nil {
-				continue
-			}
 			out[key] = canonicalValue(entry)
 		}
 		return out
@@ -539,18 +585,20 @@ func canonicalValue(value any) any {
 		}
 		return out
 	case json.Number:
-		if number, err := typed.Float64(); err == nil {
-			return number
+		if number, ok := new(big.Rat).SetString(typed.String()); ok {
+			return canonicalNumber(number.RatString())
 		}
-		return typed.String()
+		return canonicalNumber(typed.String())
 	case int:
-		return float64(typed)
+		return canonicalNumber(big.NewRat(int64(typed), 1).RatString())
 	case int64:
-		return float64(typed)
+		return canonicalNumber(big.NewRat(typed, 1).RatString())
 	default:
 		return value
 	}
 }
+
+type canonicalNumber string
 
 func sortedKeys(object map[string]any) []string {
 	keys := make([]string, 0, len(object))

@@ -156,6 +156,8 @@ func TestParseFlowReportsEachInvariantWithItsPath(t *testing.T) {
 		message string
 	}{
 		{"not json", `{`, "", "not valid JSON"},
+		{"trailing token", document(nodes(complete), `[]`) + ` true`, "", "trailing content"},
+		{"second document", document(nodes(complete), `[]`) + ` {}`, "", "trailing content"},
 		{"an array, as the old shape was", `[{"nodeId":"c","nodeType":"COMPLETE"}]`, "", "must be a JSON object"},
 		{"actionNodes missing", `{"rules":[]}`, "actionNodes", "is required"},
 		{"rules missing", `{"actionNodes":[` + complete + `]}`, "rules", "is required"},
@@ -342,6 +344,27 @@ func TestComposeFlowIsIndependentOfTheOrderTheApiListsRulesIn(t *testing.T) {
 	expected := `{"actionNodes":[{"elseChildNodeId":"c","nodeId":"r","nodeType":"RULE","ruleChildNodeIds":[["b","c"],["a","c"]]},{"nodeId":"c","nodeType":"COMPLETE"}],"rules":[{"name":"A","ruleId":"a"},{"conditions":{"and":[]},"name":"B","ruleId":"b"}]}`
 	if oneOrder != expected {
 		t.Fatalf("expected sorted-key JSON with the rules sorted by ruleId and no conditions key on A\nexpected: %s\ngot:      %s", expected, oneOrder)
+	}
+}
+
+func TestComposeFlowKeepsThePriorRuleOrderDuringDrift(t *testing.T) {
+	nodes := serverNodes(t, `[{"nodeId":"c","nodeType":"COMPLETE","changed":true}]`)
+	rules := []authsignal.RuleResponse{
+		serverRule("a", "A", ""),
+		serverRule("new", "New", ""),
+		serverRule("b", "B", ""),
+	}
+
+	composed, err := composeFlowWithRuleOrder(nodes, rules, []string{"b", "a"})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	b := strings.Index(composed, `"ruleId":"b"`)
+	a := strings.Index(composed, `"ruleId":"a"`)
+	added := strings.Index(composed, `"ruleId":"new"`)
+	if b == -1 || a == -1 || added == -1 || !(b < a && a < added) {
+		t.Fatalf("expected prior rules in prior order and new rules appended by id: %s", composed)
 	}
 }
 

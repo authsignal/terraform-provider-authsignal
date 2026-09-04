@@ -49,7 +49,12 @@ func readFlowFields(ctx context.Context, client *authsignal.Client, actionConfig
 		return flowFields{}, diags
 	}
 
-	flowJson, err := composeFlow(actionConfiguration.ActionNodes, rules)
+	var preferredRuleIds []string
+	if !prior.IsNull() && !prior.IsUnknown() {
+		preferredRuleIds = flowRuleIds(prior.ValueString())
+	}
+
+	flowJson, err := composeFlowWithRuleOrder(actionConfiguration.ActionNodes, rules, preferredRuleIds)
 	if err != nil {
 		diags.AddError(
 			"Error reading action flow",

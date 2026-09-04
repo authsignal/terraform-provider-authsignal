@@ -25,10 +25,10 @@ type flowFields struct {
 
 // readFlowFields maps a read action configuration to its flow attributes. A legacy action (any type
 // other than MULTI_STEP_AUTHENTICATION, including the empty string an older API returns) has no
-// flow and no rules are listed for it. A flow action's rules are listed and embedded into its
-// graph; when the result means the same as the prior value, the prior string is kept so a
-// pretty-printed file never drifts. Server rules no node references cannot live in the graph and
-// are reported as a warning.
+// flow and no rules are listed for it. A flow action's document is composed from its action nodes
+// and its rules; when the result means the same as the prior value, the prior string is kept so a
+// pretty-printed file never drifts. A rule the server holds but the configuration has dropped comes
+// back in `rules` and shows as an ordinary difference, pruned by the next publish.
 func readFlowFields(ctx context.Context, client *authsignal.Client, actionConfiguration *authsignal.ActionConfigurationResponse, prior FlowValue) (flowFields, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
@@ -49,7 +49,7 @@ func readFlowFields(ctx context.Context, client *authsignal.Client, actionConfig
 		return flowFields{}, diags
 	}
 
-	flowJson, unreferenced, err := embedFlow(actionConfiguration.ActionNodes, rules)
+	flowJson, err := composeFlow(actionConfiguration.ActionNodes, rules)
 	if err != nil {
 		diags.AddError(
 			"Error reading action flow",
@@ -70,14 +70,6 @@ func readFlowFields(ctx context.Context, client *authsignal.Client, actionConfig
 		if equal {
 			flow = prior
 		}
-	}
-
-	if len(unreferenced) > 0 {
-		diags.AddWarning(
-			"Unreferenced rules on action "+actionConfiguration.ActionCode,
-			fmt.Sprintf("%d rule(s) exist on action %s that no RULE node of its flow references: %s. They cannot be represented in the flow attribute and will be removed on the next publish of the flow.",
-				len(unreferenced), actionConfiguration.ActionCode, strings.Join(unreferenced, ", ")),
-		)
 	}
 
 	flowVersion := types.Int64Null()
@@ -103,12 +95,12 @@ func flowChanged(ctx context.Context, plan FlowValue, state FlowValue) (bool, di
 	return !equal, diags
 }
 
-// publishFlow lifts the embedded rules out of the flow and publishes `{actionNodes, rules}`. With an
-// expected version the API refuses (409) to overwrite a flow that moved on since Terraform read it.
+// publishFlow sends the configured document as the publish body. With an expected version the API
+// refuses (409) to overwrite a flow that moved on since Terraform read it.
 func publishFlow(client *authsignal.Client, actionCode string, flow FlowValue, expectedFlowVersion *int64) diag.Diagnostics {
 	var diags diag.Diagnostics
 
-	doc, errs := liftFlow(flow.ValueString())
+	doc, errs := parseFlow(flow.ValueString())
 	if len(errs) > 0 {
 		messages := make([]string, len(errs))
 		for i, err := range errs {
@@ -123,7 +115,7 @@ func publishFlow(client *authsignal.Client, actionCode string, flow FlowValue, e
 	}
 
 	_, statusCode, err := client.UpdateActionFlow(actionCode, authsignal.ActionFlow{
-		ActionNodes:         doc.actionNodes(),
+		ActionNodes:         doc.ActionNodes,
 		Rules:               doc.Rules,
 		ExpectedFlowVersion: expectedFlowVersion,
 	})

@@ -85,10 +85,10 @@ func (r *actionConfigurationResource) Schema(_ context.Context, _ resource.Schem
 	resp.Schema = schema.Schema{
 		Description: "Manages an action configuration. " +
 			"A `LEGACY` action (the default) evaluates a flat list of rules, managed separately with `authsignal_rule`. " +
-			"A `MULTI_STEP_AUTHENTICATION` action runs a flow: a graph of action nodes given in `flow`, where every `RULE` node also " +
-			"carries a `rules` array defining the rules its arms reference. This is exactly the file the admin portal's flow builder " +
-			"exports, so `flow = file(\"flow-sign-in.json\")` reproduces a flow on any tenant. " +
-			"On a flow action the flow owns the rules: publishing it creates and updates the rules it defines and removes any rule it does not reference, " +
+			"A `MULTI_STEP_AUTHENTICATION` action runs a flow: the `flow` attribute holds one JSON document with an `actionNodes` array " +
+			"and the flat `rules` array those nodes reference. This is exactly the document the admin portal's flow builder exports, " +
+			"so `flow = file(\"flow-sign-in.json\")` reproduces a flow on any tenant. " +
+			"On a flow action the flow owns the rules: publishing it creates and updates the rules in `rules` and removes any rule its nodes do not reference, " +
 			"so do not manage the rules of a flow action with `authsignal_rule`.",
 		Attributes: map[string]schema.Attribute{
 			"action_code": schema.StringAttribute{
@@ -157,9 +157,11 @@ func (r *actionConfigurationResource) Schema(_ context.Context, _ resource.Schem
 			},
 			"flow": schema.StringAttribute{
 				CustomType: FlowType{},
-				Description: "The flow of a `MULTI_STEP_AUTHENTICATION` action, as JSON: an array of action nodes where every `RULE` node also has a `rules` array listing, in arm order, the rules its `ruleChildNodeIds` reference as `{ruleId, name, conditions}`. " +
-					"This is the file the admin portal's flow builder exports, so use `file()` to load it. " +
+				Description: "The flow of a `MULTI_STEP_AUTHENTICATION` action, as JSON: an object with `actionNodes`, the graph the action runs, and `rules`, the flat list of `{ruleId, name, conditions}` its `RULE` nodes reference by `ruleChildNodeIds`. " +
+					"This is the document the API publishes and the admin portal's flow builder exports, so load it with `file()` or write it with `jsonencode()`. " +
 					"Differences in formatting, key order and rule order are not changes; a change to any node or rule publishes a new flow version. " +
+					"Rules that belong to a flow live in this document; do not also declare them as `authsignal_rule` resources on the same action, or every apply will prune and recreate them and show a permanent diff. " +
+					"`authsignal_rule` stays the way to manage the rules of a `LEGACY` action. " +
 					"Required when `action_type` is `MULTI_STEP_AUTHENTICATION` and must not be set otherwise.",
 				Optional: true,
 				Validators: []validator.String{

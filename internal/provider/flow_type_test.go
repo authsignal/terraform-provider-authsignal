@@ -14,11 +14,16 @@ import (
 )
 
 func TestFlowValueSemanticEquality(t *testing.T) {
-	base := `[
-	  {"nodeId":"r","nodeType":"RULE","parentNodeIds":[],"ruleChildNodeIds":[["a","c"],["b","c"]],"elseChildNodeId":"c",
-	   "rules":[{"ruleId":"a","name":"A","conditions":{"and":[{"==":[{"var":"ip.isAnonymous"},true]}]}},{"ruleId":"b","name":"B"}]},
-	  {"nodeId":"c","nodeType":"COMPLETE","parentNodeIds":["r"],"weight":1}
-	]`
+	base := `{
+	  "actionNodes": [
+	    {"nodeId":"r","nodeType":"RULE","parentNodeIds":[],"ruleChildNodeIds":[["a","c"],["b","c"]],"elseChildNodeId":"c"},
+	    {"nodeId":"c","nodeType":"COMPLETE","parentNodeIds":["r"],"weight":1}
+	  ],
+	  "rules": [
+	    {"ruleId":"a","name":"A","conditions":{"and":[{"==":[{"var":"ip.isAnonymous"},true]}]}},
+	    {"ruleId":"b","name":"B"}
+	  ]
+	}`
 
 	testCases := []struct {
 		name  string
@@ -32,61 +37,70 @@ func TestFlowValueSemanticEquality(t *testing.T) {
 		},
 		{
 			name:  "whitespace and key order",
-			other: `[{"rules":[{"conditions":{"and":[{"==":[{"var":"ip.isAnonymous"},true]}]},"name":"A","ruleId":"a"},{"name":"B","ruleId":"b"}],"elseChildNodeId":"c","ruleChildNodeIds":[["a","c"],["b","c"]],"parentNodeIds":[],"nodeType":"RULE","nodeId":"r"},{"weight":1,"parentNodeIds":["r"],"nodeType":"COMPLETE","nodeId":"c"}]`,
+			other: `{"rules":[{"conditions":{"and":[{"==":[{"var":"ip.isAnonymous"},true]}]},"name":"A","ruleId":"a"},{"name":"B","ruleId":"b"}],"actionNodes":[{"elseChildNodeId":"c","ruleChildNodeIds":[["a","c"],["b","c"]],"parentNodeIds":[],"nodeType":"RULE","nodeId":"r"},{"weight":1,"parentNodeIds":["r"],"nodeType":"COMPLETE","nodeId":"c"}]}`,
 			equal: true,
 		},
 		{
-			name: "rule order",
-			other: `[{"nodeId":"r","nodeType":"RULE","parentNodeIds":[],"ruleChildNodeIds":[["a","c"],["b","c"]],"elseChildNodeId":"c",
-			   "rules":[{"ruleId":"b","name":"B"},{"ruleId":"a","name":"A","conditions":{"and":[{"==":[{"var":"ip.isAnonymous"},true]}]}}]},
-			  {"nodeId":"c","nodeType":"COMPLETE","parentNodeIds":["r"],"weight":1}]`,
+			// Flow rules all carry priority 0, so the order the API lists them in is arbitrary and
+			// can differ between two reads of an unchanged flow.
+			name: "the order the API lists rules in",
+			other: `{"actionNodes":[{"nodeId":"r","nodeType":"RULE","parentNodeIds":[],"ruleChildNodeIds":[["a","c"],["b","c"]],"elseChildNodeId":"c"},
+			   {"nodeId":"c","nodeType":"COMPLETE","parentNodeIds":["r"],"weight":1}],
+			  "rules":[{"ruleId":"b","name":"B"},{"ruleId":"a","name":"A","conditions":{"and":[{"==":[{"var":"ip.isAnonymous"},true]}]}}]}`,
 			equal: true,
 		},
 		{
 			name: "null conditions equal absent conditions",
-			other: `[{"nodeId":"r","nodeType":"RULE","parentNodeIds":[],"ruleChildNodeIds":[["a","c"],["b","c"]],"elseChildNodeId":"c",
-			   "rules":[{"ruleId":"a","name":"A","conditions":{"and":[{"==":[{"var":"ip.isAnonymous"},true]}]}},{"ruleId":"b","name":"B","conditions":null}]},
-			  {"nodeId":"c","nodeType":"COMPLETE","parentNodeIds":["r"],"weight":1}]`,
+			other: `{"actionNodes":[{"nodeId":"r","nodeType":"RULE","parentNodeIds":[],"ruleChildNodeIds":[["a","c"],["b","c"]],"elseChildNodeId":"c"},
+			   {"nodeId":"c","nodeType":"COMPLETE","parentNodeIds":["r"],"weight":1}],
+			  "rules":[{"ruleId":"a","name":"A","conditions":{"and":[{"==":[{"var":"ip.isAnonymous"},true]}]}},{"ruleId":"b","name":"B","conditions":null}]}`,
 			equal: true,
 		},
 		{
 			name: "1.0 equals 1",
-			other: `[{"nodeId":"r","nodeType":"RULE","parentNodeIds":[],"ruleChildNodeIds":[["a","c"],["b","c"]],"elseChildNodeId":"c",
-			   "rules":[{"ruleId":"a","name":"A","conditions":{"and":[{"==":[{"var":"ip.isAnonymous"},true]}]}},{"ruleId":"b","name":"B"}]},
-			  {"nodeId":"c","nodeType":"COMPLETE","parentNodeIds":["r"],"weight":1.0}]`,
+			other: `{"actionNodes":[{"nodeId":"r","nodeType":"RULE","parentNodeIds":[],"ruleChildNodeIds":[["a","c"],["b","c"]],"elseChildNodeId":"c"},
+			   {"nodeId":"c","nodeType":"COMPLETE","parentNodeIds":["r"],"weight":1.0}],
+			  "rules":[{"ruleId":"a","name":"A","conditions":{"and":[{"==":[{"var":"ip.isAnonymous"},true]}]}},{"ruleId":"b","name":"B"}]}`,
 			equal: true,
 		},
 		{
 			name: "a condition changed",
-			other: `[{"nodeId":"r","nodeType":"RULE","parentNodeIds":[],"ruleChildNodeIds":[["a","c"],["b","c"]],"elseChildNodeId":"c",
-			   "rules":[{"ruleId":"a","name":"A","conditions":{"and":[{"==":[{"var":"ip.isAnonymous"},false]}]}},{"ruleId":"b","name":"B"}]},
-			  {"nodeId":"c","nodeType":"COMPLETE","parentNodeIds":["r"],"weight":1}]`,
+			other: `{"actionNodes":[{"nodeId":"r","nodeType":"RULE","parentNodeIds":[],"ruleChildNodeIds":[["a","c"],["b","c"]],"elseChildNodeId":"c"},
+			   {"nodeId":"c","nodeType":"COMPLETE","parentNodeIds":["r"],"weight":1}],
+			  "rules":[{"ruleId":"a","name":"A","conditions":{"and":[{"==":[{"var":"ip.isAnonymous"},false]}]}},{"ruleId":"b","name":"B"}]}`,
 			equal: false,
 		},
 		{
 			name: "a rule renamed",
-			other: `[{"nodeId":"r","nodeType":"RULE","parentNodeIds":[],"ruleChildNodeIds":[["a","c"],["b","c"]],"elseChildNodeId":"c",
-			   "rules":[{"ruleId":"a","name":"A","conditions":{"and":[{"==":[{"var":"ip.isAnonymous"},true]}]}},{"ruleId":"b","name":"B renamed"}]},
-			  {"nodeId":"c","nodeType":"COMPLETE","parentNodeIds":["r"],"weight":1}]`,
+			other: `{"actionNodes":[{"nodeId":"r","nodeType":"RULE","parentNodeIds":[],"ruleChildNodeIds":[["a","c"],["b","c"]],"elseChildNodeId":"c"},
+			   {"nodeId":"c","nodeType":"COMPLETE","parentNodeIds":["r"],"weight":1}],
+			  "rules":[{"ruleId":"a","name":"A","conditions":{"and":[{"==":[{"var":"ip.isAnonymous"},true]}]}},{"ruleId":"b","name":"B renamed"}]}`,
+			equal: false,
+		},
+		{
+			name: "a rule dropped",
+			other: `{"actionNodes":[{"nodeId":"r","nodeType":"RULE","parentNodeIds":[],"ruleChildNodeIds":[["a","c"],["b","c"]],"elseChildNodeId":"c"},
+			   {"nodeId":"c","nodeType":"COMPLETE","parentNodeIds":["r"],"weight":1}],
+			  "rules":[{"ruleId":"a","name":"A","conditions":{"and":[{"==":[{"var":"ip.isAnonymous"},true]}]}}]}`,
 			equal: false,
 		},
 		{
 			name: "node order is the graph",
-			other: `[{"nodeId":"c","nodeType":"COMPLETE","parentNodeIds":["r"],"weight":1},
-			  {"nodeId":"r","nodeType":"RULE","parentNodeIds":[],"ruleChildNodeIds":[["a","c"],["b","c"]],"elseChildNodeId":"c",
-			   "rules":[{"ruleId":"a","name":"A","conditions":{"and":[{"==":[{"var":"ip.isAnonymous"},true]}]}},{"ruleId":"b","name":"B"}]}]`,
+			other: `{"actionNodes":[{"nodeId":"c","nodeType":"COMPLETE","parentNodeIds":["r"],"weight":1},
+			   {"nodeId":"r","nodeType":"RULE","parentNodeIds":[],"ruleChildNodeIds":[["a","c"],["b","c"]],"elseChildNodeId":"c"}],
+			  "rules":[{"ruleId":"a","name":"A","conditions":{"and":[{"==":[{"var":"ip.isAnonymous"},true]}]}},{"ruleId":"b","name":"B"}]}`,
 			equal: false,
 		},
 		{
 			name: "a node field changed",
-			other: `[{"nodeId":"r","nodeType":"RULE","parentNodeIds":[],"ruleChildNodeIds":[["a","c"],["b","c"]],"elseChildNodeId":"c",
-			   "rules":[{"ruleId":"a","name":"A","conditions":{"and":[{"==":[{"var":"ip.isAnonymous"},true]}]}},{"ruleId":"b","name":"B"}]},
-			  {"nodeId":"c","nodeType":"COMPLETE","parentNodeIds":["r"],"weight":2}]`,
+			other: `{"actionNodes":[{"nodeId":"r","nodeType":"RULE","parentNodeIds":[],"ruleChildNodeIds":[["a","c"],["b","c"]],"elseChildNodeId":"c"},
+			   {"nodeId":"c","nodeType":"COMPLETE","parentNodeIds":["r"],"weight":2}],
+			  "rules":[{"ruleId":"a","name":"A","conditions":{"and":[{"==":[{"var":"ip.isAnonymous"},true]}]}},{"ruleId":"b","name":"B"}]}`,
 			equal: false,
 		},
 		{
-			name:  "invalid flow is never equal",
-			other: `[{"nodeId":"r","nodeType":"RULE","ruleChildNodeIds":[["a","c"]]}]`,
+			name:  "the old embedded shape is not this flow",
+			other: `[{"nodeId":"r","nodeType":"RULE","ruleChildNodeIds":[["a","c"]],"rules":[{"ruleId":"a","name":"A"}]}]`,
 			equal: false,
 		},
 	}
@@ -107,8 +121,8 @@ func TestFlowValueSemanticEquality(t *testing.T) {
 
 // jsonencode and Go's json.Marshal both HTML-escape, but a hand-written file need not.
 func TestFlowValueHtmlEscapingIsNotAChange(t *testing.T) {
-	escaped := `[{"nodeId":"r","nodeType":"RULE","ruleChildNodeIds":[["a","c"]],"elseChildNodeId":"c","rules":[{"ruleId":"a","name":"Tom \u0026 Jerry \u003c3"}]},{"nodeId":"c","nodeType":"COMPLETE"}]`
-	literal := `[{"nodeId":"r","nodeType":"RULE","ruleChildNodeIds":[["a","c"]],"elseChildNodeId":"c","rules":[{"ruleId":"a","name":"Tom & Jerry <3"}]},{"nodeId":"c","nodeType":"COMPLETE"}]`
+	escaped := `{"actionNodes":[{"nodeId":"r","nodeType":"RULE","ruleChildNodeIds":[["a","c"]],"elseChildNodeId":"c"},{"nodeId":"c","nodeType":"COMPLETE"}],"rules":[{"ruleId":"a","name":"Tom \u0026 Jerry \u003c3"}]}`
+	literal := `{"actionNodes":[{"nodeId":"r","nodeType":"RULE","ruleChildNodeIds":[["a","c"]],"elseChildNodeId":"c"},{"nodeId":"c","nodeType":"COMPLETE"}],"rules":[{"ruleId":"a","name":"Tom & Jerry <3"}]}`
 
 	equal, diags := NewFlowValue(escaped).StringSemanticEquals(context.Background(), NewFlowValue(literal))
 	if diags.HasError() || !equal {
@@ -116,13 +130,18 @@ func TestFlowValueHtmlEscapingIsNotAChange(t *testing.T) {
 	}
 }
 
-func TestFlowValueAbsentRulesEqualEmptyRules(t *testing.T) {
-	withEmpty := `[{"nodeId":"r","nodeType":"RULE","ruleChildNodeIds":[],"elseChildNodeId":"c","rules":[]},{"nodeId":"c","nodeType":"COMPLETE"}]`
-	without := `[{"nodeId":"r","nodeType":"RULE","ruleChildNodeIds":[],"elseChildNodeId":"c"},{"nodeId":"c","nodeType":"COMPLETE"}]`
+// Comparison is structural, so a document that breaches an invariant still compares predictably
+// rather than being unequal to everything, including itself.
+func TestFlowValueComparesDocumentsThatBreachAnInvariant(t *testing.T) {
+	strayRule := `{"actionNodes":[{"nodeId":"c","nodeType":"COMPLETE"}],"rules":[{"ruleId":"stray","name":"Made in the portal"}]}`
 
-	equal, diags := NewFlowValue(withEmpty).StringSemanticEquals(context.Background(), NewFlowValue(without))
+	if _, errs := parseFlow(strayRule); len(errs) == 0 {
+		t.Fatal("expected the unreferenced rule to breach the reference invariant")
+	}
+
+	equal, diags := NewFlowValue(strayRule).StringSemanticEquals(context.Background(), NewFlowValue(strayRule))
 	if diags.HasError() || !equal {
-		t.Fatalf("expected an empty rules array to equal no rules array, equal=%v diags=%v", equal, diags)
+		t.Fatalf("a document must equal itself whether or not it validates, equal=%v diags=%v", equal, diags)
 	}
 }
 
@@ -133,15 +152,15 @@ func TestFlowValueNullAndUnknownCompareStrictly(t *testing.T) {
 		t.Fatal("null must equal null")
 	}
 
-	if equal, _ := NewFlowNull().StringSemanticEquals(ctx, NewFlowValue("[]")); equal {
+	if equal, _ := NewFlowNull().StringSemanticEquals(ctx, NewFlowValue("{}")); equal {
 		t.Fatal("null must not equal a value")
 	}
 
-	if equal, _ := NewFlowUnknown().StringSemanticEquals(ctx, NewFlowValue("[]")); equal {
+	if equal, _ := NewFlowUnknown().StringSemanticEquals(ctx, NewFlowValue("{}")); equal {
 		t.Fatal("unknown must not equal a value")
 	}
 
-	_, diags := NewFlowValue("[]").StringSemanticEquals(ctx, types.StringValue("[]"))
+	_, diags := NewFlowValue("{}").StringSemanticEquals(ctx, types.StringValue("{}"))
 	if !diags.HasError() {
 		t.Fatal("a plain string is the wrong value type and must be reported")
 	}
@@ -150,22 +169,22 @@ func TestFlowValueNullAndUnknownCompareStrictly(t *testing.T) {
 func TestFlowTypeConvertsToFlowValue(t *testing.T) {
 	ctx := context.Background()
 
-	fromTerraform, err := FlowType{}.ValueFromTerraform(ctx, tftypes.NewValue(tftypes.String, "[]"))
+	fromTerraform, err := FlowType{}.ValueFromTerraform(ctx, tftypes.NewValue(tftypes.String, "{}"))
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if converted, ok := fromTerraform.(FlowValue); !ok || converted.ValueString() != "[]" {
+	if converted, ok := fromTerraform.(FlowValue); !ok || converted.ValueString() != "{}" {
 		t.Fatalf("expected a FlowValue holding [], got %T %v", fromTerraform, fromTerraform)
 	}
 
-	valuable, diags := FlowType{}.ValueFromString(ctx, basetypes.NewStringValue("[]"))
+	valuable, diags := FlowType{}.ValueFromString(ctx, basetypes.NewStringValue("{}"))
 	if diags.HasError() {
 		t.Fatal(diags)
 	}
 
 	flow, ok := valuable.(FlowValue)
-	if !ok || flow.ValueString() != "[]" {
+	if !ok || flow.ValueString() != "{}" {
 		t.Fatalf("expected a FlowValue holding [], got %T %v", valuable, valuable)
 	}
 
@@ -184,7 +203,7 @@ func TestFlowTypeConvertsToFlowValue(t *testing.T) {
 
 func TestFlowValidatorReportsEveryBreachAtTheAttribute(t *testing.T) {
 	ctx := context.Background()
-	flow := `[{"nodeId":"c","nodeType":"COMPLETE","rules":[]},{"nodeId":"c","nodeType":"COMPLETE"}]`
+	flow := `{"actionNodes":[{"nodeId":"c","nodeType":"COMPLETE"},{"nodeId":"c","nodeType":"COMPLETE"}],"rules":[{"ruleId":"has space","name":"A"}]}`
 
 	request := validator.StringRequest{
 		Path:        path.Root("flow"),
@@ -204,7 +223,8 @@ func TestFlowValidatorReportsEveryBreachAtTheAttribute(t *testing.T) {
 		}
 	}
 
-	if !containsDetail(response, "[0].rules: only RULE nodes carry rules") || !containsDetail(response, `[1].nodeId: duplicates [0].nodeId ("c")`) {
+	if !containsDetail(response, `actionNodes[1].nodeId: duplicates actionNodes[0].nodeId ("c")`) ||
+		!containsDetail(response, "rules[0].ruleId: must be 1-64 characters of letters, digits, `_` or `-`") {
 		t.Fatalf("expected JSON paths in the details, got %v", response.Diagnostics)
 	}
 

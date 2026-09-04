@@ -121,49 +121,50 @@ func TestAccActionConfigurationResource(t *testing.T) {
 }
 
 // testAccFlowConfig is a MULTI_STEP_AUTHENTICATION action with two RULE nodes and a COMPLETE node,
-// each RULE node defining the rule its arm references. The country code is the one thing the
-// update step changes.
+// and the flat rules array those nodes reference. The country code is the one thing the update step
+// changes. The rules are written before the nodes, and out of ruleId order, so the step also covers
+// that neither ordering is a difference.
 func testAccFlowConfig(countryCode string) string {
 	return fmt.Sprintf(`
 		resource "authsignal_action_configuration" "flow" {
 			action_code                = "terraform-acceptance-test-flow"
 			action_type                = "MULTI_STEP_AUTHENTICATION"
 			default_user_action_result = "CHALLENGE"
-			flow = jsonencode([
-				{
-					nodeId           = "rule-country"
-					nodeType         = "RULE"
-					parentNodeIds    = []
-					ruleChildNodeIds = [["from-country", "rule-anonymous"]]
-					elseChildNodeId  = "complete"
-					rules = [
-						{
-							ruleId     = "from-country"
-							name       = "From %[1]s"
-							conditions = { and = [{ in = [{ var = "ip.location.country.countryCode" }, ["%[1]s"]] }] }
-						}
-					]
-				},
-				{
-					nodeId           = "rule-anonymous"
-					nodeType         = "RULE"
-					parentNodeIds    = ["rule-country"]
-					ruleChildNodeIds = [["anonymous-ip", "complete"]]
-					elseChildNodeId  = "complete"
-					rules = [
-						{
-							ruleId     = "anonymous-ip"
-							name       = "Anonymous IP"
-							conditions = { and = [{ "==" = [{ var = "ip.isAnonymous" }, true] }] }
-						}
-					]
-				},
-				{
-					nodeId        = "complete"
-					nodeType      = "COMPLETE"
-					parentNodeIds = ["rule-country", "rule-anonymous"]
-				}
-			])
+			flow = jsonencode({
+				rules = [
+					{
+						ruleId     = "from-country"
+						name       = "From %[1]s"
+						conditions = { and = [{ in = [{ var = "ip.location.country.countryCode" }, ["%[1]s"]] }] }
+					},
+					{
+						ruleId     = "anonymous-ip"
+						name       = "Anonymous IP"
+						conditions = { and = [{ "==" = [{ var = "ip.isAnonymous" }, true] }] }
+					}
+				]
+				actionNodes = [
+					{
+						nodeId           = "rule-country"
+						nodeType         = "RULE"
+						parentNodeIds    = []
+						ruleChildNodeIds = [["from-country", "rule-anonymous"]]
+						elseChildNodeId  = "complete"
+					},
+					{
+						nodeId           = "rule-anonymous"
+						nodeType         = "RULE"
+						parentNodeIds    = ["rule-country"]
+						ruleChildNodeIds = [["anonymous-ip", "complete"]]
+						elseChildNodeId  = "complete"
+					},
+					{
+						nodeId        = "complete"
+						nodeType      = "COMPLETE"
+						parentNodeIds = ["rule-country", "rule-anonymous"]
+					}
+				]
+			})
 		}
 	`, countryCode)
 }
@@ -189,7 +190,10 @@ func TestAccActionConfigurationResource_flow(t *testing.T) {
 					}),
 					resource.TestCheckResourceAttrWith("authsignal_action_configuration.flow", "flow", func(value string) error {
 						if !strings.Contains(value, `"ruleId":"from-country"`) || !strings.Contains(value, `["NZ"]`) {
-							return fmt.Errorf("expected the embedded rule in the flow, got %s", value)
+							return fmt.Errorf("expected the rule in the flow's rules array, got %s", value)
+						}
+						if !strings.Contains(value, `"actionNodes"`) || !strings.Contains(value, `"rules"`) {
+							return fmt.Errorf("expected a document with both arrays, got %s", value)
 						}
 						return nil
 					}),

@@ -8,12 +8,12 @@ import (
 
 var _ validator.String = flowValidator{}
 
-// flowValidator runs the same lift the publish uses and reports every broken invariant with the
-// JSON path of the offending value, so a bad export is caught at plan time rather than by the API.
+// flowValidator runs the same parse the publish uses and reports every broken invariant with the
+// JSON path of the offending value, so a bad document is caught at plan time rather than by the API.
 type flowValidator struct{}
 
 func (v flowValidator) Description(_ context.Context) string {
-	return "must be a JSON array of action nodes where every RULE node defines, in a `rules` array, exactly the rules its `ruleChildNodeIds` reference"
+	return "must be a JSON object holding an `actionNodes` array and the flat `rules` array its nodes reference"
 }
 
 func (v flowValidator) MarkdownDescription(ctx context.Context) string {
@@ -25,7 +25,7 @@ func (v flowValidator) ValidateString(_ context.Context, req validator.StringReq
 		return
 	}
 
-	_, errs := liftFlow(req.ConfigValue.ValueString())
+	_, errs := parseFlow(req.ConfigValue.ValueString())
 
 	for _, err := range errs {
 		resp.Diagnostics.AddAttributeError(

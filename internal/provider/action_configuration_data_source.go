@@ -86,7 +86,7 @@ func (d *actionConfigurationDataSource) Schema(_ context.Context, _ datasource.S
 			},
 			"flow": schema.StringAttribute{
 				CustomType:  FlowType{},
-				Description: "The flow of a `MULTI_STEP_AUTHENTICATION` action as JSON: its action nodes, with the rules each `RULE` node references embedded in a `rules` array. Null for `LEGACY` actions.",
+				Description: "The flow of a `MULTI_STEP_AUTHENTICATION` action as JSON: an object with `actionNodes`, the graph the action runs, and `rules`, the flat list its `RULE` nodes reference. Null for `LEGACY` actions.",
 				Computed:    true,
 			},
 			"flow_version": schema.Int64Attribute{

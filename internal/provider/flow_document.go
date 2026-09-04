@@ -3,6 +3,7 @@ package provider
 import (
 	"encoding/json"
 	"fmt"
+	"reflect"
 	"regexp"
 	"sort"
 	"strings"
@@ -10,10 +11,12 @@ import (
 	"github.com/authsignal/authsignal-management-go/v6"
 )
 
-// The flow attribute holds a self-contained graph: the action node array the portal exports, where
-// every RULE node also carries a `rules` array defining the rules its arms reference. The API is
-// wire-shaped and wants `{actionNodes, rules}` instead, so the provider lifts the embedded rules out
-// before publishing and embeds the server's rules back into the graph when it reads.
+// The flow attribute holds the body the API's publish endpoint accepts, verbatim: an `actionNodes`
+// array and the flat `rules` array those nodes reference. Nothing here reshapes a flow. Publishing
+// hands the parsed document straight to the API, and a read composes the same two arrays back from
+// the action configuration and the action's rules, so the portal export, this provider and the API
+// all describe a flow the same way. `expectedFlowVersion` is the one part of the publish body that
+// is not in the document: the provider adds it from the version it last read.
 
 const (
 	actionTypeLegacy    = "LEGACY"
@@ -30,7 +33,7 @@ var (
 )
 
 // flowError is one broken invariant, located by the JSON path of the offending value within the
-// flow array (for example `[0].rules[1].ruleId`). An empty path means the document as a whole.
+// flow document (for example `actionNodes[0].nodeId`). An empty path means the document as a whole.
 type flowError struct {
 	Path    string
 	Message string
@@ -44,18 +47,37 @@ func (e flowError) Error() string {
 	return e.Path + ": " + e.Message
 }
 
-// flowDocument is the lifted form of a flow: the nodes without their embedded rules, and the rules
-// collected in node and arm order.
+// flowDocument is a parsed flow, ready to publish.
 type flowDocument struct {
-	Nodes []map[string]any
-	Rules []authsignal.ActionFlowRule
+	ActionNodes []authsignal.ActionNode
+	Rules       []authsignal.ActionFlowRule
 }
 
-// liftFlow parses the self-contained graph, strips the `rules` arrays off the RULE nodes and checks
-// every invariant. Numbers are kept as json.Number so the publish body carries the user's literals.
-func liftFlow(flowJson string) (flowDocument, []flowError) {
-	var errs []flowError
+// flowNode is one entry of `actionNodes`. Only nodeId and nodeType have a meaning here; the rest of
+// the payload is opaque and travels to the API untouched.
+type flowNode struct {
+	path    string
+	nodeId  string
+	payload map[string]any
+}
 
+// flowRule is one entry of `rules`, with the path it came from so an error can point back at it.
+type flowRule struct {
+	path string
+	rule authsignal.ActionFlowRule
+}
+
+// flowArm is one `[ruleId, childNodeId]` pair of a node's `ruleChildNodeIds`.
+type flowArm struct {
+	path        string
+	ruleId      string
+	childNodeId string
+}
+
+// parseFlow decodes a flow document and checks every invariant the API enforces, reporting each one
+// with the JSON path of the offending value. Numbers are kept as json.Number so the publish body
+// carries the literals the user wrote. A document with any error is not returned.
+func parseFlow(flowJson string) (flowDocument, []flowError) {
 	decoder := json.NewDecoder(strings.NewReader(flowJson))
 	decoder.UseNumber()
 
@@ -64,103 +86,290 @@ func liftFlow(flowJson string) (flowDocument, []flowError) {
 		return flowDocument{}, []flowError{{Message: "not valid JSON: " + err.Error()}}
 	}
 
-	rawNodes, ok := raw.([]any)
+	document, ok := raw.(map[string]any)
 	if !ok {
-		return flowDocument{}, []flowError{{Message: "a flow must be a JSON array of action nodes"}}
+		return flowDocument{}, []flowError{{Message: "a flow must be a JSON object with an `actionNodes` array and a `rules` array"}}
 	}
 
-	if len(rawNodes) == 0 {
-		return flowDocument{}, []flowError{{Message: "a flow needs at least one node"}}
+	errs := checkFlowKeys(document)
+
+	// Each array is parsed only when the key is there. A key that is present but null falls to the
+	// parsers, which reject it, rather than passing as an absent array.
+	var nodes []flowNode
+	var nodeErrs []flowError
+	if raw, has := document["actionNodes"]; has {
+		nodes, nodeErrs = parseActionNodes(raw)
+		errs = append(errs, nodeErrs...)
 	}
 
-	doc := flowDocument{
-		Nodes: make([]map[string]any, 0, len(rawNodes)),
-		Rules: []authsignal.ActionFlowRule{},
-	}
-
-	nodeIdPaths := map[string]string{}
-	ruleIdPaths := map[string]string{}
-
-	for i, rawNode := range rawNodes {
-		nodePath := fmt.Sprintf("[%d]", i)
-
-		node, ok := rawNode.(map[string]any)
-		if !ok {
-			errs = append(errs, flowError{nodePath, "a node must be a JSON object"})
-			continue
-		}
-
-		nodeId, ok := node["nodeId"].(string)
-		if !ok || nodeId == "" {
-			errs = append(errs, flowError{nodePath + ".nodeId", "must be a non-empty string"})
-		} else if previous, seen := nodeIdPaths[nodeId]; seen {
-			errs = append(errs, flowError{nodePath + ".nodeId", fmt.Sprintf("duplicates %s.nodeId (%q)", previous, nodeId)})
-		} else {
-			nodeIdPaths[nodeId] = nodePath
-		}
-
-		nodeType, ok := node["nodeType"].(string)
-		if !ok || nodeType == "" {
-			errs = append(errs, flowError{nodePath + ".nodeType", "must be a non-empty string"})
-		}
-
-		lifted := make(map[string]any, len(node))
-		for key, value := range node {
-			if key != "rules" {
-				lifted[key] = value
-			}
-		}
-		doc.Nodes = append(doc.Nodes, lifted)
-
-		rawRules, hasRules := node["rules"]
-
-		if nodeType != flowNodeTypeRule {
-			if hasRules {
-				errs = append(errs, flowError{nodePath + ".rules", "only RULE nodes carry rules"})
-			}
-			continue
-		}
-
-		armRuleIds, armErrs := liftArmRuleIds(node["ruleChildNodeIds"], nodePath)
-		errs = append(errs, armErrs...)
-
-		rules, ruleErrs := liftNodeRules(rawRules, hasRules, nodePath, ruleIdPaths)
+	var rules []flowRule
+	var ruleErrs []flowError
+	if raw, has := document["rules"]; has {
+		rules, ruleErrs = parseRules(raw)
 		errs = append(errs, ruleErrs...)
-
-		if len(armErrs) == 0 && len(ruleErrs) == 0 {
-			errs = append(errs, checkArmsMatchRules(armRuleIds, rules, nodePath)...)
-		}
-
-		for _, rule := range rules {
-			doc.Rules = append(doc.Rules, rule.rule)
-		}
 	}
 
-	if len(doc.Rules) > flowMaxRules {
-		errs = append(errs, flowError{Message: fmt.Sprintf("a flow may define at most %d rules, found %d", flowMaxRules, len(doc.Rules))})
+	if len(nodeErrs) == 0 && len(ruleErrs) == 0 {
+		errs = append(errs, checkFlowReferences(nodes, rules)...)
 	}
 
 	if len(errs) > 0 {
 		return flowDocument{}, errs
 	}
 
-	return doc, nil
+	actionNodes := make([]authsignal.ActionNode, len(nodes))
+	for i, node := range nodes {
+		actionNodes[i] = node.payload
+	}
+
+	publishRules := make([]authsignal.ActionFlowRule, len(rules))
+	for i, rule := range rules {
+		publishRules[i] = rule.rule
+	}
+
+	return flowDocument{ActionNodes: actionNodes, Rules: publishRules}, nil
 }
 
-// liftArmRuleIds reads the ruleId out of every `[ruleId, childNodeId]` arm of a RULE node.
-func liftArmRuleIds(rawArms any, nodePath string) ([]string, []flowError) {
-	armsPath := nodePath + ".ruleChildNodeIds"
+// checkFlowKeys enforces the two keys a flow document has. Keys are visited in order so a document
+// with several stray keys reports them the same way every time.
+func checkFlowKeys(document map[string]any) []flowError {
+	var errs []flowError
 
-	arms, ok := rawArms.([]any)
+	keys := make([]string, 0, len(document))
+	for key := range document {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+
+	for _, key := range keys {
+		switch key {
+		case "actionNodes", "rules":
+		case "expectedFlowVersion":
+			errs = append(errs, flowError{key, "is not part of a flow; the provider publishes with the version it last read"})
+		default:
+			errs = append(errs, flowError{key, "unknown key; a flow has `actionNodes` and `rules` only"})
+		}
+	}
+
+	if _, has := document["actionNodes"]; !has {
+		errs = append(errs, flowError{"actionNodes", "is required"})
+	}
+
+	if _, has := document["rules"]; !has {
+		errs = append(errs, flowError{"rules", "is required"})
+	}
+
+	return errs
+}
+
+// parseActionNodes checks the shape every node shares.
+func parseActionNodes(raw any) ([]flowNode, []flowError) {
+	rawNodes, ok := raw.([]any)
+	if !ok {
+		return nil, []flowError{{"actionNodes", "must be an array of action nodes"}}
+	}
+
+	if len(rawNodes) == 0 {
+		return nil, []flowError{{"actionNodes", "a flow needs at least one node"}}
+	}
+
+	var errs []flowError
+	nodes := make([]flowNode, 0, len(rawNodes))
+	nodeIdPaths := map[string]string{}
+
+	for i, rawNode := range rawNodes {
+		path := fmt.Sprintf("actionNodes[%d]", i)
+
+		payload, ok := rawNode.(map[string]any)
+		if !ok {
+			errs = append(errs, flowError{path, "a node must be a JSON object"})
+			continue
+		}
+
+		nodeId, ok := payload["nodeId"].(string)
+		if !ok || nodeId == "" {
+			errs = append(errs, flowError{path + ".nodeId", "must be a non-empty string"})
+		} else if previous, seen := nodeIdPaths[nodeId]; seen {
+			errs = append(errs, flowError{path + ".nodeId", fmt.Sprintf("duplicates %s.nodeId (%q)", previous, nodeId)})
+		} else {
+			nodeIdPaths[nodeId] = path
+		}
+
+		if nodeType, ok := payload["nodeType"].(string); !ok || nodeType == "" {
+			errs = append(errs, flowError{path + ".nodeType", "must be a non-empty string"})
+		}
+
+		nodes = append(nodes, flowNode{path: path, nodeId: nodeId, payload: payload})
+	}
+
+	return nodes, errs
+}
+
+// parseRules checks the flat rule list. The API accepts these three keys and silently drops any
+// other, so an unknown key is an error rather than something to pass through.
+func parseRules(raw any) ([]flowRule, []flowError) {
+	rawRules, ok := raw.([]any)
+	if !ok {
+		return nil, []flowError{{"rules", "must be an array of {ruleId, name, conditions} objects"}}
+	}
+
+	var errs []flowError
+	rules := make([]flowRule, 0, len(rawRules))
+	ruleIdPaths := map[string]string{}
+
+	for i, rawRule := range rawRules {
+		path := fmt.Sprintf("rules[%d]", i)
+
+		rule, ok := rawRule.(map[string]any)
+		if !ok {
+			errs = append(errs, flowError{path, "must be a {ruleId, name, conditions} object"})
+			continue
+		}
+
+		valid := true
+
+		ruleId, ok := rule["ruleId"].(string)
+		if !ok || !flowRuleIdPattern.MatchString(ruleId) {
+			errs = append(errs, flowError{path + ".ruleId", "must be 1-64 characters of letters, digits, `_` or `-`"})
+			valid = false
+		} else if previous, seen := ruleIdPaths[ruleId]; seen {
+			errs = append(errs, flowError{path + ".ruleId", fmt.Sprintf("rule %q is already defined at %s", ruleId, previous)})
+			valid = false
+		} else {
+			ruleIdPaths[ruleId] = path
+		}
+
+		name, ok := rule["name"].(string)
+		if !ok || name == "" {
+			errs = append(errs, flowError{path + ".name", "must be a non-empty string"})
+			valid = false
+		} else if !flowRuleNamePattern.MatchString(name) {
+			errs = append(errs, flowError{path + ".name", "must be 1-256 characters of letters, digits, spaces and common punctuation"})
+			valid = false
+		}
+
+		conditions, hasConditions := rule["conditions"]
+		if hasConditions && conditions != nil {
+			if _, ok := conditions.(map[string]any); !ok {
+				errs = append(errs, flowError{path + ".conditions", "must be a JSON object or absent"})
+				valid = false
+			}
+		}
+
+		for _, key := range sortedKeys(rule) {
+			if key != "ruleId" && key != "name" && key != "conditions" {
+				errs = append(errs, flowError{path + "." + key, "unknown key; a flow rule has ruleId, name and conditions only"})
+				valid = false
+			}
+		}
+
+		if !valid {
+			continue
+		}
+
+		rules = append(rules, flowRule{
+			path: path,
+			rule: authsignal.ActionFlowRule{RuleId: ruleId, Name: name, Conditions: conditions},
+		})
+	}
+
+	if len(rawRules) > flowMaxRules {
+		errs = append(errs, flowError{"rules", fmt.Sprintf("a flow may define at most %d rules, found %d", flowMaxRules, len(rawRules))})
+	}
+
+	return rules, errs
+}
+
+// checkFlowReferences ties the two arrays together: every rule belongs to exactly one node, and
+// every node a flow points at is a node the flow defines.
+func checkFlowReferences(nodes []flowNode, rules []flowRule) []flowError {
+	var errs []flowError
+
+	nodeIds := make(map[string]bool, len(nodes))
+	for _, node := range nodes {
+		nodeIds[node.nodeId] = true
+	}
+
+	definedRules := make(map[string]bool, len(rules))
+	for _, rule := range rules {
+		definedRules[rule.rule.RuleId] = true
+	}
+
+	referencedBy := map[string]string{}
+
+	for _, node := range nodes {
+		errs = append(errs, checkNodeTarget(node, "childNodeId", nodeIds)...)
+		errs = append(errs, checkNodeTarget(node, "elseChildNodeId", nodeIds)...)
+
+		arms, armErrs := parseArms(node)
+		errs = append(errs, armErrs...)
+
+		for _, arm := range arms {
+			if !nodeIds[arm.childNodeId] {
+				errs = append(errs, flowError{arm.path + "[1]", fmt.Sprintf("no node has nodeId %q", arm.childNodeId)})
+			}
+
+			if !definedRules[arm.ruleId] {
+				errs = append(errs, flowError{arm.path + "[0]", fmt.Sprintf("references rule %q, which `rules` does not define", arm.ruleId)})
+			}
+
+			if previous, seen := referencedBy[arm.ruleId]; seen {
+				errs = append(errs, flowError{arm.path + "[0]", fmt.Sprintf("references rule %q, which %s already references; a rule belongs to one node", arm.ruleId, previous)})
+			} else {
+				referencedBy[arm.ruleId] = arm.path
+			}
+		}
+	}
+
+	for _, rule := range rules {
+		if _, referenced := referencedBy[rule.rule.RuleId]; !referenced {
+			errs = append(errs, flowError{rule.path + ".ruleId", fmt.Sprintf("rule %q is not referenced by any node's ruleChildNodeIds", rule.rule.RuleId)})
+		}
+	}
+
+	return errs
+}
+
+// checkNodeTarget resolves one of the node pointers that names a single child. A value that is not
+// a string is left alone: node payloads are opaque, and only the API knows which keys each node
+// type must carry and what else they may hold.
+func checkNodeTarget(node flowNode, key string, nodeIds map[string]bool) []flowError {
+	target, ok := node.payload[key].(string)
+	if !ok {
+		return nil
+	}
+
+	if !nodeIds[target] {
+		return []flowError{{node.path + "." + key, fmt.Sprintf("no node has nodeId %q", target)}}
+	}
+
+	return nil
+}
+
+// parseArms reads the `[ruleId, childNodeId]` pairs a RULE node branches on. Only a RULE node needs
+// them, but any node carrying the key is read the same way.
+func parseArms(node flowNode) ([]flowArm, []flowError) {
+	armsPath := node.path + ".ruleChildNodeIds"
+
+	raw, present := node.payload["ruleChildNodeIds"]
+	if !present {
+		if node.payload["nodeType"] == flowNodeTypeRule {
+			return nil, []flowError{{armsPath, "a RULE node must have an array of [ruleId, childNodeId] pairs"}}
+		}
+
+		return nil, nil
+	}
+
+	rawArms, ok := raw.([]any)
 	if !ok {
 		return nil, []flowError{{armsPath, "must be an array of [ruleId, childNodeId] pairs"}}
 	}
 
 	var errs []flowError
-	ruleIds := make([]string, 0, len(arms))
+	arms := make([]flowArm, 0, len(rawArms))
 
-	for k, rawArm := range arms {
-		armPath := fmt.Sprintf("%s[%d]", armsPath, k)
+	for i, rawArm := range rawArms {
+		armPath := fmt.Sprintf("%s[%d]", armsPath, i)
 
 		arm, ok := rawArm.([]any)
 		if !ok || len(arm) != 2 {
@@ -175,196 +384,39 @@ func liftArmRuleIds(rawArms any, nodePath string) ([]string, []flowError) {
 			continue
 		}
 
-		ruleIds = append(ruleIds, ruleId)
+		arms = append(arms, flowArm{path: armPath, ruleId: ruleId, childNodeId: childNodeId})
 	}
 
-	return ruleIds, errs
+	return arms, errs
 }
 
-type liftedRule struct {
-	path string
-	rule authsignal.ActionFlowRule
-}
-
-// liftNodeRules validates the `rules` array of one RULE node. A missing array is the same as an
-// empty one. ruleIdPaths is shared across nodes so a ruleId can only be defined once per flow.
-func liftNodeRules(rawRules any, hasRules bool, nodePath string, ruleIdPaths map[string]string) ([]liftedRule, []flowError) {
-	rulesPath := nodePath + ".rules"
-
-	if !hasRules || rawRules == nil {
-		return []liftedRule{}, nil
+// composeFlow builds the flow document a read stores: the action configuration's nodes as the API
+// returned them, and the action's rules projected down to the three keys a flow publishes. Rules
+// are sorted by ruleId so an unchanged flow reads back as the same string every time.
+func composeFlow(nodes []authsignal.ActionNode, rules []authsignal.RuleResponse) (string, error) {
+	actionNodes := nodes
+	if actionNodes == nil {
+		actionNodes = []authsignal.ActionNode{}
 	}
 
-	rawList, ok := rawRules.([]any)
-	if !ok {
-		return nil, []flowError{{rulesPath, "must be an array of {ruleId, name, conditions} objects"}}
+	sorted := make([]authsignal.RuleResponse, len(rules))
+	copy(sorted, rules)
+	sort.SliceStable(sorted, func(i, j int) bool { return sorted[i].RuleId < sorted[j].RuleId })
+
+	projected := make([]map[string]any, 0, len(sorted))
+	for _, rule := range sorted {
+		projected = append(projected, projectFlowRule(rule))
 	}
 
-	var errs []flowError
-	rules := make([]liftedRule, 0, len(rawList))
-
-	for k, rawRule := range rawList {
-		rulePath := fmt.Sprintf("%s[%d]", rulesPath, k)
-
-		rule, ok := rawRule.(map[string]any)
-		if !ok {
-			errs = append(errs, flowError{rulePath, "must be a {ruleId, name, conditions} object"})
-			continue
-		}
-
-		valid := true
-
-		ruleId, ok := rule["ruleId"].(string)
-		if !ok || !flowRuleIdPattern.MatchString(ruleId) {
-			errs = append(errs, flowError{rulePath + ".ruleId", "must be 1-64 characters of letters, digits, `_` or `-`"})
-			valid = false
-		} else if previous, seen := ruleIdPaths[ruleId]; seen {
-			errs = append(errs, flowError{rulePath + ".ruleId", fmt.Sprintf("rule %q is already defined at %s", ruleId, previous)})
-			valid = false
-		} else {
-			ruleIdPaths[ruleId] = rulePath
-		}
-
-		name, ok := rule["name"].(string)
-		if !ok || name == "" {
-			errs = append(errs, flowError{rulePath + ".name", "must be a non-empty string"})
-			valid = false
-		} else if !flowRuleNamePattern.MatchString(name) {
-			errs = append(errs, flowError{rulePath + ".name", "must be 1-256 characters of letters, digits, spaces and common punctuation"})
-			valid = false
-		}
-
-		conditions, hasConditions := rule["conditions"]
-		if hasConditions && conditions != nil {
-			if _, ok := conditions.(map[string]any); !ok {
-				errs = append(errs, flowError{rulePath + ".conditions", "must be a JSON object or absent"})
-				valid = false
-			}
-		}
-
-		for key := range rule {
-			if key != "ruleId" && key != "name" && key != "conditions" {
-				errs = append(errs, flowError{rulePath + "." + key, "unknown key; a flow rule has ruleId, name and conditions only"})
-				valid = false
-			}
-		}
-
-		if !valid {
-			continue
-		}
-
-		rules = append(rules, liftedRule{
-			path: rulePath,
-			rule: authsignal.ActionFlowRule{RuleId: ruleId, Name: name, Conditions: conditions},
-		})
-	}
-
-	return rules, errs
-}
-
-// checkArmsMatchRules enforces that the rules a RULE node defines are exactly the rules its arms use.
-func checkArmsMatchRules(armRuleIds []string, rules []liftedRule, nodePath string) []flowError {
-	var errs []flowError
-
-	defined := map[string]bool{}
-	for _, rule := range rules {
-		defined[rule.rule.RuleId] = true
-	}
-
-	referenced := map[string]bool{}
-	for k, ruleId := range armRuleIds {
-		referenced[ruleId] = true
-		if !defined[ruleId] {
-			errs = append(errs, flowError{fmt.Sprintf("%s.ruleChildNodeIds[%d]", nodePath, k), fmt.Sprintf("references rule %q, which is not defined in this node's rules", ruleId)})
-		}
-	}
-
-	for _, rule := range rules {
-		if !referenced[rule.rule.RuleId] {
-			errs = append(errs, flowError{rule.path + ".ruleId", fmt.Sprintf("rule %q is not referenced by any arm of this node's ruleChildNodeIds", rule.rule.RuleId)})
-		}
-	}
-
-	return errs
-}
-
-// actionNodes returns the lifted nodes in the SDK's shape.
-func (doc flowDocument) actionNodes() []authsignal.ActionNode {
-	nodes := make([]authsignal.ActionNode, len(doc.Nodes))
-	for i, node := range doc.Nodes {
-		nodes[i] = node
-	}
-
-	return nodes
-}
-
-// embedFlow attaches each server rule to the RULE node whose arms reference it, in arm order, and
-// marshals the result with Go's sorted keys. The API enforces one rule to one node, so this is
-// unambiguous. Rules no arm references cannot live in a self-contained graph; their ids and names
-// are returned so the caller can warn about them. Rule fields other than ruleId, name and
-// conditions are projected away.
-func embedFlow(nodes []authsignal.ActionNode, rules []authsignal.RuleResponse) (string, []string, error) {
-	byId := make(map[string]authsignal.RuleResponse, len(rules))
-	for _, rule := range rules {
-		byId[rule.RuleId] = rule
-	}
-
-	referenced := map[string]bool{}
-	embedded := make([]any, 0, len(nodes))
-
-	for _, rawNode := range nodes {
-		node, ok := rawNode.(map[string]any)
-		if !ok || node["nodeType"] != flowNodeTypeRule {
-			embedded = append(embedded, rawNode)
-			continue
-		}
-
-		copied := make(map[string]any, len(node)+1)
-		for key, value := range node {
-			copied[key] = value
-		}
-
-		nodeRules := []any{}
-		arms, _ := node["ruleChildNodeIds"].([]any)
-		for _, rawArm := range arms {
-			arm, ok := rawArm.([]any)
-			if !ok || len(arm) == 0 {
-				continue
-			}
-
-			ruleId, ok := arm[0].(string)
-			if !ok {
-				continue
-			}
-
-			rule, found := byId[ruleId]
-			if !found {
-				continue
-			}
-
-			referenced[ruleId] = true
-			nodeRules = append(nodeRules, projectFlowRule(rule))
-		}
-
-		copied["rules"] = nodeRules
-		embedded = append(embedded, copied)
-	}
-
-	var unreferenced []string
-	for _, rule := range rules {
-		if !referenced[rule.RuleId] {
-			unreferenced = append(unreferenced, fmt.Sprintf("%s (%s)", rule.Name, rule.RuleId))
-		}
-	}
-
-	flowJson, err := json.Marshal(embedded)
+	flowJson, err := json.Marshal(map[string]any{"actionNodes": actionNodes, "rules": projected})
 	if err != nil {
-		return "", nil, err
+		return "", err
 	}
 
-	return string(flowJson), unreferenced, nil
+	return string(flowJson), nil
 }
 
+// projectFlowRule drops the fields the API derives for a rule, keeping the three a flow publishes.
 func projectFlowRule(rule authsignal.RuleResponse) map[string]any {
 	projected := map[string]any{
 		"ruleId": rule.RuleId,
@@ -378,29 +430,58 @@ func projectFlowRule(rule authsignal.RuleResponse) map[string]any {
 	return projected
 }
 
-// canonical reduces a lifted flow to a shape reflect.DeepEqual can compare: rules sorted by ruleId,
+// flowsEqual reports whether two flow documents mean the same thing. Comparison is structural and
+// does not depend on the invariants parseFlow checks, so a flow read back from a server that holds
+// a rule the configuration has dropped still compares as the ordinary difference it is.
+func flowsEqual(a, b string) bool {
+	canonicalA, okA := canonicalFlow(a)
+	canonicalB, okB := canonicalFlow(b)
+
+	if !okA || !okB {
+		return a == b
+	}
+
+	return reflect.DeepEqual(canonicalA, canonicalB)
+}
+
+// canonicalFlow reduces a flow to a value reflect.DeepEqual can compare: rules sorted by ruleId,
 // null values dropped (so absent conditions equal null conditions), every number a float64 (so
-// `1.0` equals `1`). Node order is kept because the array is the graph.
-func canonical(doc flowDocument) any {
-	nodes := make([]any, len(doc.Nodes))
-	for i, node := range doc.Nodes {
-		nodes[i] = canonicalValue(node)
+// `1.0` equals `1`). The order of `actionNodes` is kept because the array is the graph.
+func canonicalFlow(flowJson string) (any, bool) {
+	decoder := json.NewDecoder(strings.NewReader(flowJson))
+	decoder.UseNumber()
+
+	var raw any
+	if err := decoder.Decode(&raw); err != nil {
+		return nil, false
 	}
 
-	sorted := make([]authsignal.ActionFlowRule, len(doc.Rules))
-	copy(sorted, doc.Rules)
-	sort.SliceStable(sorted, func(i, j int) bool { return sorted[i].RuleId < sorted[j].RuleId })
-
-	rules := make([]any, len(sorted))
-	for i, rule := range sorted {
-		entry := map[string]any{"ruleId": rule.RuleId, "name": rule.Name}
-		if rule.Conditions != nil {
-			entry["conditions"] = rule.Conditions
-		}
-		rules[i] = canonicalValue(entry)
+	canonical, ok := canonicalValue(raw).(map[string]any)
+	if !ok {
+		return nil, false
 	}
 
-	return map[string]any{"actionNodes": nodes, "rules": rules}
+	if rules, ok := canonical["rules"].([]any); ok {
+		sorted := make([]any, len(rules))
+		copy(sorted, rules)
+		sort.SliceStable(sorted, func(i, j int) bool { return canonicalRuleId(sorted[i]) < canonicalRuleId(sorted[j]) })
+		canonical["rules"] = sorted
+	}
+
+	return canonical, true
+}
+
+// canonicalRuleId is the sort key of a rule. Anything that is not a rule sorts first and keeps its
+// relative order, so a malformed list still compares consistently.
+func canonicalRuleId(rule any) string {
+	entry, ok := rule.(map[string]any)
+	if !ok {
+		return ""
+	}
+
+	ruleId, _ := entry["ruleId"].(string)
+
+	return ruleId
 }
 
 func canonicalValue(value any) any {
@@ -432,4 +513,14 @@ func canonicalValue(value any) any {
 	default:
 		return value
 	}
+}
+
+func sortedKeys(object map[string]any) []string {
+	keys := make([]string, 0, len(object))
+	for key := range object {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+
+	return keys
 }

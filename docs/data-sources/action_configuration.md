@@ -31,7 +31,7 @@ data "authsignal_action_configuration" "test" {
 - `action_type` (String) How the action decides its outcome: `LEGACY` evaluates the rules managed with `authsignal_rule`; `MULTI_STEP_AUTHENTICATION` runs the flow in `flow`.
 - `default_user_action_result` (String) The default action behavior if no rules match. (i.e 'CHALLENGE').
 - `default_verification_method` (String) Ignore the user's preference and choose which authenticator the Pre-built UI will present by default.
-- `flow` (String) The flow of a `MULTI_STEP_AUTHENTICATION` action as JSON: its action nodes, with the rules each `RULE` node references embedded in a `rules` array. Null for `LEGACY` actions.
+- `flow` (String) The flow of a `MULTI_STEP_AUTHENTICATION` action as JSON: an object with `actionNodes`, the graph the action runs, and `rules`, the flat list its `RULE` nodes reference. Null for `LEGACY` actions.
 - `flow_version` (Number) The version of the published flow. Null for `LEGACY` actions and for a flow that has never been published.
 - `last_action_created_at` (String) The date of when an action was last tracked for any user.
 - `messaging_templates` (String) Optional messaging templates to be shown in Authsignal's pre-built UI.

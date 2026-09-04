@@ -3,7 +3,6 @@ package provider
 import (
 	"context"
 	"fmt"
-	"reflect"
 
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
@@ -17,10 +16,10 @@ var (
 	_ basetypes.StringValuableWithSemanticEquals = FlowValue{}
 )
 
-// FlowType is the attribute type of a self-contained action flow: a JSON string whose semantic
-// equality ignores formatting, key order, rule order and other differences that do not change the
-// graph or its rules. It is structured like jsontypes.Normalized but implemented here so the
-// provider does not take on another dependency.
+// FlowType is the attribute type of an action flow document: a JSON string whose semantic equality
+// ignores formatting, key order, rule order and other differences that do not change the flow. It is
+// structured like jsontypes.Normalized but implemented here so the provider does not take on another
+// dependency.
 type FlowType struct {
 	basetypes.StringType
 }
@@ -65,7 +64,7 @@ func (t FlowType) ValueFromTerraform(ctx context.Context, in tftypes.Value) (att
 	return stringValuable, nil
 }
 
-// FlowValue is a self-contained action flow held as a JSON string.
+// FlowValue is an action flow document held as a JSON string.
 type FlowValue struct {
 	basetypes.StringValue
 }
@@ -95,10 +94,9 @@ func (v FlowValue) Equal(o attr.Value) bool {
 	return v.StringValue.Equal(other.StringValue)
 }
 
-// StringSemanticEquals lifts both flows, canonicalises them and deep-compares the result. Two flows
-// are equal when their nodes match in order and they define the same rules, whatever the JSON
-// formatting, key order, rule order, or `1.0` versus `1`. A flow that does not lift (which the
-// validator prevents in configuration, and the API prevents on its side) is never equal to anything.
+// StringSemanticEquals canonicalises both flows and deep-compares the result. Two flows are equal
+// when their nodes match in order and they carry the same rules, whatever the JSON formatting, key
+// order, rule order, or `1.0` versus `1`.
 func (v FlowValue) StringSemanticEquals(_ context.Context, newValuable basetypes.StringValuable) (bool, diag.Diagnostics) {
 	var diags diag.Diagnostics
 
@@ -120,18 +118,4 @@ func (v FlowValue) StringSemanticEquals(_ context.Context, newValuable basetypes
 	}
 
 	return flowsEqual(v.ValueString(), newValue.ValueString()), diags
-}
-
-func flowsEqual(a, b string) bool {
-	docA, errsA := liftFlow(a)
-	if len(errsA) > 0 {
-		return false
-	}
-
-	docB, errsB := liftFlow(b)
-	if len(errsB) > 0 {
-		return false
-	}
-
-	return reflect.DeepEqual(canonical(docA), canonical(docB))
 }

@@ -1,23 +1,25 @@
-[
-  {
-    "nodeId": "rule-abc",
-    "nodeType": "RULE",
-    "parentNodeIds": [],
-    "ruleChildNodeIds": [["rule-nz", "verify-def"], ["rule-anon", "block-mno"]],
-    "elseChildNodeId": "complete-ghi",
-    "rules": [
-      {"ruleId": "rule-nz", "name": "From New Zealand", "conditions": {"and": [{"in": [{"var": "ip.location.country.countryCode"}, ["NZ"]]}]}},
-      {"ruleId": "rule-anon", "name": "Anonymous IP", "conditions": {"and": [{"==": [{"var": "ip.isAnonymous"}, true]}]}}
-    ]
-  },
-  {
-    "nodeId": "verify-def",
-    "nodeType": "VERIFICATION",
-    "parentNodeIds": ["rule-abc"],
-    "name": "Sign in",
-    "methodConfigurations": {"PASSKEY": {"isEnabled": true}, "EMAIL_OTP": {"isEnabled": true}},
-    "childNodeId": "complete-ghi"
-  },
-  {"nodeId": "block-mno", "nodeType": "BLOCK", "parentNodeIds": ["rule-abc"]},
-  {"nodeId": "complete-ghi", "nodeType": "COMPLETE", "parentNodeIds": ["rule-abc", "verify-def"]}
-]
+{
+  "actionNodes": [
+    {
+      "nodeId": "rule-abc",
+      "nodeType": "RULE",
+      "parentNodeIds": [],
+      "ruleChildNodeIds": [["rule-nz", "verify-def"], ["rule-anon", "block-mno"]],
+      "elseChildNodeId": "complete-ghi"
+    },
+    {
+      "nodeId": "verify-def",
+      "nodeType": "VERIFICATION",
+      "parentNodeIds": ["rule-abc"],
+      "name": "Sign in",
+      "methodConfigurations": {"PASSKEY": {"isEnabled": true}, "EMAIL_OTP": {"isEnabled": true}},
+      "childNodeId": "complete-ghi"
+    },
+    {"nodeId": "block-mno", "nodeType": "BLOCK", "parentNodeIds": ["rule-abc"]},
+    {"nodeId": "complete-ghi", "nodeType": "COMPLETE", "parentNodeIds": ["rule-abc", "verify-def"]}
+  ],
+  "rules": [
+    {"ruleId": "rule-nz", "name": "From New Zealand", "conditions": {"and": [{"in": [{"var": "ip.location.country.countryCode"}, ["NZ"]]}]}},
+    {"ruleId": "rule-anon", "name": "Anonymous IP", "conditions": {"and": [{"==": [{"var": "ip.isAnonymous"}, true]}]}}
+  ]
+}

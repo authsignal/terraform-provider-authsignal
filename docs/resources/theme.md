@@ -86,7 +86,7 @@ resource "authsignal_theme" "theme" {
     underline = true
   }
   shadows = {
-    enabled = false
+    enabled = true
   }
   dark_mode = {
     logo_url      = "<url to an image>"
@@ -137,6 +137,9 @@ resource "authsignal_theme" "theme" {
       logo_position     = "inside"
       logo_height       = 2
     }
+    shadows = {
+      enabled = false
+    }
   }
 }
 ```
@@ -159,7 +162,7 @@ resource "authsignal_theme" "theme" {
 - `logo_url` (String) The URL of an image to be used as a logo for the tenant.
 - `page_background` (Attributes) (see [below for nested schema](#nestedatt--page_background))
 - `primary_color` (String) The primary color for the tenant.
-- `shadows` (Attributes) How shadows are drawn in the pre-built UI. Shared by light and dark mode. (see [below for nested schema](#nestedatt--shadows))
+- `shadows` (Attributes) How shadows are drawn in the pre-built UI. Dark mode inherits this unless `dark_mode.shadows` sets its own. (see [below for nested schema](#nestedatt--shadows))
 - `typography` (Attributes) The fonts used in the pre-built UI. A typeface is shared by light and dark mode. (see [below for nested schema](#nestedatt--typography))
 - `watermark_url` (String) The URL of an image to be used as a watermark at the bottom of Authsignal's pre-built UI.
 
@@ -231,6 +234,7 @@ Optional:
 - `logo_url` (String) The URL of an image to be used as a logo for the tenant.
 - `page_background` (Attributes) (see [below for nested schema](#nestedatt--dark_mode--page_background))
 - `primary_color` (String) The primary color for the tenant.
+- `shadows` (Attributes) How shadows are drawn in dark mode. Without it, dark mode inherits the theme's `shadows`. (see [below for nested schema](#nestedatt--dark_mode--shadows))
 - `watermark_url` (String) The URL of an image to be used as a watermark at the bottom of Authsignal's pre-built UI.
 
 <a id="nestedatt--dark_mode--borders"></a>
@@ -295,6 +299,14 @@ Optional:
 
 - `background_color` (String) The color to be used for the background in the pre-built UI.
 - `background_image_url` (String) The URL of an image which will be used as the background in the pre-built UI.
+
+
+<a id="nestedatt--dark_mode--shadows"></a>
+### Nested Schema for `dark_mode.shadows`
+
+Optional:
+
+- `enabled` (Boolean) Whether elements such as cards and buttons cast a shadow.
 
 
 

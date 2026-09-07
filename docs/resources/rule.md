@@ -3,12 +3,12 @@
 page_title: "authsignal_rule Resource - terraform-provider-authsignal"
 subcategory: ""
 description: |-
-  
+  Manages a rule for a CLASSIC action configuration. Rules for a FLOW action belong in its flow document. Using this resource for a FLOW action causes a permanent diff.
 ---
 
 # authsignal_rule (Resource)
 
-
+Manages a rule for a `CLASSIC` action configuration. Rules for a `FLOW` action belong in its `flow` document. Using this resource for a `FLOW` action causes a permanent diff.
 
 ## Example Usage
 

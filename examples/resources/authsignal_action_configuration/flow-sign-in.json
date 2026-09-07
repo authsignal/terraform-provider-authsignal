@@ -1,0 +1,25 @@
+{
+  "actionNodes": [
+    {
+      "nodeId": "evaluate-risk",
+      "nodeType": "RULE",
+      "parentNodeIds": [],
+      "ruleChildNodeIds": [["new-zealand", "verify-identity"], ["anonymous-ip", "block-request"]],
+      "elseChildNodeId": "complete-sign-in"
+    },
+    {
+      "nodeId": "verify-identity",
+      "nodeType": "VERIFICATION",
+      "parentNodeIds": ["evaluate-risk"],
+      "name": "Sign in",
+      "methodConfigurations": {"PASSKEY": {"isEnabled": true}, "EMAIL_OTP": {"isEnabled": true}},
+      "childNodeId": "complete-sign-in"
+    },
+    {"nodeId": "block-request", "nodeType": "BLOCK", "parentNodeIds": ["evaluate-risk"]},
+    {"nodeId": "complete-sign-in", "nodeType": "COMPLETE", "parentNodeIds": ["evaluate-risk", "verify-identity"]}
+  ],
+  "rules": [
+    {"ruleId": "new-zealand", "name": "From New Zealand", "conditions": {"and": [{"in": [{"var": "ip.location.country.countryCode"}, ["NZ"]]}]}},
+    {"ruleId": "anonymous-ip", "name": "Anonymous IP", "conditions": {"and": [{"==": [{"var": "ip.isAnonymous"}, true]}]}}
+  ]
+}

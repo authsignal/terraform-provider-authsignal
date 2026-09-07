@@ -120,48 +120,73 @@ func TestAccActionConfigurationResource(t *testing.T) {
 	})
 }
 
+// The flow is pretty-printed with a key order the API does not return, so the
+// configured text never matches the document composed from a read.
 func testAccFlowConfig(countryCode string) string {
 	return fmt.Sprintf(`
 		resource "authsignal_action_configuration" "flow" {
-			action_code                = "terraform-acceptance-test-flow"
-			action_type                = "FLOW"
-			flow = jsonencode({
-				rules = [
-					{
-						ruleId     = "from-country"
-						name       = "From %[1]s"
-						conditions = { and = [{ in = [{ var = "ip.location.country.countryCode" }, ["%[1]s"]] }] }
-					},
-					{
-						ruleId     = "anonymous-ip"
-						name       = "Anonymous IP"
-						conditions = { and = [{ "==" = [{ var = "ip.isAnonymous" }, true] }] }
-					}
-				]
-				actionNodes = [
-					{
-						nodeId           = "rule-country"
-						nodeType         = "RULE"
-						parentNodeIds    = []
-						ruleChildNodeIds = [["from-country", "rule-anonymous"]]
-						elseChildNodeId  = "complete"
-					},
-					{
-						nodeId           = "rule-anonymous"
-						nodeType         = "RULE"
-						parentNodeIds    = ["rule-country"]
-						ruleChildNodeIds = [["anonymous-ip", "complete"]]
-						elseChildNodeId  = "complete"
-					},
-					{
-						nodeId        = "complete"
-						nodeType      = "COMPLETE"
-						parentNodeIds = ["rule-country", "rule-anonymous"]
-					}
-				]
-			})
+			action_code = "terraform-acceptance-test-flow"
+			action_type = "FLOW"
+			flow        = <<-EOT
+				{
+				  "rules": [
+				    {
+				      "ruleId": "from-country",
+				      "name": "From %[1]s",
+				      "conditions": {
+				        "and": [
+				          { "in": [{ "var": "ip.location.country.countryCode" }, ["%[1]s"]] }
+				        ]
+				      }
+				    },
+				    {
+				      "ruleId": "anonymous-ip",
+				      "name": "Anonymous IP",
+				      "conditions": {
+				        "and": [
+				          { "==": [{ "var": "ip.isAnonymous" }, true] }
+				        ]
+				      }
+				    }
+				  ],
+				  "actionNodes": [
+				    {
+				      "nodeType": "RULE",
+				      "nodeId": "rule-country",
+				      "parentNodeIds": [],
+				      "ruleChildNodeIds": [["from-country", "rule-anonymous"]],
+				      "elseChildNodeId": "complete"
+				    },
+				    {
+				      "nodeType": "RULE",
+				      "nodeId": "rule-anonymous",
+				      "parentNodeIds": ["rule-country"],
+				      "ruleChildNodeIds": [["anonymous-ip", "complete"]],
+				      "elseChildNodeId": "complete"
+				    },
+				    {
+				      "nodeType": "COMPLETE",
+				      "nodeId": "complete",
+				      "parentNodeIds": ["rule-country", "rule-anonymous"]
+				    }
+				  ]
+				}
+			EOT
 		}
 	`, countryCode)
+}
+
+// terraform import needs the address free, and the harness has no state rm.
+func testAccFlowForgetConfig() string {
+	return `
+		removed {
+			from = authsignal_action_configuration.flow
+
+			lifecycle {
+				destroy = false
+			}
+		}
+	`
 }
 
 func TestAccActionConfigurationResource_flow(t *testing.T) {
@@ -182,7 +207,7 @@ func TestAccActionConfigurationResource_flow(t *testing.T) {
 						return nil
 					}),
 					resource.TestCheckResourceAttrWith("authsignal_action_configuration.flow", "flow", func(value string) error {
-						if !strings.Contains(value, `"ruleId":"from-country"`) || !strings.Contains(value, `["NZ"]`) {
+						if !strings.Contains(value, `"ruleId": "from-country"`) || !strings.Contains(value, `["NZ"]`) {
 							return fmt.Errorf("expected the rule in the flow's rules array, got %s", value)
 						}
 						if !strings.Contains(value, `"actionNodes"`) || !strings.Contains(value, `"rules"`) {
@@ -224,6 +249,21 @@ func TestAccActionConfigurationResource_flow(t *testing.T) {
 				ImportStateVerify:                    true,
 				ImportStateVerifyIgnore:              []string{"flow"},
 				ImportStateVerifyIdentifierAttribute: "action_code",
+			},
+			{
+				Config: testAccFlowForgetConfig(),
+			},
+			{
+				Config:             testAccFlowConfig("AU"),
+				ResourceName:       "authsignal_action_configuration.flow",
+				ImportState:        true,
+				ImportStateId:      "terraform-acceptance-test-flow",
+				ImportStatePersist: true,
+			},
+			// The imported flow is the composed document, not the configured text.
+			{
+				Config:   testAccFlowConfig("AU"),
+				PlanOnly: true,
 			},
 		},
 	})

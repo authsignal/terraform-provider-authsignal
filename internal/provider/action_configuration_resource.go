@@ -22,6 +22,7 @@ var (
 	_ resource.Resource                   = &actionConfigurationResource{}
 	_ resource.ResourceWithConfigure      = &actionConfigurationResource{}
 	_ resource.ResourceWithImportState    = &actionConfigurationResource{}
+	_ resource.ResourceWithModifyPlan     = &actionConfigurationResource{}
 	_ resource.ResourceWithValidateConfig = &actionConfigurationResource{}
 )
 
@@ -223,6 +224,45 @@ func (r *actionConfigurationResource) ValidateConfig(ctx context.Context, req re
 			"Missing default user action result",
 			"A `"+actionTypeClassic+"` action needs a default result for when no rule matches. Set `default_user_action_result` to one of `ALLOW`, `CHALLENGE`, `REVIEW` or `BLOCK`.",
 		)
+	}
+}
+
+// The framework marks every computed attribute with a null configuration value unknown
+// before the attribute plan modifiers run, whenever the proposed plan differs from the
+// prior state. An imported flow is the composed document rather than the configured
+// text, so the proposal always differs and last_action_created_at stays unknown forever.
+func (r *actionConfigurationResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
+	if req.State.Raw.IsNull() || req.Plan.Raw.IsNull() || len(resp.RequiresReplace) > 0 {
+		return
+	}
+
+	var plan actionConfigurationResourceModel
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+
+	var state actionConfigurationResourceModel
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	flowEqual, diags := state.Flow.StringSemanticEquals(ctx, plan.Flow)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	// last_action_created_at and flow_version follow the action, so only the configurable attributes decide.
+	unchanged := flowEqual &&
+		plan.ActionCode.Equal(state.ActionCode) &&
+		plan.ActionType.Equal(state.ActionType) &&
+		plan.DefaultUserActionResult.Equal(state.DefaultUserActionResult) &&
+		plan.MessagingTemplates.Equal(state.MessagingTemplates) &&
+		plan.VerificationMethods.Equal(state.VerificationMethods) &&
+		plan.PromptToEnrollVerificationMethods.Equal(state.PromptToEnrollVerificationMethods) &&
+		plan.DefaultVerificationMethod.Equal(state.DefaultVerificationMethod)
+
+	if unchanged {
+		resp.Plan.Raw = req.State.Raw
 	}
 }
 

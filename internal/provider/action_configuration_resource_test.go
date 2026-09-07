@@ -1,6 +1,9 @@
 package provider
 
 import (
+	"fmt"
+	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
@@ -113,6 +116,115 @@ func TestAccActionConfigurationResource(t *testing.T) {
 				),
 			},
 			// Delete testing automatically occurs in TestCase
+		},
+	})
+}
+
+func testAccFlowConfig(countryCode string) string {
+	return fmt.Sprintf(`
+		resource "authsignal_action_configuration" "flow" {
+			action_code                = "terraform-acceptance-test-flow"
+			action_type                = "FLOW"
+			flow = jsonencode({
+				rules = [
+					{
+						ruleId     = "from-country"
+						name       = "From %[1]s"
+						conditions = { and = [{ in = [{ var = "ip.location.country.countryCode" }, ["%[1]s"]] }] }
+					},
+					{
+						ruleId     = "anonymous-ip"
+						name       = "Anonymous IP"
+						conditions = { and = [{ "==" = [{ var = "ip.isAnonymous" }, true] }] }
+					}
+				]
+				actionNodes = [
+					{
+						nodeId           = "rule-country"
+						nodeType         = "RULE"
+						parentNodeIds    = []
+						ruleChildNodeIds = [["from-country", "rule-anonymous"]]
+						elseChildNodeId  = "complete"
+					},
+					{
+						nodeId           = "rule-anonymous"
+						nodeType         = "RULE"
+						parentNodeIds    = ["rule-country"]
+						ruleChildNodeIds = [["anonymous-ip", "complete"]]
+						elseChildNodeId  = "complete"
+					},
+					{
+						nodeId        = "complete"
+						nodeType      = "COMPLETE"
+						parentNodeIds = ["rule-country", "rule-anonymous"]
+					}
+				]
+			})
+		}
+	`, countryCode)
+}
+
+func TestAccActionConfigurationResource_flow(t *testing.T) {
+	var firstVersion string
+
+	resource.Test(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccFlowConfig("NZ"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttr("authsignal_action_configuration.flow", "action_code", "terraform-acceptance-test-flow"),
+					resource.TestCheckResourceAttr("authsignal_action_configuration.flow", "action_type", "FLOW"),
+					resource.TestCheckNoResourceAttr("authsignal_action_configuration.flow", "default_user_action_result"),
+					resource.TestCheckResourceAttrSet("authsignal_action_configuration.flow", "flow_version"),
+					resource.TestCheckResourceAttrWith("authsignal_action_configuration.flow", "flow_version", func(value string) error {
+						firstVersion = value
+						return nil
+					}),
+					resource.TestCheckResourceAttrWith("authsignal_action_configuration.flow", "flow", func(value string) error {
+						if !strings.Contains(value, `"ruleId":"from-country"`) || !strings.Contains(value, `["NZ"]`) {
+							return fmt.Errorf("expected the rule in the flow's rules array, got %s", value)
+						}
+						if !strings.Contains(value, `"actionNodes"`) || !strings.Contains(value, `"rules"`) {
+							return fmt.Errorf("expected a document with both arrays, got %s", value)
+						}
+						return nil
+					}),
+				),
+			},
+			{
+				Config: testAccFlowConfig("AU"),
+				Check: resource.ComposeAggregateTestCheckFunc(
+					resource.TestCheckResourceAttrWith("authsignal_action_configuration.flow", "flow_version", func(value string) error {
+						first, err := strconv.Atoi(firstVersion)
+						if err != nil {
+							return err
+						}
+						second, err := strconv.Atoi(value)
+						if err != nil {
+							return err
+						}
+						if second != first+1 {
+							return fmt.Errorf("expected flow_version %d after changing a condition, got %d", first+1, second)
+						}
+						return nil
+					}),
+					resource.TestCheckResourceAttrWith("authsignal_action_configuration.flow", "flow", func(value string) error {
+						if !strings.Contains(value, `["AU"]`) {
+							return fmt.Errorf("expected the changed condition in the flow, got %s", value)
+						}
+						return nil
+					}),
+				),
+			},
+			{
+				ResourceName:                         "authsignal_action_configuration.flow",
+				ImportState:                          true,
+				ImportStateId:                        "terraform-acceptance-test-flow",
+				ImportStateVerify:                    true,
+				ImportStateVerifyIgnore:              []string{"flow"},
+				ImportStateVerifyIdentifierAttribute: "action_code",
+			},
 		},
 	})
 }

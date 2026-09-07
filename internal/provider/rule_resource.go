@@ -54,6 +54,9 @@ func (r *ruleResource) Metadata(_ context.Context, req resource.MetadataRequest,
 
 func (d *ruleResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
+		Description: "Manages a rule for a `CLASSIC` action configuration. " +
+			"Rules for a `FLOW` action belong in its `flow` document. " +
+			"Using this resource for a `FLOW` action causes a permanent diff.",
 		Attributes: map[string]schema.Attribute{
 			"action_code": schema.StringAttribute{
 				Description: "The name of the action that users perform which you will track. (e.g 'login')",

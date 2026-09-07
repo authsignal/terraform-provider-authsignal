@@ -28,8 +28,11 @@ data "authsignal_action_configuration" "test" {
 
 ### Read-Only
 
-- `default_user_action_result` (String) The default action behavior if no rules match. (i.e 'CHALLENGE').
+- `action_type` (String) The action type: `CLASSIC` or `FLOW`.
+- `default_user_action_result` (String) The result when no rule matches a `CLASSIC` action. Null for `FLOW` actions.
 - `default_verification_method` (String) Ignore the user's preference and choose which authenticator the Pre-built UI will present by default.
+- `flow` (String) The flow as a JSON object string with `actionNodes` and `rules`. Null for `CLASSIC` actions.
+- `flow_version` (Number) The computed version of the published flow. Null for `CLASSIC` actions and unpublished `FLOW` actions.
 - `last_action_created_at` (String) The date of when an action was last tracked for any user.
 - `messaging_templates` (String) Optional messaging templates to be shown in Authsignal's pre-built UI.
 - `prompt_to_enroll_verification_methods` (List of String) If this is set then users will be prompted to add a passkey after a challenge is completed.

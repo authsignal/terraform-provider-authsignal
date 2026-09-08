@@ -464,7 +464,7 @@ func TestComposeFlowDoesNotMutateTheServerNodes(t *testing.T) {
 }
 
 func TestTheShippedExampleFlowValidates(t *testing.T) {
-	example, err := os.ReadFile("../../examples/resources/authsignal_action_configuration/flow-sign-in.json")
+	example, err := os.ReadFile("../../examples/resources/authsignal_flow/flow-sign-in.json")
 	if err != nil {
 		t.Fatal(err)
 	}

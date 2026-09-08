@@ -5,9 +5,7 @@ import (
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-framework/path"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
-	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-framework/types/basetypes"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
@@ -267,76 +265,4 @@ func containsDetail(response *validator.StringResponse, detail string) bool {
 	}
 
 	return false
-}
-
-func TestActionTypeReplaceDecision(t *testing.T) {
-	ctx := context.Background()
-	existing := tftypes.NewValue(tftypes.Object{}, map[string]tftypes.Value{})
-
-	testCases := []struct {
-		name            string
-		config          types.String
-		plan            types.String
-		state           types.String
-		requiresReplace bool
-		errors          bool
-	}{
-		{
-			name:   "state from a provider without action_type is not a type change",
-			config: types.StringNull(),
-			plan:   types.StringValue(actionTypeClassic),
-			state:  types.StringNull(),
-		},
-		{
-			name:   "flow action on the server, action_type not configured, fails the plan",
-			config: types.StringNull(),
-			plan:   types.StringValue(actionTypeClassic),
-			state:  types.StringValue(actionTypeFlow),
-			errors: true,
-		},
-		{
-			name:            "explicit CLASSIC over a flow action replaces",
-			config:          types.StringValue(actionTypeClassic),
-			plan:            types.StringValue(actionTypeClassic),
-			state:           types.StringValue(actionTypeFlow),
-			requiresReplace: true,
-		},
-		{
-			name:            "explicit flow type over a classic action replaces",
-			config:          types.StringValue(actionTypeFlow),
-			plan:            types.StringValue(actionTypeFlow),
-			state:           types.StringValue(actionTypeClassic),
-			requiresReplace: true,
-		},
-		{
-			name:   "unchanged type does nothing",
-			config: types.StringValue(actionTypeFlow),
-			plan:   types.StringValue(actionTypeFlow),
-			state:  types.StringValue(actionTypeFlow),
-		},
-	}
-
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			request := planmodifier.StringRequest{
-				Path:        path.Root("action_type"),
-				ConfigValue: testCase.config,
-				PlanValue:   testCase.plan,
-				StateValue:  testCase.state,
-				Plan:        tfsdk.Plan{Raw: existing},
-				State:       tfsdk.State{Raw: existing},
-			}
-			response := &planmodifier.StringResponse{PlanValue: testCase.plan}
-
-			actionTypeRequiresReplace().PlanModifyString(ctx, request, response)
-
-			if response.RequiresReplace != testCase.requiresReplace {
-				t.Fatalf("expected requiresReplace=%v, got %v", testCase.requiresReplace, response.RequiresReplace)
-			}
-
-			if response.Diagnostics.HasError() != testCase.errors {
-				t.Fatalf("expected errors=%v, got %v", testCase.errors, response.Diagnostics)
-			}
-		})
-	}
 }

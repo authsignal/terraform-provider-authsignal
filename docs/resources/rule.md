@@ -3,17 +3,16 @@
 page_title: "authsignal_rule Resource - terraform-provider-authsignal"
 subcategory: ""
 description: |-
-  Manages a rule for a CLASSIC action configuration. Rules for a FLOW action belong in its flow document. Using this resource for a FLOW action causes a permanent diff.
+  Manages a rule for a CLASSIC action. For a FLOW action, define rules in authsignal_flow.flow.
 ---
 
 # authsignal_rule (Resource)
 
-Manages a rule for a `CLASSIC` action configuration. Rules for a `FLOW` action belong in its `flow` document. Using this resource for a `FLOW` action causes a permanent diff.
+Manages a rule for a `CLASSIC` action. For a `FLOW` action, define rules in `authsignal_flow.flow`.
 
 ## Example Usage
 
 ```terraform
-# create a rule
 resource "authsignal_rule" "test" {
   action_code = "test-rules"
   name        = "made-with-terraform"
@@ -76,6 +75,6 @@ Import is supported using the following syntax:
 The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
 
 ```shell
-# rules can be imported by specifying the action code.
+# Import a rule using `<action_code>/<rule_id>`.
 terraform import authsignal_rule.test "test-action-code/a2d9670f-4028-424c-9f0f-1493ed9efc45"
 ```

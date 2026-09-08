@@ -1,4 +1,3 @@
-# create a rule
 resource "authsignal_rule" "test" {
   action_code = "test-rules"
   name        = "made-with-terraform"

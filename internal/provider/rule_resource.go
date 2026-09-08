@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
@@ -52,11 +53,34 @@ func (r *ruleResource) Metadata(_ context.Context, req resource.MetadataRequest,
 	resp.TypeName = req.ProviderTypeName + "_rule"
 }
 
+// A FLOW action keeps its rules in the flow document, and the rules endpoint accepts one
+// written here regardless, so the rule would silently reappear inside `authsignal_flow`'s
+// flow as a permanent diff. The check guards the two mutations that could introduce it.
+// It is deliberately best effort: an action configuration that cannot be read is left to
+// the rules endpoint to accept or reject, so this cannot fail an otherwise valid apply.
+func (r *ruleResource) checkActionIsClassic(actionCode string) diag.Diagnostics {
+	var diags diag.Diagnostics
+
+	actionConfiguration, _, err := r.client.GetActionConfiguration(actionCode)
+	if err != nil || actionConfiguration == nil {
+		return diags
+	}
+
+	if isFlowActionType(actionConfiguration.ActionType) {
+		diags.AddAttributeError(
+			path.Root("action_code"),
+			"Rules of a "+actionTypeFlow+" action belong in its flow",
+			"Action configuration "+actionCode+" is a "+actionTypeFlow+" action, and `authsignal_rule` manages the rules of a "+actionTypeClassic+" action only. "+
+				"Move this rule into the `flow` document of the `authsignal_flow` resource that manages "+actionCode+".",
+		)
+	}
+
+	return diags
+}
+
 func (d *ruleResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: "Manages a rule for a `CLASSIC` action configuration. " +
-			"Rules for a `FLOW` action belong in its `flow` document. " +
-			"Using this resource for a `FLOW` action causes a permanent diff.",
+		Description: "Manages a rule for a `CLASSIC` action. For a `FLOW` action, define rules in `authsignal_flow.flow`.",
 		Attributes: map[string]schema.Attribute{
 			"action_code": schema.StringAttribute{
 				Description: "The name of the action that users perform which you will track. (e.g 'login')",
@@ -140,6 +164,11 @@ func (r *ruleResource) Create(ctx context.Context, req resource.CreateRequest, r
 	var plan ruleResourceModel
 	diags := req.Plan.Get(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	resp.Diagnostics.Append(r.checkActionIsClassic(plan.ActionCode.ValueString())...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
@@ -302,6 +331,11 @@ func (r *ruleResource) Update(ctx context.Context, req resource.UpdateRequest, r
 	var plan ruleResourceModel
 	diags := req.Plan.Get(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	resp.Diagnostics.Append(r.checkActionIsClassic(plan.ActionCode.ValueString())...)
 	if resp.Diagnostics.HasError() {
 		return
 	}

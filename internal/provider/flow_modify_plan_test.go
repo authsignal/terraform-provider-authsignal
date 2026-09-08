@@ -10,7 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
 )
 
-func TestActionConfigurationModifyPlan(t *testing.T) {
+func TestFlowModifyPlan(t *testing.T) {
 	const stored = `{"actionNodes":[{"nodeId":"c","nodeType":"COMPLETE"}],"rules":[]}`
 	const reformatted = `{
   "rules": [],
@@ -21,7 +21,7 @@ func TestActionConfigurationModifyPlan(t *testing.T) {
 	testCases := []struct {
 		name            string
 		planFlow        string
-		planTemplates   string
+		planActionCode  string
 		create          bool
 		destroy         bool
 		requiresReplace bool
@@ -29,7 +29,7 @@ func TestActionConfigurationModifyPlan(t *testing.T) {
 	}{
 		{name: "the flow is the same document", planFlow: reformatted, expectState: true},
 		{name: "the flow changed", planFlow: changed},
-		{name: "another attribute changed", planFlow: reformatted, planTemplates: `{"en":{"defaultTemplate":"hi"}}`},
+		{name: "the action code changed", planFlow: reformatted, planActionCode: "sign-up"},
 		{name: "the resource is being created", planFlow: reformatted, create: true},
 		{name: "the resource is being destroyed", planFlow: reformatted, destroy: true},
 		{name: "the resource is being replaced", planFlow: reformatted, requiresReplace: true},
@@ -37,22 +37,24 @@ func TestActionConfigurationModifyPlan(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			resourceSchema := actionConfigurationSchema(t)
+			resourceSchema := flowSchema(t)
 
-			state := actionConfigurationObject(t, resourceSchema, map[string]tftypes.Value{
+			planActionCode := testCase.planActionCode
+			if planActionCode == "" {
+				planActionCode = "sign-in"
+			}
+
+			state := resourceObject(t, resourceSchema, map[string]tftypes.Value{
 				"action_code":            tftypes.NewValue(tftypes.String, "sign-in"),
-				"action_type":            tftypes.NewValue(tftypes.String, actionTypeFlow),
 				"flow":                   tftypes.NewValue(tftypes.String, stored),
 				"flow_version":           tftypes.NewValue(tftypes.Number, 4),
 				"tenant_id":              tftypes.NewValue(tftypes.String, "tenant"),
 				"last_action_created_at": tftypes.NewValue(tftypes.String, "2026-09-07T00:00:00.000Z"),
 			})
 
-			plan := actionConfigurationObject(t, resourceSchema, map[string]tftypes.Value{
-				"action_code":            tftypes.NewValue(tftypes.String, "sign-in"),
-				"action_type":            tftypes.NewValue(tftypes.String, actionTypeFlow),
+			plan := resourceObject(t, resourceSchema, map[string]tftypes.Value{
+				"action_code":            tftypes.NewValue(tftypes.String, planActionCode),
 				"flow":                   tftypes.NewValue(tftypes.String, testCase.planFlow),
-				"messaging_templates":    optionalString(testCase.planTemplates),
 				"flow_version":           tftypes.NewValue(tftypes.Number, 4),
 				"tenant_id":              tftypes.NewValue(tftypes.String, "tenant"),
 				"last_action_created_at": tftypes.NewValue(tftypes.String, tftypes.UnknownValue),
@@ -76,7 +78,7 @@ func TestActionConfigurationModifyPlan(t *testing.T) {
 				resp.RequiresReplace = append(resp.RequiresReplace, path.Root("flow"))
 			}
 
-			(&actionConfigurationResource{}).ModifyPlan(context.Background(), req, resp)
+			(&flowResource{}).ModifyPlan(context.Background(), req, resp)
 
 			if resp.Diagnostics.HasError() {
 				t.Fatal(resp.Diagnostics)

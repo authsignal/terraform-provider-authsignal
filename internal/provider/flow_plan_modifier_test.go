@@ -25,10 +25,10 @@ func TestFlowKeepsStateWhenEqual(t *testing.T) {
 		{"the same document formatted differently", types.StringValue(stored), types.StringValue(reformatted), types.StringValue(stored)},
 		{"a different document", types.StringValue(stored), types.StringValue(changed), types.StringValue(changed)},
 		{"a null state, as on create", types.StringNull(), types.StringValue(stored), types.StringValue(stored)},
-		{"a null plan, as when the flow is removed", types.StringValue(stored), types.StringNull(), types.StringNull()},
+		{"a null plan", types.StringValue(stored), types.StringNull(), types.StringNull()},
 		{"an unknown plan", types.StringValue(stored), types.StringUnknown(), types.StringUnknown()},
 		{"an unknown state", types.StringUnknown(), types.StringValue(stored), types.StringValue(stored)},
-		{"a CLASSIC action, which has no flow", types.StringNull(), types.StringNull(), types.StringNull()},
+		{"a null state and plan", types.StringNull(), types.StringNull(), types.StringNull()},
 	}
 
 	for _, testCase := range testCases {

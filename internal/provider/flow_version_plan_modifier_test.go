@@ -17,37 +17,35 @@ func TestFlowVersionFollowsFlow(t *testing.T) {
 	const changed = `{"actionNodes":[{"nodeId":"c","nodeType":"BLOCK"}],"rules":[]}`
 
 	testCases := []struct {
-		name       string
-		actionType string
-		stateFlow  string
-		planFlow   string
-		expected   types.Int64
+		name      string
+		published bool
+		stateFlow string
+		planFlow  string
+		expected  types.Int64
 	}{
 		// The framework marks a computed attribute unknown before the plan modifiers run.
-		{"the flow changed", actionTypeFlow, stored, changed, types.Int64Unknown()},
-		{"the flow is the same document", actionTypeFlow, stored, reformatted, types.Int64Value(4)},
-		{"a CLASSIC action has no flow", actionTypeClassic, "", "", types.Int64Null()},
+		{"the flow changed", true, stored, changed, types.Int64Unknown()},
+		{"the flow is the same document", true, stored, reformatted, types.Int64Value(4)},
+		{"the flow has never been published", false, "", "", types.Int64Null()},
 	}
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			resourceSchema := actionConfigurationSchema(t)
+			resourceSchema := flowSchema(t)
 
 			stateVersion := tftypes.NewValue(tftypes.Number, nil)
-			if testCase.actionType == actionTypeFlow {
+			if testCase.published {
 				stateVersion = tftypes.NewValue(tftypes.Number, 4)
 			}
 
-			state := actionConfigurationObject(t, resourceSchema, map[string]tftypes.Value{
+			state := resourceObject(t, resourceSchema, map[string]tftypes.Value{
 				"action_code":  tftypes.NewValue(tftypes.String, "sign-in"),
-				"action_type":  optionalString(testCase.actionType),
 				"flow":         optionalString(testCase.stateFlow),
 				"flow_version": stateVersion,
 			})
 
-			plan := actionConfigurationObject(t, resourceSchema, map[string]tftypes.Value{
+			plan := resourceObject(t, resourceSchema, map[string]tftypes.Value{
 				"action_code":  tftypes.NewValue(tftypes.String, "sign-in"),
-				"action_type":  optionalString(testCase.actionType),
 				"flow":         optionalString(testCase.planFlow),
 				"flow_version": tftypes.NewValue(tftypes.Number, tftypes.UnknownValue),
 			})
@@ -60,7 +58,7 @@ func TestFlowVersionFollowsFlow(t *testing.T) {
 				PlanValue:  types.Int64Unknown(),
 			}
 
-			if testCase.actionType == actionTypeFlow {
+			if testCase.published {
 				req.StateValue = types.Int64Value(4)
 			}
 

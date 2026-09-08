@@ -176,6 +176,7 @@ func (p *authsignalProvider) DataSources(_ context.Context) []func() datasource.
 func (p *authsignalProvider) Resources(_ context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
 		NewActionConfigurationResource,
+		NewFlowResource,
 		NewRuleResource,
 		NewThemeResource,
 		NewValueListResource,

@@ -1,0 +1,1 @@
+terraform import authsignal_push_authenticator_configuration.push push

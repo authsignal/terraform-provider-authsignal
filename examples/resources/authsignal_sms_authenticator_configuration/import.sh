@@ -1,0 +1,1 @@
+terraform import authsignal_sms_authenticator_configuration.sms sms

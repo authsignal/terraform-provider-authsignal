@@ -1,0 +1,1 @@
+terraform import authsignal_passkey_authenticator_configuration.passkey passkey

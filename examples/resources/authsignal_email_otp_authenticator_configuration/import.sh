@@ -1,0 +1,1 @@
+terraform import authsignal_email_otp_authenticator_configuration.email_otp email-otp

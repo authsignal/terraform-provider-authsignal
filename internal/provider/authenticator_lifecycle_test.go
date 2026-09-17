@@ -1565,7 +1565,7 @@ func planModifiedWebhookUrl(t *testing.T, resourceSchema schema.Schema, storedPr
 	})
 
 	resp := &planmodifier.StringResponse{PlanValue: storedUrl}
-	supersededWebhookUrl{}.PlanModifyString(context.Background(), planmodifier.StringRequest{
+	supersededWebhookUrl{providerAttribute: "push_provider"}.PlanModifyString(context.Background(), planmodifier.StringRequest{
 		Config:      tfsdk.Config{Schema: resourceSchema, Raw: configValue},
 		Plan:        tfsdk.Plan{Schema: resourceSchema, Raw: planValue},
 		State:       tfsdk.State{Schema: resourceSchema, Raw: stateValue},

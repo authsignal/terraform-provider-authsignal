@@ -37,6 +37,7 @@ type emailOtpAuthenticatorConfigurationResourceModel struct {
 	VerificationMethod types.String `tfsdk:"verification_method"`
 	IsActive           types.Bool   `tfsdk:"is_active"`
 	EmailProvider      types.String `tfsdk:"email_provider"`
+	WebhookUrl         types.String `tfsdk:"webhook_url"`
 
 	SubmissionRateLimitConfiguration types.Object `tfsdk:"submission_rate_limit_configuration"`
 	SendingRateLimitConfigurations   types.List   `tfsdk:"sending_rate_limit_configurations"`
@@ -175,6 +176,17 @@ func (r *emailOtpAuthenticatorConfigurationResource) Schema(_ context.Context, _
 				stringvalidator.OneOf(allowedEmailProviders...),
 			},
 		},
+		"webhook_url": schema.StringAttribute{
+			Description: "HTTPS endpoint for verification codes. Required for `WEBHOOK`; omit for other providers. Changing providers clears it.",
+			Optional:    true,
+			Computed:    true,
+			PlanModifiers: []planmodifier.String{
+				supersededWebhookUrl{providerAttribute: "email_provider"},
+			},
+			Validators: []validator.String{
+				httpsUrlValidator{},
+			},
+		},
 		"submission_rate_limit_configuration": schema.SingleNestedAttribute{
 			Description: "Code submission limit.",
 			Optional:    true,
@@ -237,6 +249,8 @@ func (r *emailOtpAuthenticatorConfigurationResource) ValidateConfig(ctx context.
 			resp.Diagnostics.Append(mismatchedCredentialDiagnostic(block.Name, "email_provider", provider))
 		}
 	}
+
+	resp.Diagnostics.Append(webhookUrlDiagnostics("email_provider", provider, config.WebhookUrl)...)
 }
 
 func (m emailOtpAuthenticatorConfigurationResourceModel) credentialObject(name string) types.Object {
@@ -440,6 +454,7 @@ func emailOtpCreateBody(ctx context.Context, plan emailOtpAuthenticatorConfigura
 	body := authsignal.CreateEmailOtpAuthenticatorConfigurationBody{
 		IsActive:      boolPointer(config.IsActive),
 		EmailProvider: plan.EmailProvider.ValueString(),
+		WebhookUrl:    stringPointer(config.WebhookUrl),
 	}
 
 	if isKnownAndSet(config.AllowedCustomEmailVariables) {
@@ -552,6 +567,10 @@ func emailOtpUpdateBody(ctx context.Context, plan emailOtpAuthenticatorConfigura
 		body.IsActive = authsignal.SetValue(config.IsActive.ValueBool())
 	}
 
+	if isKnownAndSet(config.WebhookUrl) {
+		body.WebhookUrl = authsignal.SetValue(config.WebhookUrl.ValueString())
+	}
+
 	if isKnownAndSet(config.AllowedCustomEmailVariables) {
 		variables, setDiags := sortedStringsFrom(ctx, config.AllowedCustomEmailVariables)
 		diags.Append(setDiags...)
@@ -662,6 +681,7 @@ func emailOtpStateAfterWrite(plan emailOtpAuthenticatorConfigurationResourceMode
 	state.VerificationMethod = types.StringValue(response.VerificationMethod)
 
 	state.IsActive = resolvedValue(plan.IsActive, types.BoolValue(response.IsActive))
+	state.WebhookUrl = resolvedValue(plan.WebhookUrl, types.StringPointerValue(response.WebhookUrl))
 	state.SubmissionRateLimitConfiguration = resolvedValue(plan.SubmissionRateLimitConfiguration, rateLimitValue(response.SubmissionRateLimitConfiguration))
 	state.SendingRateLimitConfigurations = resolvedValue(plan.SendingRateLimitConfigurations, rateLimitListValue(response.SendingRateLimitConfigurations))
 	state.AllowedCustomEmailVariables = resolvedValue(plan.AllowedCustomEmailVariables, stringSetPointerValue(response.AllowedCustomEmailVariables))
@@ -682,6 +702,7 @@ func emailOtpStateFromResponse(response *authsignal.EmailOtpAuthenticatorConfigu
 		VerificationMethod:               types.StringValue(response.VerificationMethod),
 		IsActive:                         types.BoolValue(response.IsActive),
 		EmailProvider:                    types.StringPointerValue(response.EmailProvider),
+		WebhookUrl:                       types.StringPointerValue(response.WebhookUrl),
 		SubmissionRateLimitConfiguration: rateLimitValue(response.SubmissionRateLimitConfiguration),
 		SendingRateLimitConfigurations:   rateLimitListValue(response.SendingRateLimitConfigurations),
 		AllowedCustomEmailVariables:      stringSetPointerValue(response.AllowedCustomEmailVariables),

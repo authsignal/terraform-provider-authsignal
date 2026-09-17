@@ -598,3 +598,116 @@ func TestHttpsUrlValidatorDefersOnUnknownAndNull(t *testing.T) {
 		}
 	}
 }
+
+func TestSmsValidateConfigRequiresAWebhookUrlForTheWebhookProvider(t *testing.T) {
+	res := &smsAuthenticatorConfigurationResource{}
+	resourceSchema := resourceSchemaOf(t, res)
+
+	summaries := validateResourceConfig(t, res, resourceSchema, map[string]tftypes.Value{
+		"sms_provider": tftypes.NewValue(tftypes.String, "WEBHOOK"),
+	})
+
+	if len(summaries) != 1 || !strings.Contains(summaries[0], "Missing Webhook URL") {
+		t.Errorf("expected a missing-webhook-url error, got %v", summaries)
+	}
+}
+
+func TestEmailOtpValidateConfigRequiresAWebhookUrlForTheWebhookProvider(t *testing.T) {
+	res := &emailOtpAuthenticatorConfigurationResource{}
+	resourceSchema := resourceSchemaOf(t, res)
+
+	summaries := validateResourceConfig(t, res, resourceSchema, map[string]tftypes.Value{
+		"email_provider": tftypes.NewValue(tftypes.String, "WEBHOOK"),
+	})
+
+	if len(summaries) != 1 || !strings.Contains(summaries[0], "Missing Webhook URL") {
+		t.Errorf("expected a missing-webhook-url error, got %v", summaries)
+	}
+}
+
+func TestSmsValidateConfigRejectsAWebhookUrlForACredentialProvider(t *testing.T) {
+	for _, provider := range []string{"BIRD", "MESSAGE_MEDIA", "MODICA_GROUP", "TNZ", "TWILIO"} {
+		res := &smsAuthenticatorConfigurationResource{}
+		resourceSchema := resourceSchemaOf(t, res)
+
+		summaries := validateResourceConfig(t, res, resourceSchema, map[string]tftypes.Value{
+			"sms_provider": tftypes.NewValue(tftypes.String, provider),
+			"webhook_url":  tftypes.NewValue(tftypes.String, "https://example.com/sms"),
+		})
+
+		found := false
+		for _, summary := range summaries {
+			if strings.Contains(summary, "Webhook URL Does Not Apply") {
+				found = true
+			}
+		}
+
+		if !found {
+			t.Errorf("%s: expected a webhook-url-does-not-apply error, got %v", provider, summaries)
+		}
+	}
+}
+
+func TestEmailOtpValidateConfigRejectsAWebhookUrlForACredentialProvider(t *testing.T) {
+	res := &emailOtpAuthenticatorConfigurationResource{}
+	resourceSchema := resourceSchemaOf(t, res)
+
+	summaries := validateResourceConfig(t, res, resourceSchema, map[string]tftypes.Value{
+		"email_provider": tftypes.NewValue(tftypes.String, "SENDGRID"),
+		"webhook_url":    tftypes.NewValue(tftypes.String, "https://example.com/email"),
+	})
+
+	found := false
+	for _, summary := range summaries {
+		if strings.Contains(summary, "Webhook URL Does Not Apply") {
+			found = true
+		}
+	}
+
+	if !found {
+		t.Errorf("expected a webhook-url-does-not-apply error, got %v", summaries)
+	}
+}
+
+func TestSmsValidateConfigAcceptsTheWebhookProviderWithItsEndpoint(t *testing.T) {
+	res := &smsAuthenticatorConfigurationResource{}
+	resourceSchema := resourceSchemaOf(t, res)
+
+	summaries := validateResourceConfig(t, res, resourceSchema, map[string]tftypes.Value{
+		"sms_provider": tftypes.NewValue(tftypes.String, "WEBHOOK"),
+		"webhook_url":  tftypes.NewValue(tftypes.String, "https://example.com/sms"),
+	})
+
+	if len(summaries) != 0 {
+		t.Errorf("expected no diagnostics, got %v", summaries)
+	}
+}
+
+func TestIpv4CidrValidatorAcceptsRangesAndRejectsAnythingElse(t *testing.T) {
+	cases := []struct {
+		value    string
+		accepted bool
+	}{
+		{"203.0.113.0/24", true},
+		{"198.51.100.7/32", true},
+		{"0.0.0.0/0", true},
+		{"203.0.113.1", false},
+		{"203.0.113.0/33", false},
+		{"256.0.113.0/24", false},
+		{"not-an-address", false},
+		{"2001:db8::/32", false},
+	}
+
+	for _, testCase := range cases {
+		response := &validator.StringResponse{}
+
+		ipv4CidrValidator{}.ValidateString(context.Background(), validator.StringRequest{
+			Path:        path.Root("ip_whitelist"),
+			ConfigValue: types.StringValue(testCase.value),
+		}, response)
+
+		if response.Diagnostics.HasError() == testCase.accepted {
+			t.Errorf("%q: accepted=%t, got diagnostics %v", testCase.value, testCase.accepted, response.Diagnostics)
+		}
+	}
+}

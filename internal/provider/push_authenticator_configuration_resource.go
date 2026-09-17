@@ -85,8 +85,6 @@ var fcmBlock = credentialBlock{
 
 var pushCredentialBlocks = []credentialBlock{apnsBlock, fcmBlock}
 
-const pushWebhookProvider = "WEBHOOK"
-
 func (r *pushAuthenticatorConfigurationResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_push_authenticator_configuration"
 }
@@ -121,7 +119,7 @@ func (r *pushAuthenticatorConfigurationResource) Schema(_ context.Context, _ res
 			Optional:    true,
 			Computed:    true,
 			PlanModifiers: []planmodifier.String{
-				supersededWebhookUrl{},
+				supersededWebhookUrl{providerAttribute: "push_provider"},
 			},
 			Validators: []validator.String{
 				httpsUrlValidator{},
@@ -207,20 +205,7 @@ func (r *pushAuthenticatorConfigurationResource) ValidateConfig(ctx context.Cont
 		}
 	}
 
-	if provider == pushWebhookProvider && !isKnownAndSet(config.WebhookUrl) {
-		resp.Diagnostics.AddError(
-			"Missing Webhook URL",
-			"`push_provider` is \"WEBHOOK\", so `webhook_url` has to be set.",
-		)
-	}
-
-	if provider != pushWebhookProvider && isKnownAndSet(config.WebhookUrl) {
-		resp.Diagnostics.AddError(
-			"Webhook URL Does Not Apply to the Configured Provider",
-			fmt.Sprintf("`webhook_url` is set but `push_provider` is %q. The endpoint is only used by the `WEBHOOK` provider. "+
-				"Remove `webhook_url`, or set `push_provider` to \"WEBHOOK\".", provider),
-		)
-	}
+	resp.Diagnostics.Append(webhookUrlDiagnostics("push_provider", provider, config.WebhookUrl)...)
 }
 
 func (m pushAuthenticatorConfigurationResourceModel) credentialObject(name string) types.Object {

@@ -3,7 +3,7 @@ module github.com/authsignal/terraform-provider-authsignal
 go 1.25.0
 
 require (
-	github.com/authsignal/authsignal-management-go/v6 v6.4.0
+	github.com/authsignal/authsignal-management-go/v6 v6.5.0
 	github.com/hashicorp/go-version v1.7.0
 	github.com/hashicorp/terraform-plugin-docs v0.24.0
 	github.com/hashicorp/terraform-plugin-framework v1.14.1

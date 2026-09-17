@@ -40,6 +40,7 @@ type smsAuthenticatorConfigurationResourceModel struct {
 	VerificationMethod types.String `tfsdk:"verification_method"`
 	IsActive           types.Bool   `tfsdk:"is_active"`
 	SmsProvider        types.String `tfsdk:"sms_provider"`
+	WebhookUrl         types.String `tfsdk:"webhook_url"`
 	SmsCountryCodes    types.Set    `tfsdk:"sms_country_codes"`
 	DefaultCountryCode types.String `tfsdk:"default_country_code"`
 
@@ -153,6 +154,17 @@ func (r *smsAuthenticatorConfigurationResource) Schema(_ context.Context, _ reso
 			Required:    true,
 			Validators: []validator.String{
 				stringvalidator.OneOf(allowedSmsProviders...),
+			},
+		},
+		"webhook_url": schema.StringAttribute{
+			Description: "HTTPS endpoint for verification codes. Required for `WEBHOOK`; omit for other providers. Changing providers clears it.",
+			Optional:    true,
+			Computed:    true,
+			PlanModifiers: []planmodifier.String{
+				supersededWebhookUrl{providerAttribute: "sms_provider"},
+			},
+			Validators: []validator.String{
+				httpsUrlValidator{},
 			},
 		},
 		"sms_country_codes": schema.SetAttribute{
@@ -324,6 +336,8 @@ func (r *smsAuthenticatorConfigurationResource) ValidateConfig(ctx context.Conte
 			resp.Diagnostics.Append(mismatchedCredentialDiagnostic(block.Name, "sms_provider", provider))
 		}
 	}
+
+	resp.Diagnostics.Append(webhookUrlDiagnostics("sms_provider", provider, config.WebhookUrl)...)
 }
 
 func (m smsAuthenticatorConfigurationResourceModel) credentialObject(name string) types.Object {
@@ -524,6 +538,7 @@ func smsCreateBody(ctx context.Context, plan smsAuthenticatorConfigurationResour
 	body := authsignal.CreateSmsAuthenticatorConfigurationBody{
 		IsActive:           boolPointer(config.IsActive),
 		SmsProvider:        plan.SmsProvider.ValueString(),
+		WebhookUrl:         stringPointer(config.WebhookUrl),
 		DefaultCountryCode: stringPointer(config.DefaultCountryCode),
 	}
 
@@ -634,6 +649,10 @@ func smsUpdateBody(ctx context.Context, plan smsAuthenticatorConfigurationResour
 		body.IsActive = authsignal.SetValue(config.IsActive.ValueBool())
 	}
 
+	if isKnownAndSet(config.WebhookUrl) {
+		body.WebhookUrl = authsignal.SetValue(config.WebhookUrl.ValueString())
+	}
+
 	if isKnownAndSet(config.DefaultCountryCode) {
 		body.DefaultCountryCode = authsignal.SetValue(config.DefaultCountryCode.ValueString())
 	}
@@ -742,6 +761,7 @@ func smsStateAfterWrite(plan smsAuthenticatorConfigurationResourceModel, respons
 	state.VerificationMethod = types.StringValue(response.VerificationMethod)
 
 	state.IsActive = resolvedValue(plan.IsActive, types.BoolValue(response.IsActive))
+	state.WebhookUrl = resolvedValue(plan.WebhookUrl, types.StringPointerValue(response.WebhookUrl))
 	state.SmsCountryCodes = resolvedValue(plan.SmsCountryCodes, stringSetPointerValue(response.SmsCountryCodes))
 	state.DefaultCountryCode = resolvedValue(plan.DefaultCountryCode, types.StringPointerValue(response.DefaultCountryCode))
 	state.SubmissionRateLimitConfiguration = resolvedValue(plan.SubmissionRateLimitConfiguration, rateLimitValue(response.SubmissionRateLimitConfiguration))
@@ -764,6 +784,7 @@ func smsStateFromResponse(response *authsignal.SmsAuthenticatorConfiguration, pr
 		VerificationMethod:               types.StringValue(response.VerificationMethod),
 		IsActive:                         types.BoolValue(response.IsActive),
 		SmsProvider:                      types.StringPointerValue(response.SmsProvider),
+		WebhookUrl:                       types.StringPointerValue(response.WebhookUrl),
 		SmsCountryCodes:                  stringSetPointerValue(response.SmsCountryCodes),
 		DefaultCountryCode:               types.StringPointerValue(response.DefaultCountryCode),
 		SubmissionRateLimitConfiguration: rateLimitValue(response.SubmissionRateLimitConfiguration),

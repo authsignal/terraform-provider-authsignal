@@ -187,5 +187,6 @@ func (p *authsignalProvider) Resources(_ context.Context) []func() resource.Reso
 		NewCustomDataPointResource,
 		NewMessageOverridesResource,
 		NewPreBuiltUiSettingsResource,
+		NewTenantSettingsResource,
 	}
 }

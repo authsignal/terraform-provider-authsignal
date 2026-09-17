@@ -26,9 +26,11 @@ const (
 	pushAuthenticatorSlug     = "push"
 )
 
-var allowedSmsProviders = []string{"BIRD", "MESSAGE_MEDIA", "MODICA_GROUP", "TNZ", "TWILIO"}
+const webhookProvider = "WEBHOOK"
 
-var allowedEmailProviders = []string{"BIRD", "MAILGUN", "MAILJET", "MANDRILL", "SENDGRID", "SMTP"}
+var allowedSmsProviders = []string{"BIRD", "MESSAGE_MEDIA", "MODICA_GROUP", "TNZ", "TWILIO", webhookProvider}
+
+var allowedEmailProviders = []string{"BIRD", "MAILGUN", "MAILJET", "MANDRILL", "SENDGRID", "SMTP", webhookProvider}
 
 var allowedPushProviders = []string{"DEFAULT", "FIREBASE", "WEBHOOK"}
 
@@ -397,6 +399,27 @@ func resolvedValue[T attr.Value](planned T, fromResponse T) T {
 	}
 
 	return planned
+}
+
+func webhookUrlDiagnostics(providerAttribute string, provider string, webhookUrl types.String) diag.Diagnostics {
+	var diags diag.Diagnostics
+
+	if provider == webhookProvider && !isKnownAndSet(webhookUrl) {
+		diags.AddError(
+			"Missing Webhook URL",
+			fmt.Sprintf("`webhook_url` is required when `%s` is %q.", providerAttribute, webhookProvider),
+		)
+	}
+
+	if provider != webhookProvider && isKnownAndSet(webhookUrl) {
+		diags.AddError(
+			"Webhook URL Does Not Apply to the Configured Provider",
+			fmt.Sprintf("`webhook_url` requires `%s` to be %q, but it is %q. Remove `webhook_url` or change `%s`.",
+				providerAttribute, webhookProvider, provider, providerAttribute),
+		)
+	}
+
+	return diags
 }
 
 func missingResponseFieldDiagnostic(method string, field string) diag.Diagnostic {

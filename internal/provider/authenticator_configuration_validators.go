@@ -251,10 +251,12 @@ func (m excludedDefaultCountryCode) PlanModifyString(ctx context.Context, req pl
 	}
 }
 
-type supersededWebhookUrl struct{}
+type supersededWebhookUrl struct {
+	providerAttribute string
+}
 
 func (m supersededWebhookUrl) Description(_ context.Context) string {
-	return "Plans webhook_url as unknown when push_provider moves away from WEBHOOK, because the Management API discards the stored endpoint."
+	return fmt.Sprintf("Marks `webhook_url` unknown when `%s` changes from `WEBHOOK`.", m.providerAttribute)
 }
 
 func (m supersededWebhookUrl) MarkdownDescription(ctx context.Context) string {
@@ -275,19 +277,19 @@ func (m supersededWebhookUrl) PlanModifyString(ctx context.Context, req planmodi
 	}
 
 	var storedProvider types.String
-	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root("push_provider"), &storedProvider)...)
+	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root(m.providerAttribute), &storedProvider)...)
 
 	var configuredProvider types.String
-	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root("push_provider"), &configuredProvider)...)
+	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root(m.providerAttribute), &configuredProvider)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	if storedProvider.ValueString() != pushWebhookProvider {
+	if storedProvider.ValueString() != webhookProvider {
 		return
 	}
 
-	if !isKnownAndSet(configuredProvider) || configuredProvider.ValueString() == pushWebhookProvider {
+	if !isKnownAndSet(configuredProvider) || configuredProvider.ValueString() == webhookProvider {
 		return
 	}
 

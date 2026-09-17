@@ -39,7 +39,7 @@ resource "authsignal_sms_authenticator_configuration" "sms" {
 
 ### Required
 
-- `sms_provider` (String) SMS delivery provider. Supply its credential block when first selecting it. One of `BIRD`, `MESSAGE_MEDIA`, `MODICA_GROUP`, `TNZ`, `TWILIO`.
+- `sms_provider` (String) SMS delivery provider. Supply its credential block when first selecting it. One of `BIRD`, `MESSAGE_MEDIA`, `MODICA_GROUP`, `TNZ`, `TWILIO`, `WEBHOOK`.
 
 ### Optional
 
@@ -62,6 +62,7 @@ resource "authsignal_sms_authenticator_configuration" "sms" {
 - `tnz_credentials_version` (String) Credential rotation marker for `tnz_credentials`. Change it to resend the credentials. Use an opaque counter or date, never a secret.
 - `twilio_credentials` (Attributes) Twilio credentials. Required when `sms_provider` is `TWILIO` and no Twilio credentials are stored yet. (see [below for nested schema](#nestedatt--twilio_credentials))
 - `twilio_credentials_version` (String) Credential rotation marker for `twilio_credentials`. Change it to resend the credentials. Use an opaque counter or date, never a secret.
+- `webhook_url` (String) HTTPS endpoint for verification codes. Required for `WEBHOOK`; omit for other providers. Changing providers clears it.
 
 ### Read-Only
 

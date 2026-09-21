@@ -108,7 +108,16 @@ func (d *themeDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, 
 						Computed: true,
 					},
 					"padding": schema.Int64Attribute{
-						Computed: true,
+						Description: "Padding on every side of the container, in pixels. `padding_horizontal` and `padding_vertical` each override it on their own axis. The order of precedence is the axis value, then `padding`, then the platform default of 64px.",
+						Computed:    true,
+					},
+					"padding_horizontal": schema.Int64Attribute{
+						Description: "Padding on the left and right of the container, in pixels. Takes precedence over `padding`, which takes precedence over the platform default of 64px. Null when the tenant has no horizontal override.",
+						Computed:    true,
+					},
+					"padding_vertical": schema.Int64Attribute{
+						Description: "Padding above and below the container, in pixels. Takes precedence over `padding`, which takes precedence over the platform default of 64px. Null when the tenant has no vertical override.",
+						Computed:    true,
 					},
 					"logo_alignment": schema.StringAttribute{
 						Computed: true,
@@ -301,7 +310,8 @@ func (d *themeDataSource) Schema(_ context.Context, _ datasource.SchemaRequest, 
 								Computed: true,
 							},
 							"padding": schema.Int64Attribute{
-								Computed: true,
+								Description: "Padding on every side of the container in dark mode, in pixels. Overrides `container.padding`, and falls back to it when unset. The axis paddings are theme-wide, so they are read from `container` and apply to both colour modes.",
+								Computed:    true,
 							},
 							"logo_alignment": schema.StringAttribute{
 								Computed: true,

@@ -200,6 +200,15 @@ func buildAuthsignalContainerCreateObject(container containerModel) authsignal.C
 		authsignalContainer.Padding = authsignal.SetValue(container.Padding.ValueInt64())
 	}
 
+	// Zero is a padding the configuration asked for, so the test is nullness rather than truthiness.
+	if !container.PaddingHorizontal.IsNull() {
+		authsignalContainer.PaddingHorizontal = authsignal.SetValue(container.PaddingHorizontal.ValueInt64())
+	}
+
+	if !container.PaddingVertical.IsNull() {
+		authsignalContainer.PaddingVertical = authsignal.SetValue(container.PaddingVertical.ValueInt64())
+	}
+
 	if len(container.LogoAlignment.ValueString()) > 0 {
 		authsignalContainer.LogoAlignment = authsignal.SetValue(container.LogoAlignment.ValueString())
 	}
@@ -657,6 +666,20 @@ func buildAuthsignalContainerUpdateObject(container containerModel) authsignal.C
 		authsignalContainer.Padding = authsignal.SetNull(container.Padding.ValueInt64())
 	}
 
+	// Zero is a padding the configuration asked for, so the test is nullness rather than truthiness.
+	// The null branch is what clears an axis override the configuration has dropped.
+	if !container.PaddingHorizontal.IsNull() {
+		authsignalContainer.PaddingHorizontal = authsignal.SetValue(container.PaddingHorizontal.ValueInt64())
+	} else {
+		authsignalContainer.PaddingHorizontal = authsignal.SetNull(container.PaddingHorizontal.ValueInt64())
+	}
+
+	if !container.PaddingVertical.IsNull() {
+		authsignalContainer.PaddingVertical = authsignal.SetValue(container.PaddingVertical.ValueInt64())
+	} else {
+		authsignalContainer.PaddingVertical = authsignal.SetNull(container.PaddingVertical.ValueInt64())
+	}
+
 	if len(container.LogoAlignment.ValueString()) > 0 {
 		authsignalContainer.LogoAlignment = authsignal.SetValue(container.LogoAlignment.ValueString())
 	} else {
@@ -1013,6 +1036,8 @@ func buildAuthsignalContainerDeleteObject(container containerModel) authsignal.C
 
 	authsignalContainer.ContentAlignment = authsignal.SetNull(container.ContentAlignment.ValueString())
 	authsignalContainer.Padding = authsignal.SetNull(container.Padding.ValueInt64())
+	authsignalContainer.PaddingHorizontal = authsignal.SetNull(container.PaddingHorizontal.ValueInt64())
+	authsignalContainer.PaddingVertical = authsignal.SetNull(container.PaddingVertical.ValueInt64())
 	authsignalContainer.LogoAlignment = authsignal.SetNull(container.LogoAlignment.ValueString())
 	authsignalContainer.LogoPosition = authsignal.SetNull(container.LogoPosition.ValueString())
 	authsignalContainer.LogoHeight = authsignal.SetNull(container.LogoHeight.ValueInt64())

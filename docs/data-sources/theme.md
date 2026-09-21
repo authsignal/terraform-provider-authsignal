@@ -90,7 +90,9 @@ Read-Only:
 - `logo_alignment` (String)
 - `logo_height` (Number)
 - `logo_position` (String)
-- `padding` (Number)
+- `padding` (Number) Padding on every side of the container, in pixels. `padding_horizontal` and `padding_vertical` each override it on their own axis. The order of precedence is the axis value, then `padding`, then the platform default of 64px.
+- `padding_horizontal` (Number) Padding on the left and right of the container, in pixels. Takes precedence over `padding`, which takes precedence over the platform default of 64px. Null when the tenant has no horizontal override.
+- `padding_vertical` (Number) Padding above and below the container, in pixels. Takes precedence over `padding`, which takes precedence over the platform default of 64px. Null when the tenant has no vertical override.
 
 
 <a id="nestedatt--dark_mode"></a>
@@ -160,7 +162,7 @@ Read-Only:
 - `logo_alignment` (String)
 - `logo_height` (Number)
 - `logo_position` (String)
-- `padding` (Number)
+- `padding` (Number) Padding on every side of the container in dark mode, in pixels. Overrides `container.padding`, and falls back to it when unset. The axis paddings are theme-wide, so they are read from `container` and apply to both colour modes.
 
 
 <a id="nestedatt--dark_mode--page_background"></a>

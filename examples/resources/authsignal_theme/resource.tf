@@ -42,12 +42,14 @@ resource "authsignal_theme" "theme" {
     background_image_url = "<url to an image>"
   }
   container = {
-    content_alignment = "left"
-    padding           = 1
-    logo_alignment    = "center"
-    logo_position     = "inside"
-    logo_height       = 2
-    exit_position     = "bottom"
+    content_alignment  = "left"
+    padding            = 1
+    padding_horizontal = 2
+    padding_vertical   = 3
+    logo_alignment     = "center"
+    logo_position      = "inside"
+    logo_height        = 2
+    exit_position      = "bottom"
   }
   typography = {
     text = {

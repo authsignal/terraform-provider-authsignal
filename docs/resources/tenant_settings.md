@@ -65,5 +65,6 @@ Import is supported using the following syntax:
 The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
 
 ```shell
+# A tenant has one set of settings, so there is no ID to import by. The empty string is required for the command to run.
 terraform import authsignal_tenant_settings.tenant_settings ""
 ```

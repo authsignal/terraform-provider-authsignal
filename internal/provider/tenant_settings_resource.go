@@ -299,8 +299,21 @@ func (r *tenantSettingsResource) Update(ctx context.Context, req resource.Update
 func (r *tenantSettingsResource) Delete(_ context.Context, _ resource.DeleteRequest, _ *resource.DeleteResponse) {
 }
 
-func (r *tenantSettingsResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
-	resp.Diagnostics.Append(resp.State.Set(ctx, tenantSettingsResourceModel{})...)
+func (r *tenantSettingsResource) ImportState(ctx context.Context, _ resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	// The provider is configured against a single tenant, so the import ID is not needed.
+	// Seed typed empty state; the subsequent Read populates it from the API.
+	resp.Diagnostics.Append(resp.State.Set(ctx, emptyTenantSettingsModel())...)
+}
+
+// emptyTenantSettingsModel returns a model whose nested attributes carry their attribute types.
+// A zero-value model stores untyped null objects, which Read cannot convert back into the schema.
+func emptyTenantSettingsModel() tenantSettingsResourceModel {
+	return tenantSettingsResourceModel{
+		TokenDurationInMinutes:           types.Int64Null(),
+		AuthenticatorEventsWebhookConfig: types.ObjectNull(authenticatorEventsWebhookConfigAttributeTypes),
+		LogEventsWebhookConfig:           types.ObjectNull(logEventsWebhookConfigAttributeTypes),
+		IpWhitelist:                      types.SetNull(types.StringType),
+	}
 }
 
 func (r *tenantSettingsResource) Configure(_ context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {

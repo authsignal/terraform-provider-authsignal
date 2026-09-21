@@ -478,17 +478,21 @@ func (m colorsModel) AttributeValues() map[string]attr.Value {
 }
 
 // CONTAINER
-// ExitPosition sits here and not on modeContainerModel. Where the exit control sits is theme-wide,
-// so the API rejects it under dark_mode.
+// ExitPosition and the axis paddings sit here and not on modeContainerModel. Where the exit control
+// sits and how much a single axis is padded are both theme-wide, so the API rejects them under
+// dark_mode.
 type containerModel struct {
-	ContentAlignment types.String `tfsdk:"content_alignment"`
-	Padding          types.Int64  `tfsdk:"padding"`
-	LogoAlignment    types.String `tfsdk:"logo_alignment"`
-	LogoPosition     types.String `tfsdk:"logo_position"`
-	LogoHeight       types.Int64  `tfsdk:"logo_height"`
-	ExitPosition     types.String `tfsdk:"exit_position"`
+	ContentAlignment  types.String `tfsdk:"content_alignment"`
+	Padding           types.Int64  `tfsdk:"padding"`
+	PaddingHorizontal types.Int64  `tfsdk:"padding_horizontal"`
+	PaddingVertical   types.Int64  `tfsdk:"padding_vertical"`
+	LogoAlignment     types.String `tfsdk:"logo_alignment"`
+	LogoPosition      types.String `tfsdk:"logo_position"`
+	LogoHeight        types.Int64  `tfsdk:"logo_height"`
+	ExitPosition      types.String `tfsdk:"exit_position"`
 }
 
+// Unlike Padding, an axis padding of zero is a value rather than emptiness. Only nil means unset.
 func (m *containerModel) CreateObject(input authsignal.ContainerResponse) types.Object {
 	isNull := 1
 	if len(input.ContentAlignment) > 0 {
@@ -503,6 +507,20 @@ func (m *containerModel) CreateObject(input authsignal.ContainerResponse) types.
 		m.Padding = types.Int64Value(input.Padding)
 	} else {
 		m.Padding = types.Int64Null()
+	}
+
+	if input.PaddingHorizontal != nil {
+		isNull = 0
+		m.PaddingHorizontal = types.Int64Value(*input.PaddingHorizontal)
+	} else {
+		m.PaddingHorizontal = types.Int64Null()
+	}
+
+	if input.PaddingVertical != nil {
+		isNull = 0
+		m.PaddingVertical = types.Int64Value(*input.PaddingVertical)
+	} else {
+		m.PaddingVertical = types.Int64Null()
 	}
 
 	if len(input.LogoAlignment) > 0 {
@@ -543,12 +561,14 @@ func (m *containerModel) CreateObject(input authsignal.ContainerResponse) types.
 
 func (m containerModel) AttributeTypes() map[string]attr.Type {
 	return map[string]attr.Type{
-		"content_alignment": types.StringType,
-		"padding":           types.Int64Type,
-		"logo_alignment":    types.StringType,
-		"logo_position":     types.StringType,
-		"logo_height":       types.Int64Type,
-		"exit_position":     types.StringType,
+		"content_alignment":  types.StringType,
+		"padding":            types.Int64Type,
+		"padding_horizontal": types.Int64Type,
+		"padding_vertical":   types.Int64Type,
+		"logo_alignment":     types.StringType,
+		"logo_position":      types.StringType,
+		"logo_height":        types.Int64Type,
+		"exit_position":      types.StringType,
 	}
 }
 
@@ -556,6 +576,8 @@ func (m containerModel) AttributeValues() map[string]attr.Value {
 	elements := map[string]attr.Value{}
 	elements["content_alignment"] = m.ContentAlignment
 	elements["padding"] = m.Padding
+	elements["padding_horizontal"] = m.PaddingHorizontal
+	elements["padding_vertical"] = m.PaddingVertical
 	elements["logo_alignment"] = m.LogoAlignment
 	elements["logo_position"] = m.LogoPosition
 	elements["logo_height"] = m.LogoHeight

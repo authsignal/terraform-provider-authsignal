@@ -41,12 +41,12 @@ func TestExitPositionIsOmittedFromAnUpdateUntilItIsSet(t *testing.T) {
 		{
 			name:         "unconfigured",
 			exitPosition: types.StringNull(),
-			expectedJson: "{\"container\":{\"contentAlignment\":null,\"padding\":null,\"logoAlignment\":null,\"logoPosition\":null,\"logoHeight\":null}}",
+			expectedJson: "{\"container\":{\"contentAlignment\":null,\"padding\":null,\"paddingHorizontal\":null,\"paddingVertical\":null,\"logoAlignment\":null,\"logoPosition\":null,\"logoHeight\":null}}",
 		},
 		{
 			name:         "configured",
 			exitPosition: types.StringValue("bottom"),
-			expectedJson: "{\"container\":{\"contentAlignment\":null,\"padding\":null,\"logoAlignment\":null,\"logoPosition\":null,\"logoHeight\":null,\"exitPosition\":\"bottom\"}}",
+			expectedJson: "{\"container\":{\"contentAlignment\":null,\"padding\":null,\"paddingHorizontal\":null,\"paddingVertical\":null,\"logoAlignment\":null,\"logoPosition\":null,\"logoHeight\":null,\"exitPosition\":\"bottom\"}}",
 		},
 	}
 

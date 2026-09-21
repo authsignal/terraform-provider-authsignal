@@ -6,6 +6,7 @@ import (
 	"regexp"
 
 	"github.com/authsignal/authsignal-management-go/v6"
+	"github.com/hashicorp/terraform-plugin-framework-validators/int64validator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/listvalidator"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -19,6 +20,12 @@ var (
 	_ resource.Resource                = &themeResource{}
 	_ resource.ResourceWithConfigure   = &themeResource{}
 	_ resource.ResourceWithImportState = &themeResource{}
+)
+
+// The range the Management API accepts for a container padding, universal or per axis.
+const (
+	containerPaddingMinimum = -1000
+	containerPaddingMaximum = 1000
 )
 
 // Shape only. The API additionally rejects a range that does not ascend.
@@ -127,7 +134,25 @@ func (r *themeResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 						},
 					},
 					"padding": schema.Int64Attribute{
-						Optional: true,
+						Description: "Padding on every side of the container, in pixels. `padding_horizontal` and `padding_vertical` each override it on their own axis. The order of precedence is the axis value, then `padding`, then the platform default of 64px.",
+						Optional:    true,
+						Validators: []validator.Int64{
+							int64validator.Between(containerPaddingMinimum, containerPaddingMaximum),
+						},
+					},
+					"padding_horizontal": schema.Int64Attribute{
+						Description: "Padding on the left and right of the container, in pixels. Takes precedence over `padding`, which takes precedence over the platform default of 64px. Zero is a padding rather than an absence. Leaving it out of the configuration clears any stored horizontal override on the next apply.",
+						Optional:    true,
+						Validators: []validator.Int64{
+							int64validator.Between(containerPaddingMinimum, containerPaddingMaximum),
+						},
+					},
+					"padding_vertical": schema.Int64Attribute{
+						Description: "Padding above and below the container, in pixels. Takes precedence over `padding`, which takes precedence over the platform default of 64px. Zero is a padding rather than an absence. Leaving it out of the configuration clears any stored vertical override on the next apply.",
+						Optional:    true,
+						Validators: []validator.Int64{
+							int64validator.Between(containerPaddingMinimum, containerPaddingMaximum),
+						},
 					},
 					"logo_alignment": schema.StringAttribute{
 						Description: "Allowed values: `left`, `center`, `right`.",
@@ -340,7 +365,11 @@ func (r *themeResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 								},
 							},
 							"padding": schema.Int64Attribute{
-								Optional: true,
+								Description: "Padding on every side of the container in dark mode, in pixels. Overrides `container.padding`, and falls back to it when unset. The axis paddings are theme-wide, so they are set on `container` and apply to both colour modes.",
+								Optional:    true,
+								Validators: []validator.Int64{
+									int64validator.Between(containerPaddingMinimum, containerPaddingMaximum),
+								},
 							},
 							"logo_alignment": schema.StringAttribute{
 								Description: "Allowed values: `left`, `center`, `right`.",

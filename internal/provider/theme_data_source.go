@@ -50,6 +50,10 @@ func typefaceDataSourceAttributes() map[string]schema.Attribute {
 			DeprecationMessage: "Use `faces` instead, which carries a weight for each font file.",
 			Computed:           true,
 		},
+		"size_adjust": schema.Int64Attribute{
+			Description: "The configured integer percentage, from 67 to 150, that scales the glyphs drawn by every face in this typeface. It corrects a font that draws smaller or larger than expected at the same nominal font size. It does not change the font size, line height, or layout.",
+			Computed:    true,
+		},
 	}
 }
 

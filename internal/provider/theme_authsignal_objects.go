@@ -138,6 +138,10 @@ func buildAuthsignalTypefaceCreateObject(ctx context.Context, resp *resource.Cre
 		authsignalTypeface.FontUrl = authsignal.SetValue(typeface.FontUrl.ValueString())
 	}
 
+	if !typeface.SizeAdjust.IsNull() {
+		authsignalTypeface.SizeAdjust = authsignal.SetValue(typeface.SizeAdjust.ValueInt64())
+	}
+
 	return authsignalTypeface
 }
 
@@ -596,6 +600,13 @@ func buildAuthsignalTypefaceUpdateObject(ctx context.Context, resp *resource.Upd
 		authsignalTypeface.FontUrl = authsignal.SetNull(typeface.FontUrl.ValueString())
 	}
 
+	// A size adjust dropped from the configuration reaches the API as a null, which clears it.
+	if !typeface.SizeAdjust.IsNull() {
+		authsignalTypeface.SizeAdjust = authsignal.SetValue(typeface.SizeAdjust.ValueInt64())
+	} else {
+		authsignalTypeface.SizeAdjust = authsignal.SetNull(int64(0))
+	}
+
 	return authsignalTypeface
 }
 
@@ -1000,6 +1011,7 @@ func buildAuthsignalTypefaceDeleteObject() authsignal.Typeface {
 
 	authsignalTypeface.Faces = authsignal.SetNull([]authsignal.FontFace{})
 	authsignalTypeface.FontUrl = authsignal.SetNull("")
+	authsignalTypeface.SizeAdjust = authsignal.SetNull(int64(0))
 
 	return authsignalTypeface
 }

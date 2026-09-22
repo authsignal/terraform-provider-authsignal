@@ -183,6 +183,12 @@ func TestAccThemeAxisPadding(t *testing.T) {
 // would wipe the test tenant's theme. The configuration below carries the whole fixture theme and
 // varies only the container padding. The values match theme_data_source_test.go.
 func testAccThemeAxisPaddingConfig(padding string) string {
+	return testAccThemeFixtureConfig(padding, "")
+}
+
+// Everything but the padding and the typography is the fixture theme, so an apply leaves the tenant
+// as the data source test expects.
+func testAccThemeFixtureConfig(padding string, typography string) string {
 	return `resource "authsignal_theme" "theme" {
   name          = "Management-API-Testing"
   logo_url      = "https://res.cloudinary.com/authsignal/image/upload/v1716774524/m7bvgqjzr29tp69qcogr.jpg"
@@ -233,6 +239,7 @@ func testAccThemeAxisPaddingConfig(padding string) string {
     logo_height       = 113
 ` + padding + `
   }
+` + typography + `
   dark_mode = {
     logo_url      = "https://res.cloudinary.com/authsignal/image/upload/v1716774524/m7bvgqjzr29tp69qcogr.png"
     favicon_url   = "https://res.cloudinary.com/authsignal/image/upload/v1716774530/nvjzmbqax2jiiwse3a40.png"

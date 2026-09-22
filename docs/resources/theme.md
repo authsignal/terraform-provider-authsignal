@@ -82,6 +82,7 @@ resource "authsignal_theme" "theme" {
       faces = [
         { url = "<url to a font file>", weight = "500" },
       ]
+      size_adjust = 125
     }
   }
   links = {
@@ -189,6 +190,28 @@ resource "authsignal_theme" "theme" {
   container = {
     padding            = 32
     padding_horizontal = 24
+  }
+}
+```
+
+## Size adjust
+
+`size_adjust` is an integer percentage from 67 to 150. Set it when a font draws smaller or larger
+than expected at the same nominal font size. It does not change the font size, line height, or
+layout: a 16px label at 125 draws 20px glyphs in the same 48px button. One value applies to every
+face in a text, display, or button typeface.
+
+```terraform
+# A button font that draws small, corrected to 125% of the glyphs it would otherwise draw.
+resource "authsignal_theme" "theme" {
+  name = "My Tenant"
+  typography = {
+    button = {
+      faces = [
+        { url = "<url to a font file>", weight = "500" },
+      ]
+      size_adjust = 125
+    }
   }
 }
 ```
@@ -402,6 +425,7 @@ Optional:
 
 - `faces` (Attributes List) The font files making up this typeface, one per weight. At most 6. (see [below for nested schema](#nestedatt--typography--button--faces))
 - `font_url` (String, Deprecated) The URL of a single font file to be used for this typeface.
+- `size_adjust` (Number) An integer percentage from 67 to 150 that scales the glyphs drawn by every face in this typeface. Use it to correct a font that draws smaller or larger than expected at the same nominal font size. It does not change the font size, line height, or layout. Omit it to use the font without adjustment.
 
 <a id="nestedatt--typography--button--faces"></a>
 ### Nested Schema for `typography.button.faces`
@@ -423,6 +447,7 @@ Optional:
 
 - `faces` (Attributes List) The font files making up this typeface, one per weight. At most 6. (see [below for nested schema](#nestedatt--typography--display--faces))
 - `font_url` (String, Deprecated) The URL of a single font file to be used for this typeface.
+- `size_adjust` (Number) An integer percentage from 67 to 150 that scales the glyphs drawn by every face in this typeface. Use it to correct a font that draws smaller or larger than expected at the same nominal font size. It does not change the font size, line height, or layout. Omit it to use the font without adjustment.
 
 <a id="nestedatt--typography--display--faces"></a>
 ### Nested Schema for `typography.display.faces`
@@ -444,6 +469,7 @@ Optional:
 
 - `faces` (Attributes List) The font files making up this typeface, one per weight. At most 6. (see [below for nested schema](#nestedatt--typography--text--faces))
 - `font_url` (String, Deprecated) The URL of a single font file to be used for this typeface.
+- `size_adjust` (Number) An integer percentage from 67 to 150 that scales the glyphs drawn by every face in this typeface. Use it to correct a font that draws smaller or larger than expected at the same nominal font size. It does not change the font size, line height, or layout. Omit it to use the font without adjustment.
 
 <a id="nestedatt--typography--text--faces"></a>
 ### Nested Schema for `typography.text.faces`

@@ -28,6 +28,12 @@ const (
 	containerPaddingMaximum = 1000
 )
 
+// The range the Management API accepts for a typeface size adjust.
+const (
+	sizeAdjustMinimum = 67
+	sizeAdjustMaximum = 150
+)
+
 // Shape only. The API additionally rejects a range that does not ascend.
 var fontWeightPattern = regexp.MustCompile(`^(?:[1-9][0-9]{0,2}|1000)(?: (?:[1-9][0-9]{0,2}|1000))?$`)
 
@@ -59,6 +65,13 @@ func typefaceResourceAttributes() map[string]schema.Attribute {
 			Description:        "The URL of a single font file to be used for this typeface.",
 			DeprecationMessage: "Use `faces` instead, which carries a weight for each font file.",
 			Optional:           true,
+		},
+		"size_adjust": schema.Int64Attribute{
+			Description: "An integer percentage from 67 to 150 that scales the glyphs drawn by every face in this typeface. Use it to correct a font that draws smaller or larger than expected at the same nominal font size. It does not change the font size, line height, or layout. Omit it to use the font without adjustment.",
+			Optional:    true,
+			Validators: []validator.Int64{
+				int64validator.Between(sizeAdjustMinimum, sizeAdjustMaximum),
+			},
 		},
 	}
 }

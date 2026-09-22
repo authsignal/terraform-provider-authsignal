@@ -36,6 +36,15 @@ of the configuration clears whatever override is stored against the tenant on th
 
 {{ tffile "examples/resources/authsignal_theme/padding-universal-plus-one-axis.tf" }}
 
+## Size adjust
+
+`size_adjust` is an integer percentage from 67 to 150. Set it when a font draws smaller or larger
+than expected at the same nominal font size. It does not change the font size, line height, or
+layout: a 16px label at 125 draws 20px glyphs in the same 48px button. One value applies to every
+face in a text, display, or button typeface.
+
+{{ tffile "examples/resources/authsignal_theme/size-adjust.tf" }}
+
 {{ .SchemaMarkdown | trimspace }}
 {{- if .HasImport }}
 

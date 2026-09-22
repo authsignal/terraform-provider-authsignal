@@ -794,8 +794,9 @@ func fontFaceObjectType() types.ObjectType {
 
 // TYPEFACE
 type typefaceModel struct {
-	Faces   types.List   `tfsdk:"faces"`
-	FontUrl types.String `tfsdk:"font_url"`
+	Faces      types.List   `tfsdk:"faces"`
+	FontUrl    types.String `tfsdk:"font_url"`
+	SizeAdjust types.Int64  `tfsdk:"size_adjust"`
 }
 
 func (m *typefaceModel) CreateObject(input authsignal.TypefaceResponse) types.Object {
@@ -822,6 +823,14 @@ func (m *typefaceModel) CreateObject(input authsignal.TypefaceResponse) types.Ob
 		m.FontUrl = types.StringNull()
 	}
 
+	// The API omits a size adjust the tenant never set, so only nil means unset.
+	if input.SizeAdjust != nil {
+		isNull = 0
+		m.SizeAdjust = types.Int64Value(*input.SizeAdjust)
+	} else {
+		m.SizeAdjust = types.Int64Null()
+	}
+
 	if isNull == 1 {
 		return types.ObjectNull(m.AttributeTypes())
 	}
@@ -832,8 +841,9 @@ func (m *typefaceModel) CreateObject(input authsignal.TypefaceResponse) types.Ob
 
 func (m typefaceModel) AttributeTypes() map[string]attr.Type {
 	return map[string]attr.Type{
-		"faces":    types.ListType{ElemType: fontFaceObjectType()},
-		"font_url": types.StringType,
+		"faces":       types.ListType{ElemType: fontFaceObjectType()},
+		"font_url":    types.StringType,
+		"size_adjust": types.Int64Type,
 	}
 }
 
@@ -841,6 +851,7 @@ func (m typefaceModel) AttributeValues() map[string]attr.Value {
 	elements := map[string]attr.Value{}
 	elements["faces"] = m.Faces
 	elements["font_url"] = m.FontUrl
+	elements["size_adjust"] = m.SizeAdjust
 	return elements
 }
 

@@ -67,6 +67,7 @@ resource "authsignal_theme" "theme" {
       faces = [
         { url = "<url to a font file>", weight = "500" },
       ]
+      size_adjust = 125
     }
   }
   links = {

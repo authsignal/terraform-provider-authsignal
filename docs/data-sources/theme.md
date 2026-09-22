@@ -224,6 +224,7 @@ Read-Only:
 
 - `faces` (Attributes List) The font files making up this typeface, one per weight. (see [below for nested schema](#nestedatt--typography--button--faces))
 - `font_url` (String, Deprecated) The URL of a single font file to be used for this typeface.
+- `size_adjust` (Number) The configured integer percentage, from 67 to 150, that scales the glyphs drawn by every face in this typeface. It corrects a font that draws smaller or larger than expected at the same nominal font size. It does not change the font size, line height, or layout.
 
 <a id="nestedatt--typography--button--faces"></a>
 ### Nested Schema for `typography.button.faces`
@@ -242,6 +243,7 @@ Read-Only:
 
 - `faces` (Attributes List) The font files making up this typeface, one per weight. (see [below for nested schema](#nestedatt--typography--display--faces))
 - `font_url` (String, Deprecated) The URL of a single font file to be used for this typeface.
+- `size_adjust` (Number) The configured integer percentage, from 67 to 150, that scales the glyphs drawn by every face in this typeface. It corrects a font that draws smaller or larger than expected at the same nominal font size. It does not change the font size, line height, or layout.
 
 <a id="nestedatt--typography--display--faces"></a>
 ### Nested Schema for `typography.display.faces`
@@ -260,6 +262,7 @@ Read-Only:
 
 - `faces` (Attributes List) The font files making up this typeface, one per weight. (see [below for nested schema](#nestedatt--typography--text--faces))
 - `font_url` (String, Deprecated) The URL of a single font file to be used for this typeface.
+- `size_adjust` (Number) The configured integer percentage, from 67 to 150, that scales the glyphs drawn by every face in this typeface. It corrects a font that draws smaller or larger than expected at the same nominal font size. It does not change the font size, line height, or layout.
 
 <a id="nestedatt--typography--text--faces"></a>
 ### Nested Schema for `typography.text.faces`

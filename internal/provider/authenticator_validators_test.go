@@ -625,6 +625,32 @@ func TestEmailOtpValidateConfigRequiresAWebhookUrlForTheWebhookProvider(t *testi
 	}
 }
 
+func TestValidateConfigAcceptsAnUnknownWebhookUrlForTheWebhookProvider(t *testing.T) {
+	cases := map[string]struct {
+		res               resource.ResourceWithValidateConfig
+		providerAttribute string
+	}{
+		"email-otp": {&emailOtpAuthenticatorConfigurationResource{}, "email_provider"},
+		"sms":       {&smsAuthenticatorConfigurationResource{}, "sms_provider"},
+		"push":      {&pushAuthenticatorConfigurationResource{}, "push_provider"},
+	}
+
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			resourceSchema := resourceSchemaOf(t, tc.res)
+
+			summaries := validateResourceConfig(t, tc.res, resourceSchema, map[string]tftypes.Value{
+				tc.providerAttribute: tftypes.NewValue(tftypes.String, "WEBHOOK"),
+				"webhook_url":        tftypes.NewValue(tftypes.String, tftypes.UnknownValue),
+			})
+
+			if len(summaries) != 0 {
+				t.Errorf("an unknown webhook_url produced %v; there is nothing to judge yet", summaries)
+			}
+		})
+	}
+}
+
 func TestSmsValidateConfigRejectsAWebhookUrlForACredentialProvider(t *testing.T) {
 	for _, provider := range []string{"BIRD", "MESSAGE_MEDIA", "MODICA_GROUP", "TNZ", "TWILIO"} {
 		res := &smsAuthenticatorConfigurationResource{}

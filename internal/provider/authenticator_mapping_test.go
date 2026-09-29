@@ -466,6 +466,15 @@ func TestPasskeyUpdateSendsAnExplicitlyChangedEnum(t *testing.T) {
 	}
 }
 
+func TestPasskeyUpdateSendsFalseToLetUsersRemoveTheirLastPasskey(t *testing.T) {
+	config := passkeyStored()
+	config.PreventRemovingLastPasskey = types.BoolValue(false)
+
+	if value, ok := passkeyUpdatePatch(t, config)["preventRemovingLastPasskey"]; !ok || value != false {
+		t.Errorf("preventRemovingLastPasskey is %v (present: %v), want false — turning the setting off has to reach the API", value, ok)
+	}
+}
+
 func pushModelFor(provider string) pushAuthenticatorConfigurationResourceModel {
 	model := emptyPushModel()
 	model.PushProvider = types.StringValue(provider)

@@ -40,6 +40,7 @@ type passkeyAuthenticatorConfigurationResourceModel struct {
 	PasskeyRegistrationHints    types.List   `tfsdk:"passkey_registration_hints"`
 	UserVerificationRequirement types.String `tfsdk:"user_verification_requirement"`
 	AuthenticatorAttachment     types.String `tfsdk:"authenticator_attachment"`
+	PreventRemovingLastPasskey  types.Bool   `tfsdk:"prevent_removing_last_passkey"`
 }
 
 func (r *passkeyAuthenticatorConfigurationResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -106,6 +107,11 @@ func (r *passkeyAuthenticatorConfigurationResource) Schema(_ context.Context, _ 
 				Validators: []validator.String{
 					stringvalidator.OneOf(allowedAuthenticatorAttachments...),
 				},
+			},
+			"prevent_removing_last_passkey": schema.BoolAttribute{
+				Description: "Whether users are stopped from removing their last passkey, even when they have another authentication method. Admins and the Server API can still remove it.",
+				Optional:    true,
+				Computed:    true,
 			},
 		},
 	}
@@ -264,6 +270,7 @@ func passkeyCreateBody(ctx context.Context, plan passkeyAuthenticatorConfigurati
 		ExpectedOrigins:             origins,
 		UserVerificationRequirement: stringPointer(config.UserVerificationRequirement),
 		AuthenticatorAttachment:     stringPointer(config.AuthenticatorAttachment),
+		PreventRemovingLastPasskey:  boolPointer(config.PreventRemovingLastPasskey),
 	}
 
 	if isKnownAndSet(config.PasskeyRegistrationHints) {
@@ -308,6 +315,10 @@ func passkeyUpdateBody(ctx context.Context, plan passkeyAuthenticatorConfigurati
 		body.AuthenticatorAttachment = authsignal.SetValue(config.AuthenticatorAttachment.ValueString())
 	}
 
+	if isKnownAndSet(config.PreventRemovingLastPasskey) {
+		body.PreventRemovingLastPasskey = authsignal.SetValue(config.PreventRemovingLastPasskey.ValueBool())
+	}
+
 	return body, diags
 }
 
@@ -320,6 +331,7 @@ func passkeyStateAfterWrite(plan passkeyAuthenticatorConfigurationResourceModel,
 	state.PasskeyRegistrationHints = resolvedValue(plan.PasskeyRegistrationHints, stringListPointerValue(response.PasskeyRegistrationHints))
 	state.UserVerificationRequirement = resolvedValue(plan.UserVerificationRequirement, types.StringPointerValue(response.UserVerificationRequirement))
 	state.AuthenticatorAttachment = resolvedValue(plan.AuthenticatorAttachment, types.StringPointerValue(response.AuthenticatorAttachment))
+	state.PreventRemovingLastPasskey = resolvedValue(plan.PreventRemovingLastPasskey, types.BoolPointerValue(response.PreventRemovingLastPasskey))
 
 	return state
 }
@@ -334,5 +346,6 @@ func passkeyStateFromResponse(response *authsignal.PasskeyAuthenticatorConfigura
 		PasskeyRegistrationHints:    stringListPointerValue(response.PasskeyRegistrationHints),
 		UserVerificationRequirement: types.StringPointerValue(response.UserVerificationRequirement),
 		AuthenticatorAttachment:     types.StringPointerValue(response.AuthenticatorAttachment),
+		PreventRemovingLastPasskey:  types.BoolPointerValue(response.PreventRemovingLastPasskey),
 	}
 }

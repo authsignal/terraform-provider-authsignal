@@ -417,6 +417,7 @@ func responseReadableOptionals() map[string][]string {
 		"passkey": {
 			"is_active", "passkey_registration_hints",
 			"user_verification_requirement", "authenticator_attachment",
+			"prevent_removing_last_passkey",
 		},
 		"push": {
 			"is_active", "webhook_url", "credential_lifetime_in_minutes",

@@ -38,7 +38,7 @@ resource "authsignal_email_otp_authenticator_configuration" "email_otp" {
 
 ### Required
 
-- `email_provider` (String) Email delivery provider. Supply its credential block when first selecting it. One of `BIRD`, `MAILGUN`, `MAILJET`, `MANDRILL`, `SENDGRID`, `SMTP`, `WEBHOOK`.
+- `email_provider` (String) Email delivery provider. Supply its credential block when first selecting it. One of `BIRD`, `MAILGUN`, `MAILJET`, `MANDRILL`, `SENDGRID`, `SES`, `SMTP`, `WEBHOOK`.
 
 ### Optional
 

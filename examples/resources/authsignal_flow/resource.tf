@@ -1,5 +1,3 @@
-# Load a flow exported from the Authsignal Portal. Its rules read the risk_score data point and the
-# blocked-countries list, so depends_on creates both before the flow is published.
 resource "authsignal_custom_data_point" "risk_score" {
   name       = "risk_score"
   data_type  = "number"
@@ -12,6 +10,7 @@ resource "authsignal_value_list" "blocked_countries" {
   value_list_items_strings = ["KP", "IR"]
 }
 
+# Load a flow exported from the Authsignal Portal.
 resource "authsignal_flow" "sign_in" {
   action_code = "sign-in"
   flow        = file("${path.module}/flow-sign-in.json")

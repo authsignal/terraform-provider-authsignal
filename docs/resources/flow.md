@@ -43,7 +43,7 @@ resource "authsignal_flow" "sign_in" {
 ### Required
 
 - `action_code` (String) The name of the action that users perform which you will track. (e.g 'login')
-- `flow` (String) The flow document as JSON. It must contain `actionNodes` and `rules`. Use `file()` to load a flow exported from the Authsignal Portal, or `jsonencode()` to define it inline. Before using a verification method in a flow, enable its authenticator configuration in Authsignal. Every custom data point and value list the rules read must exist before the flow is published. Terraform can't see references inside a `file()`, so add the resources that create them to `depends_on`.
+- `flow` (String) The flow document as JSON. It must contain `actionNodes` and `rules`. Use `file()` to load a flow exported from the Authsignal Portal, or `jsonencode()` to define it inline. Before using a verification method in a flow, enable its authenticator configuration in Authsignal. Every custom data point and value list the rules read must exist before the flow is published. Add the resources that create them to `depends_on`, unless the flow reads their names from those resources.
 
 ### Read-Only
 

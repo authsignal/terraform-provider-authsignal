@@ -13,10 +13,27 @@ Manages a `FLOW` action. Use `authsignal_action_configuration` for `CLASSIC` act
 ## Example Usage
 
 ```terraform
+resource "authsignal_custom_data_point" "risk_score" {
+  name       = "risk_score"
+  data_type  = "number"
+  model_type = "action"
+}
+
+resource "authsignal_value_list" "blocked_countries" {
+  name                     = "Blocked countries"
+  is_active                = true
+  value_list_items_strings = ["KP", "IR"]
+}
+
 # Load a flow exported from the Authsignal Portal.
 resource "authsignal_flow" "sign_in" {
   action_code = "sign-in"
   flow        = file("${path.module}/flow-sign-in.json")
+
+  depends_on = [
+    authsignal_custom_data_point.risk_score,
+    authsignal_value_list.blocked_countries,
+  ]
 }
 ```
 
@@ -26,7 +43,7 @@ resource "authsignal_flow" "sign_in" {
 ### Required
 
 - `action_code` (String) The name of the action that users perform which you will track. (e.g 'login')
-- `flow` (String) The flow document as JSON. It must contain `actionNodes` and `rules`. Use `file()` to load a flow exported from the Authsignal Portal, or `jsonencode()` to define it inline. Before using a verification method in a flow, enable its authenticator configuration in Authsignal.
+- `flow` (String) The flow document as JSON. It must contain `actionNodes` and `rules`. Use `file()` to load a flow exported from the Authsignal Portal, or `jsonencode()` to define it inline. Before using a verification method in a flow, enable its authenticator configuration in Authsignal. Every custom data point and value list the rules read must exist before the flow is published. Add the resources that create them to `depends_on`, unless the flow reads their names from those resources.
 
 ### Read-Only
 

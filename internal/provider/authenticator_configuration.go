@@ -34,7 +34,7 @@ var allowedEmailProviders = []string{"BIRD", "MAILGUN", "MAILJET", "MANDRILL", "
 
 var allowedPushProviders = []string{"DEFAULT", "FIREBASE", "WEBHOOK"}
 
-var allowedUserVerificationRequirements = []string{"preferred", "required"}
+var allowedUserVerificationRequirements = []string{"discouraged", "preferred", "required"}
 
 var allowedAuthenticatorAttachments = []string{"all-supported", "cross-platform", "platform"}
 

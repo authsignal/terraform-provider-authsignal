@@ -53,23 +53,27 @@ func (r *ruleResource) Metadata(_ context.Context, req resource.MetadataRequest,
 	resp.TypeName = req.ProviderTypeName + "_rule"
 }
 
+const flowRuleSummary = "Rules of a " + actionTypeFlow + " action belong in its flow"
+
 // A FLOW action keeps its rules in the flow document, and the rules endpoint accepts one
 // written here regardless, so the rule would silently reappear inside `authsignal_flow`'s
-// flow as a permanent diff. The check guards the two mutations that could introduce it.
+// flow as a permanent diff. Create and Update refuse to write such a rule, and Read and
+// ImportState refuse to take one on, because destroying it would delete it from the flow.
 // It is deliberately best effort: an action configuration that cannot be read is left to
 // the rules endpoint to accept or reject, so this cannot fail an otherwise valid apply.
+func (r *ruleResource) actionIsFlow(actionCode string) bool {
+	actionConfiguration, _, err := r.client.GetActionConfiguration(actionCode)
+
+	return err == nil && actionConfiguration != nil && isFlowActionType(actionConfiguration.ActionType)
+}
+
 func (r *ruleResource) checkActionIsClassic(actionCode string) diag.Diagnostics {
 	var diags diag.Diagnostics
 
-	actionConfiguration, _, err := r.client.GetActionConfiguration(actionCode)
-	if err != nil || actionConfiguration == nil {
-		return diags
-	}
-
-	if isFlowActionType(actionConfiguration.ActionType) {
+	if r.actionIsFlow(actionCode) {
 		diags.AddAttributeError(
 			path.Root("action_code"),
-			"Rules of a "+actionTypeFlow+" action belong in its flow",
+			flowRuleSummary,
 			"Action configuration "+actionCode+" is a "+actionTypeFlow+" action, and `authsignal_rule` manages the rules of a "+actionTypeClassic+" action only. "+
 				"Move this rule into the `flow` document of the `authsignal_flow` resource that manages "+actionCode+".",
 		)
@@ -257,7 +261,20 @@ func (r *ruleResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 		return
 	}
 
-	rule, statusCode, err := r.client.GetRule(state.ActionCode.ValueString(), state.RuleId.ValueString())
+	actionCode := state.ActionCode.ValueString()
+
+	if r.actionIsFlow(actionCode) {
+		resp.Diagnostics.AddAttributeError(
+			path.Root("action_code"),
+			flowRuleSummary,
+			"Action configuration "+actionCode+" is a "+actionTypeFlow+" action, so this rule belongs to its flow, not to `authsignal_rule`. "+
+				"Remove this resource from the configuration, run `terraform state rm` on it, and manage the rule in the `flow` document of the `authsignal_flow` resource for "+actionCode+". "+
+				"Don't destroy it: that deletes the rule from the flow.",
+		)
+		return
+	}
+
+	rule, statusCode, err := r.client.GetRule(actionCode, state.RuleId.ValueString())
 
 	if statusCode == 404 {
 		resp.State.RemoveResource(ctx)
@@ -463,6 +480,15 @@ func (r *ruleResource) ImportState(ctx context.Context, req resource.ImportState
 		resp.Diagnostics.AddError(
 			"Unexpected Import Identifier",
 			fmt.Sprintf("Expected import identifier with format: action_code/rule_id. Got: %q", req.ID),
+		)
+		return
+	}
+
+	if r.actionIsFlow(ruleIdentifiers[0]) {
+		resp.Diagnostics.AddError(
+			flowRuleSummary,
+			"Action configuration "+ruleIdentifiers[0]+" is a "+actionTypeFlow+" action, and `authsignal_rule` manages the rules of a "+actionTypeClassic+" action only. "+
+				"Import "+ruleIdentifiers[0]+" into `authsignal_flow` instead, which manages its rules as part of the flow.",
 		)
 		return
 	}

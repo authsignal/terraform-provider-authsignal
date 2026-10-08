@@ -1,6 +1,7 @@
 package provider
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -360,6 +361,39 @@ func TestComposeFlowKeepsTheNumberLiteralsTheApiSent(t *testing.T) {
 
 	if !equal {
 		t.Fatalf("the composed document must match the configuration\nconfigured: %s\ncomposed:   %s", configured, composed)
+	}
+}
+
+func TestComposeFlowKeepsComparisonOperatorsReadable(t *testing.T) {
+	const conditionsJson = `{"and":[{">":[{"var":"risk.score"},50]},{"<=":[{"var":"attempts"},3]}]}`
+
+	nodes := serverNodes(t, "["+`{"nodeId":"c","nodeType":"COMPLETE"}`+"]")
+	rules := []authsignal.RuleResponse{serverRuleFromApi(t, "a", "A", conditionsJson)}
+
+	composed, err := composeFlowWithRuleOrder(nodes, rules, []string{"a"})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !strings.Contains(composed, conditionsJson) {
+		t.Fatalf("> and <= must be stored as written, not as Unicode escapes, got %s", composed)
+	}
+
+	// State written by earlier versions holds the escaped form, which must not plan a change.
+	var escaped bytes.Buffer
+	json.HTMLEscape(&escaped, []byte(composed))
+
+	if escaped.String() == composed {
+		t.Fatal("the escaped document must differ from the composed one for this test to mean anything")
+	}
+
+	equal, diags := NewFlowValue(escaped.String()).StringSemanticEquals(context.Background(), NewFlowValue(composed))
+	if diags.HasError() {
+		t.Fatal(diags)
+	}
+
+	if !equal {
+		t.Fatalf("the escaped and unescaped documents must be equal\nescaped:  %s\ncomposed: %s", escaped.String(), composed)
 	}
 }
 

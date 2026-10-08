@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"net/http"
 
 	"github.com/authsignal/authsignal-management-go/v6"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -151,7 +152,12 @@ func (r *flowResource) Create(ctx context.Context, req resource.CreateRequest, r
 		ActionType: authsignal.SetValue(actionTypeFlow),
 	}
 
-	actionConfiguration, _, err := r.client.CreateActionConfiguration(actionConfigurationToCreate)
+	actionConfiguration, statusCode, err := r.client.CreateActionConfiguration(actionConfigurationToCreate)
+	if statusCode == http.StatusConflict {
+		resp.Diagnostics.Append(flowAlreadyExistsDiagnostics(actionCode)...)
+		return
+	}
+
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating action configuration",

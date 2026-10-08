@@ -29,5 +29,5 @@ provider "authsignal" {
 ### Optional
 
 - `api_secret` (String, Sensitive) The Management API Secret obtained from Authsignal's admin portal.
-- `host` (String) The host URL of the Authsignal Management API for your tenant.
+- `host` (String) The host URL of the Authsignal Management API for your tenant. It must start with `https://`.
 - `tenant_id` (String) The ID of your tenant.

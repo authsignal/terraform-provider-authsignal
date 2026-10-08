@@ -140,6 +140,26 @@ func TestFlowCreateRefusesAnExistingClassicAction(t *testing.T) {
 	stub.assertNotCalled(t, flowPublishRoute)
 }
 
+func TestFlowCreateOverAnExistingFlowTellsThePractitionerToImport(t *testing.T) {
+	client, stub := newStubAPI(t, map[string][]stubResponse{
+		actionGetRoute:    okResponse(actionConfigurationJson(actionTypeFlow, testNodes, "1")),
+		actionCreateRoute: {{status: http.StatusConflict, body: `{"error":"conflict"}`}},
+	})
+
+	resp := createFlow(t, client, testFlow)
+
+	if !resp.Diagnostics.HasError() {
+		t.Fatal("expected creating a flow over an existing FLOW action to fail")
+	}
+
+	if !strings.Contains(detailsOf(resp.Diagnostics), "terraform import ADDRESS sign-in") {
+		t.Errorf("the error must name the import command, got %s", detailsOf(resp.Diagnostics))
+	}
+
+	stub.assertRoutes(t, actionGetRoute, actionCreateRoute)
+	stub.assertNotCalled(t, flowPublishRoute)
+}
+
 func TestFlowCreateKeepsTheActionInStateWhenTheApiIgnoresTheFlowType(t *testing.T) {
 	client, stub := newStubAPI(t, map[string][]stubResponse{
 		actionGetRoute:    {notFoundResponse()},

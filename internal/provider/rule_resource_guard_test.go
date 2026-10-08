@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/authsignal/authsignal-management-go/v6"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
@@ -13,6 +14,10 @@ import (
 const (
 	ruleCreateRoute = "POST /action-configurations/sign-in/rules"
 	ruleUpdateRoute = "PATCH /action-configurations/sign-in/rules/rule-1"
+	ruleGetRoute    = "GET /action-configurations/sign-in/rules/rule-1"
+
+	ruleJson = `{"ruleId":"rule-1","tenantId":"tenant","actionCode":"sign-in","name":"Anonymous IP",` +
+		`"isActive":true,"priority":0,"type":"CHALLENGE","conditions":{"and":[]}}`
 )
 
 func ruleState(t *testing.T) tfsdk.State {
@@ -111,6 +116,103 @@ func TestRuleCreateReachesTheRulesEndpointForAClassicAction(t *testing.T) {
 
 	// The guard must not stand between a CLASSIC action and its rules.
 	stub.assertRoutes(t, actionGetRoute, ruleCreateRoute)
+}
+
+func TestRuleReadRefusesARuleOfAFlowAction(t *testing.T) {
+	client, stub := newStubAPI(t, map[string][]stubResponse{
+		actionGetRoute: okResponse(actionConfigurationJson(actionTypeFlow, "null", "null")),
+		ruleGetRoute:   okResponse(ruleJson),
+	})
+
+	state := ruleState(t)
+	resp := &resource.ReadResponse{State: state}
+
+	(&ruleResource{client: client}).Read(context.Background(), resource.ReadRequest{State: state}, resp)
+
+	if !resp.Diagnostics.HasError() {
+		t.Fatal("expected reading a rule of a FLOW action to fail")
+	}
+
+	if !strings.Contains(detailsOf(resp.Diagnostics), "terraform state rm") {
+		t.Errorf("the error must say how to stop managing the rule, got %s", detailsOf(resp.Diagnostics))
+	}
+
+	// Dropping the rule from state would let a later plan create it again on the flow's action.
+	if resp.State.Raw.IsNull() {
+		t.Error("the rule must stay in state")
+	}
+
+	stub.assertRoutes(t, actionGetRoute)
+}
+
+func TestRuleReadReachesTheRuleOfAClassicAction(t *testing.T) {
+	client, stub := newStubAPI(t, map[string][]stubResponse{
+		actionGetRoute: okResponse(actionConfigurationJson(actionTypeClassic, "null", "null")),
+		ruleGetRoute:   okResponse(ruleJson),
+	})
+
+	state := ruleState(t)
+	resp := &resource.ReadResponse{State: state}
+
+	(&ruleResource{client: client}).Read(context.Background(), resource.ReadRequest{State: state}, resp)
+
+	if resp.Diagnostics.HasError() {
+		t.Fatal(detailsOf(resp.Diagnostics))
+	}
+
+	stub.assertRoutes(t, actionGetRoute, ruleGetRoute)
+}
+
+func importRule(t *testing.T, client *authsignal.Client) *resource.ImportStateResponse {
+	t.Helper()
+
+	resourceSchema := resourceSchemaOf(t, &ruleResource{})
+	schemaType := resourceSchema.Type().TerraformType(context.Background())
+
+	resp := &resource.ImportStateResponse{
+		State: tfsdk.State{Schema: resourceSchema, Raw: tftypes.NewValue(schemaType, nil)},
+	}
+
+	(&ruleResource{client: client}).ImportState(context.Background(), resource.ImportStateRequest{ID: "sign-in/rule-1"}, resp)
+
+	return resp
+}
+
+func TestRuleImportRefusesARuleOfAFlowAction(t *testing.T) {
+	client, _ := newStubAPI(t, map[string][]stubResponse{
+		actionGetRoute: okResponse(actionConfigurationJson(actionTypeFlow, "null", "null")),
+	})
+
+	resp := importRule(t, client)
+
+	if !resp.Diagnostics.HasError() {
+		t.Fatal("expected importing a rule of a FLOW action to fail")
+	}
+
+	if !strings.Contains(detailsOf(resp.Diagnostics), "authsignal_flow") {
+		t.Errorf("the error must name authsignal_flow, got %s", detailsOf(resp.Diagnostics))
+	}
+}
+
+func TestRuleImportOfAClassicActionKeepsItsIdentifiers(t *testing.T) {
+	client, _ := newStubAPI(t, map[string][]stubResponse{
+		actionGetRoute: okResponse(actionConfigurationJson(actionTypeClassic, "null", "null")),
+	})
+
+	resp := importRule(t, client)
+
+	if resp.Diagnostics.HasError() {
+		t.Fatal(detailsOf(resp.Diagnostics))
+	}
+
+	var model ruleResourceModel
+	if diags := resp.State.Get(context.Background(), &model); diags.HasError() {
+		t.Fatal(detailsOf(diags))
+	}
+
+	if model.ActionCode.ValueString() != "sign-in" || model.RuleId.ValueString() != "rule-1" {
+		t.Errorf("expected sign-in/rule-1 in state, got %s/%s", model.ActionCode.ValueString(), model.RuleId.ValueString())
+	}
 }
 
 func TestActionConfigurationCreateRefusesAnExistingFlowAction(t *testing.T) {

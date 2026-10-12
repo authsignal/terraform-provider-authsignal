@@ -176,6 +176,84 @@ resource "authsignal_push_authenticator_configuration" "push" {
 	})
 }
 
+func TestPlanAProviderWithoutItsCredentialsIsRejected(t *testing.T) {
+	skipUnlessAcceptance(t)
+
+	missingCredentials := regexp.MustCompile(`Missing Credentials for the Configured Provider`)
+
+	resource.UnitTest(t, resource.TestCase{
+		TerraformVersionChecks:   []tfversion.TerraformVersionCheck{writeOnlyTerraform},
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: `
+resource "authsignal_email_otp_authenticator_configuration" "email_otp" {
+  email_provider = "SENDGRID"
+}
+`,
+				PlanOnly:    true,
+				ExpectError: missingCredentials,
+			},
+			{
+				Config: `
+resource "authsignal_sms_authenticator_configuration" "sms" {
+  sms_provider = "TWILIO"
+}
+`,
+				PlanOnly:    true,
+				ExpectError: missingCredentials,
+			},
+			{
+				Config: `
+resource "authsignal_push_authenticator_configuration" "push" {
+  push_provider = "FIREBASE"
+}
+`,
+				PlanOnly:    true,
+				ExpectError: missingCredentials,
+			},
+			{
+				Config: `
+resource "authsignal_push_authenticator_configuration" "push" {
+  push_provider = "DEFAULT"
+}
+`,
+				PlanOnly:    true,
+				ExpectError: missingCredentials,
+			},
+		},
+	})
+}
+
+func TestPlanPushDefaultProviderWithOnlyApnsCredentialsIsAccepted(t *testing.T) {
+	skipUnlessAcceptance(t)
+
+	resource.UnitTest(t, resource.TestCase{
+		TerraformVersionChecks:   []tfversion.TerraformVersionCheck{writeOnlyTerraform},
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: `
+resource "authsignal_push_authenticator_configuration" "push" {
+  push_provider = "DEFAULT"
+
+  apns_credentials = {
+    private_key = "apns-key"
+    team_id     = "TEAM123"
+    key_id      = "KEY123"
+    bundle_id   = "com.example.app"
+  }
+
+  apns_credentials_version = "1"
+}
+`,
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: true,
+			},
+		},
+	})
+}
+
 func TestPlanCredentialBlocksAreAcceptedAlongsideWriteOnlySecrets(t *testing.T) {
 	skipUnlessAcceptance(t)
 

@@ -69,7 +69,7 @@ const (
 var birdEmailBlock = credentialBlock{
 	Name:        birdEmailCredentialsBlock,
 	Providers:   []string{"BIRD"},
-	Description: "Bird email credentials. Required when `email_provider` is `BIRD` and no Bird credentials are stored yet.",
+	Description: "Bird email credentials. Required when `email_provider` is `BIRD`.",
 	Members: []credentialMember{
 		{Name: "access_key", Kind: credentialString, Secret: true, Required: true, Description: "Bird access key."},
 		{Name: "workspace_id", Kind: credentialString, Required: true, Description: "Bird workspace ID."},
@@ -85,7 +85,7 @@ var birdEmailBlock = credentialBlock{
 var mailjetEmailBlock = credentialBlock{
 	Name:        mailjetEmailCredentialsBlock,
 	Providers:   []string{"MAILJET"},
-	Description: "Mailjet credentials. Required when `email_provider` is `MAILJET` and no Mailjet credentials are stored yet.",
+	Description: "Mailjet credentials. Required when `email_provider` is `MAILJET`.",
 	Members: []credentialMember{
 		{Name: "private_key", Kind: credentialString, Secret: true, Required: true, Description: "Mailjet API secret key."},
 		{Name: "public_key", Kind: credentialString, Required: true, Description: "Mailjet API key."},
@@ -96,7 +96,7 @@ var mailjetEmailBlock = credentialBlock{
 var mailgunEmailBlock = credentialBlock{
 	Name:        mailgunEmailCredentialsBlock,
 	Providers:   []string{"MAILGUN"},
-	Description: "Mailgun credentials. Required when `email_provider` is `MAILGUN` and no Mailgun credentials are stored yet.",
+	Description: "Mailgun credentials. Required when `email_provider` is `MAILGUN`.",
 	Members: []credentialMember{
 		{Name: "api_key", Kind: credentialString, Secret: true, Required: true, Description: "Mailgun API key."},
 		{Name: "url", Kind: credentialString, Required: true, Description: "The Mailgun API base URL for the region the domain is in."},
@@ -109,7 +109,7 @@ var mailgunEmailBlock = credentialBlock{
 var mandrillEmailBlock = credentialBlock{
 	Name:        mandrillEmailCredentialsBlock,
 	Providers:   []string{"MANDRILL"},
-	Description: "Mandrill credentials. Required when `email_provider` is `MANDRILL` and no Mandrill credentials are stored yet.",
+	Description: "Mandrill credentials. Required when `email_provider` is `MANDRILL`.",
 	Members: []credentialMember{
 		{Name: "api_key", Kind: credentialString, Secret: true, Required: true, Description: "Mandrill API key."},
 		{Name: "template_name", Kind: credentialString, Required: true, Description: "Mandrill template name."},
@@ -119,7 +119,7 @@ var mandrillEmailBlock = credentialBlock{
 var sendgridEmailBlock = credentialBlock{
 	Name:        sendgridEmailCredentialsBlock,
 	Providers:   []string{"SENDGRID"},
-	Description: "SendGrid credentials. Required when `email_provider` is `SENDGRID` and no SendGrid credentials are stored yet.",
+	Description: "SendGrid credentials. Required when `email_provider` is `SENDGRID`.",
 	Members: []credentialMember{
 		{Name: "api_key", Kind: credentialString, Secret: true, Required: true, Description: "SendGrid API key."},
 		{Name: "template_id", Kind: credentialString, Required: true, Description: "SendGrid dynamic template ID."},
@@ -131,7 +131,7 @@ var sendgridEmailBlock = credentialBlock{
 var smtpEmailBlock = credentialBlock{
 	Name:        smtpEmailCredentialsBlock,
 	Providers:   []string{"SMTP"},
-	Description: "SMTP credentials. Required when `email_provider` is `SMTP` and no SMTP credentials are stored yet.",
+	Description: "SMTP credentials. Required when `email_provider` is `SMTP`.",
 	Members: []credentialMember{
 		{Name: "host", Kind: credentialString, Required: true, Description: "SMTP server hostname."},
 		{Name: "port", Kind: credentialInt64, Required: true, Description: "SMTP server port."},
@@ -170,7 +170,7 @@ func (r *emailOtpAuthenticatorConfigurationResource) Schema(_ context.Context, _
 			Computed: true,
 		},
 		"email_provider": schema.StringAttribute{
-			Description: "Email delivery provider. Supply its credential block when first selecting it." + allowedValues(allowedEmailProviders),
+			Description: "Email delivery provider. Every provider except `WEBHOOK` requires its credential block, and `WEBHOOK` requires `webhook_url`." + allowedValues(allowedEmailProviders),
 			Required:    true,
 			Validators: []validator.String{
 				stringvalidator.OneOf(allowedEmailProviders...),
@@ -241,11 +241,13 @@ func (r *emailOtpAuthenticatorConfigurationResource) ValidateConfig(ctx context.
 	provider := config.EmailProvider.ValueString()
 
 	for _, block := range emailOtpCredentialBlocks {
-		if block.appliesTo(provider) {
-			continue
+		credentials := config.credentialObject(block.Name)
+
+		if block.appliesTo(provider) && credentials.IsNull() {
+			resp.Diagnostics.Append(missingCredentialDiagnostic(block.Name, "email_provider", provider))
 		}
 
-		if isKnownAndSet(config.credentialObject(block.Name)) {
+		if !block.appliesTo(provider) && isKnownAndSet(credentials) {
 			resp.Diagnostics.Append(mismatchedCredentialDiagnostic(block.Name, "email_provider", provider))
 		}
 	}

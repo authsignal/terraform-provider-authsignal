@@ -39,28 +39,28 @@ resource "authsignal_sms_authenticator_configuration" "sms" {
 
 ### Required
 
-- `sms_provider` (String) SMS delivery provider. Supply its credential block when first selecting it. One of `BIRD`, `MESSAGE_MEDIA`, `MODICA_GROUP`, `TNZ`, `TWILIO`, `WEBHOOK`.
+- `sms_provider` (String) SMS delivery provider. Every provider except `WEBHOOK` requires its credential block, and `WEBHOOK` requires `webhook_url`. One of `BIRD`, `MESSAGE_MEDIA`, `MODICA_GROUP`, `TNZ`, `TWILIO`, `WEBHOOK`.
 
 ### Optional
 
 > **NOTE**: [Write-only arguments](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments) are supported in Terraform 1.11 and later.
 
 - `allowed_custom_sms_variables` (Set of String) Custom SMS template variables. Set to `[]` to clear them.
-- `bird_sms_credentials` (Attributes) Bird SMS credentials. Required when `sms_provider` is `BIRD` and no Bird credentials are stored yet. (see [below for nested schema](#nestedatt--bird_sms_credentials))
+- `bird_sms_credentials` (Attributes) Bird SMS credentials. Required when `sms_provider` is `BIRD`. (see [below for nested schema](#nestedatt--bird_sms_credentials))
 - `bird_sms_credentials_version` (String) Credential rotation marker for `bird_sms_credentials`. Change it to resend the credentials. Use an opaque counter or date, never a secret.
 - `default_country_code` (String) Country code used for numbers without one. It must be included in `sms_country_codes`.
 - `is_active` (Boolean)
-- `message_media_credentials` (Attributes) MessageMedia credentials. Required when `sms_provider` is `MESSAGE_MEDIA` and no MessageMedia credentials are stored yet. (see [below for nested schema](#nestedatt--message_media_credentials))
+- `message_media_credentials` (Attributes) MessageMedia credentials. Required when `sms_provider` is `MESSAGE_MEDIA`. (see [below for nested schema](#nestedatt--message_media_credentials))
 - `message_media_credentials_version` (String) Credential rotation marker for `message_media_credentials`. Change it to resend the credentials. Use an opaque counter or date, never a secret.
-- `modica_group_credentials` (Attributes) Modica Group credentials. Required when `sms_provider` is `MODICA_GROUP` and no Modica Group credentials are stored yet. (see [below for nested schema](#nestedatt--modica_group_credentials))
+- `modica_group_credentials` (Attributes) Modica Group credentials. Required when `sms_provider` is `MODICA_GROUP`. (see [below for nested schema](#nestedatt--modica_group_credentials))
 - `modica_group_credentials_version` (String) Credential rotation marker for `modica_group_credentials`. Change it to resend the credentials. Use an opaque counter or date, never a secret.
 - `prefix_rate_limit_configurations` (Attributes List) Message delivery limits by number prefix. Set to `[]` to clear them. (see [below for nested schema](#nestedatt--prefix_rate_limit_configurations))
 - `sending_rate_limit_configurations` (Attributes List) Message delivery limits. All configured limits apply. (see [below for nested schema](#nestedatt--sending_rate_limit_configurations))
 - `sms_country_codes` (Set of String) Allowed two-letter destination country codes. Set to `[]` to clear the restriction and `default_country_code`.
 - `submission_rate_limit_configuration` (Attributes) Code submission limit. (see [below for nested schema](#nestedatt--submission_rate_limit_configuration))
-- `tnz_credentials` (Attributes, [Write-only](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments)) TNZ credentials. Required when `sms_provider` is `TNZ` and no TNZ credentials are stored. This block is entirely write-only, so `tnz_credentials_version` is required when it is set. (see [below for nested schema](#nestedatt--tnz_credentials))
+- `tnz_credentials` (Attributes, [Write-only](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments)) TNZ credentials. Required when `sms_provider` is `TNZ`. This block is entirely write-only, so `tnz_credentials_version` is required when it is set. (see [below for nested schema](#nestedatt--tnz_credentials))
 - `tnz_credentials_version` (String) Credential rotation marker for `tnz_credentials`. Change it to resend the credentials. Use an opaque counter or date, never a secret.
-- `twilio_credentials` (Attributes) Twilio credentials. Required when `sms_provider` is `TWILIO` and no Twilio credentials are stored yet. (see [below for nested schema](#nestedatt--twilio_credentials))
+- `twilio_credentials` (Attributes) Twilio credentials. Required when `sms_provider` is `TWILIO`. (see [below for nested schema](#nestedatt--twilio_credentials))
 - `twilio_credentials_version` (String) Credential rotation marker for `twilio_credentials`. Change it to resend the credentials. Use an opaque counter or date, never a secret.
 - `webhook_url` (String) HTTPS endpoint for verification codes. Required for `WEBHOOK`; omit for other providers. Changing providers clears it.
 

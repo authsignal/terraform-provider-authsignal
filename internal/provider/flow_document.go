@@ -461,15 +461,12 @@ func composeFlowWithRuleOrder(nodes []authsignal.ActionNode, rules []authsignal.
 		projected = append(projected, projectFlowRule(rule))
 	}
 
-	var flowJson strings.Builder
-	encoder := json.NewEncoder(&flowJson)
-	encoder.SetEscapeHTML(false)
-
-	if err := encoder.Encode(map[string]any{"actionNodes": actionNodes, "rules": projected}); err != nil {
+	flowJson, err := json.Marshal(map[string]any{"actionNodes": actionNodes, "rules": projected})
+	if err != nil {
 		return "", err
 	}
 
-	return strings.TrimSuffix(flowJson.String(), "\n"), nil
+	return string(flowJson), nil
 }
 
 func flowRuleIds(flowJson string) []string {

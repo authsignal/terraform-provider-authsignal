@@ -214,6 +214,7 @@ func (p *authsignalProvider) Resources(_ context.Context) []func() resource.Reso
 		NewActionConfigurationResource,
 		NewEmailOtpAuthenticatorConfigurationResource,
 		NewFlowResource,
+		NewNumberVerifyAuthenticatorConfigurationResource,
 		NewPasskeyAuthenticatorConfigurationResource,
 		NewPushAuthenticatorConfigurationResource,
 		NewRuleResource,

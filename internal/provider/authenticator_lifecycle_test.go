@@ -333,6 +333,10 @@ const (
 	passkeyCreateRoute = "POST /authenticator-configurations/passkey"
 	passkeyPatchRoute  = "PATCH /authenticator-configurations/passkey"
 	passkeyDeleteRoute = "DELETE /authenticator-configurations/passkey"
+
+	numberVerifyGetRoute    = "GET /authenticator-configurations/number-verify"
+	numberVerifyCreateRoute = "POST /authenticator-configurations/number-verify"
+	numberVerifyPatchRoute  = "PATCH /authenticator-configurations/number-verify"
 )
 
 func emailOtpSchema(t *testing.T) schema.Schema {
@@ -1731,5 +1735,154 @@ func TestIncompleteResponseDiagnosticEchoesNothingFromTheResponse(t *testing.T) 
 
 	if !strings.Contains(detail, "smsProvider") {
 		t.Errorf("the diagnostic should name the missing field, got %s", detail)
+	}
+}
+
+func numberVerifySchema(t *testing.T) schema.Schema {
+	t.Helper()
+
+	return resourceSchemaOf(t, &numberVerifyAuthenticatorConfigurationResource{})
+}
+
+func numberVerifyJson(appId string, environment string) string {
+	return `{"authenticatorId":"auth_number_verify","isActive":true,"verificationMethod":"SNA",` +
+		`"appId":"` + appId + `","environment":"` + environment + `","region":"NA_01"}`
+}
+
+func TestNumberVerifyCreateSendsOnlyTheConfiguredFields(t *testing.T) {
+	client, stub := newStubAPI(t, map[string][]stubResponse{
+		numberVerifyCreateRoute: okResponse(numberVerifyJson("app-1", "PRODUCTION")),
+	})
+
+	resourceSchema := numberVerifySchema(t)
+	configValue := resourceObject(t, resourceSchema, map[string]tftypes.Value{
+		"app_id": tftypes.NewValue(tftypes.String, "app-1"),
+	})
+
+	// Terraform plans unset optional+computed attributes as unknown, not null.
+	planValue := resourceObject(t, resourceSchema, map[string]tftypes.Value{
+		"app_id":      tftypes.NewValue(tftypes.String, "app-1"),
+		"is_active":   tftypes.NewValue(tftypes.Bool, tftypes.UnknownValue),
+		"environment": tftypes.NewValue(tftypes.String, tftypes.UnknownValue),
+		"region":      tftypes.NewValue(tftypes.String, tftypes.UnknownValue),
+	})
+
+	resp := &resource.CreateResponse{State: tfsdk.State{Schema: resourceSchema}}
+	(&numberVerifyAuthenticatorConfigurationResource{client: client}).Create(
+		context.Background(),
+		resource.CreateRequest{
+			Plan:   tfsdk.Plan{Schema: resourceSchema, Raw: planValue},
+			Config: tfsdk.Config{Schema: resourceSchema, Raw: configValue},
+		},
+		resp,
+	)
+
+	if resp.Diagnostics.HasError() {
+		t.Fatal(detailsOf(resp.Diagnostics))
+	}
+
+	stub.assertRoutes(t, numberVerifyCreateRoute)
+
+	if body := stub.bodyOf(t, numberVerifyCreateRoute); body != `{"appId":"app-1"}` {
+		t.Errorf("the create body should carry only the configured app_id, got %s", body)
+	}
+
+	var model numberVerifyAuthenticatorConfigurationResourceModel
+	resp.State.Get(context.Background(), &model)
+
+	if model.AuthenticatorId.ValueString() != "auth_number_verify" || model.VerificationMethod.ValueString() != "SNA" {
+		t.Errorf("server-owned attributes are %q/%q, want auth_number_verify/SNA", model.AuthenticatorId.ValueString(), model.VerificationMethod.ValueString())
+	}
+
+	if model.Environment.ValueString() != "PRODUCTION" || model.Region.ValueString() != "NA_01" {
+		t.Errorf("unconfigured environment/region should be read back from the API, got %q/%q", model.Environment.ValueString(), model.Region.ValueString())
+	}
+}
+
+func TestNumberVerifyReadRefreshesStateFromTheApi(t *testing.T) {
+	client, _ := newStubAPI(t, map[string][]stubResponse{
+		numberVerifyGetRoute: okResponse(numberVerifyJson("app-2", "SANDBOX")),
+	})
+
+	resourceSchema := numberVerifySchema(t)
+	state := tfsdk.State{Schema: resourceSchema, Raw: resourceObject(t, resourceSchema, map[string]tftypes.Value{
+		"app_id": tftypes.NewValue(tftypes.String, "app-1"),
+	})}
+
+	resp := &resource.ReadResponse{State: state}
+	(&numberVerifyAuthenticatorConfigurationResource{client: client}).Read(
+		context.Background(),
+		resource.ReadRequest{State: state},
+		resp,
+	)
+
+	if resp.Diagnostics.HasError() {
+		t.Fatal(detailsOf(resp.Diagnostics))
+	}
+
+	var model numberVerifyAuthenticatorConfigurationResourceModel
+	resp.State.Get(context.Background(), &model)
+
+	if model.AppId.ValueString() != "app-2" || model.Environment.ValueString() != "SANDBOX" {
+		t.Errorf("state is %q/%q, want the API's app-2/SANDBOX", model.AppId.ValueString(), model.Environment.ValueString())
+	}
+}
+
+func TestNumberVerifyReadRemovesTheResourceWhenTheApiHasNone(t *testing.T) {
+	client, _ := newStubAPI(t, map[string][]stubResponse{
+		numberVerifyGetRoute: {notFoundResponse()},
+	})
+
+	resourceSchema := numberVerifySchema(t)
+	state := tfsdk.State{Schema: resourceSchema, Raw: resourceObject(t, resourceSchema, map[string]tftypes.Value{
+		"app_id": tftypes.NewValue(tftypes.String, "app-1"),
+	})}
+
+	resp := &resource.ReadResponse{State: state}
+	(&numberVerifyAuthenticatorConfigurationResource{client: client}).Read(
+		context.Background(),
+		resource.ReadRequest{State: state},
+		resp,
+	)
+
+	if !resp.State.Raw.IsNull() {
+		t.Error("a 404 should remove the resource from state")
+	}
+}
+
+func TestNumberVerifyUpdateSendsOnlyTheChangedAppId(t *testing.T) {
+	client, stub := newStubAPI(t, map[string][]stubResponse{
+		numberVerifyPatchRoute: okResponse(numberVerifyJson("app-2", "PRODUCTION")),
+	})
+
+	resourceSchema := numberVerifySchema(t)
+
+	state := tfsdk.State{Schema: resourceSchema, Raw: resourceObject(t, resourceSchema, map[string]tftypes.Value{
+		"app_id":      tftypes.NewValue(tftypes.String, "app-1"),
+		"environment": tftypes.NewValue(tftypes.String, "PRODUCTION"),
+		"region":      tftypes.NewValue(tftypes.String, "NA_01"),
+	})}
+
+	configValue := resourceObject(t, resourceSchema, map[string]tftypes.Value{
+		"app_id": tftypes.NewValue(tftypes.String, "app-2"),
+	})
+
+	resp := &resource.UpdateResponse{State: tfsdk.State{Schema: resourceSchema}}
+	(&numberVerifyAuthenticatorConfigurationResource{client: client}).Update(
+		context.Background(),
+		resource.UpdateRequest{
+			Plan:   tfsdk.Plan{Schema: resourceSchema, Raw: configValue},
+			Config: tfsdk.Config{Schema: resourceSchema, Raw: configValue},
+			State:  state,
+		},
+		resp,
+	)
+
+	if resp.Diagnostics.HasError() {
+		t.Fatal(detailsOf(resp.Diagnostics))
+	}
+
+	if body := stub.bodyOf(t, numberVerifyPatchRoute); body != `{"appId":"app-2"}` {
+		t.Errorf("the patch should carry only the changed app_id, got %s", body)
 	}
 }

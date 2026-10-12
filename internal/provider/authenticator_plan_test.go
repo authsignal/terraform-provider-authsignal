@@ -89,7 +89,7 @@ func TestPlanSmsRejectsAProviderTheContractDropped(t *testing.T) {
 			{
 				Config: `
 resource "authsignal_sms_authenticator_configuration" "sms" {
-  sms_provider = "WEBHOOK"
+  sms_provider = "MESSAGE_BIRD"
 }
 `,
 				PlanOnly:    true,

@@ -20,10 +20,11 @@ import (
 )
 
 const (
-	smsAuthenticatorSlug      = "sms"
-	emailOtpAuthenticatorSlug = "email-otp"
-	passkeyAuthenticatorSlug  = "passkey"
-	pushAuthenticatorSlug     = "push"
+	smsAuthenticatorSlug          = "sms"
+	emailOtpAuthenticatorSlug     = "email-otp"
+	passkeyAuthenticatorSlug      = "passkey"
+	pushAuthenticatorSlug         = "push"
+	numberVerifyAuthenticatorSlug = "number-verify"
 )
 
 const webhookProvider = "WEBHOOK"
@@ -41,6 +42,10 @@ var allowedAuthenticatorAttachments = []string{"all-supported", "cross-platform"
 var allowedPasskeyRegistrationHints = []string{"client-device", "hybrid", "security-key"}
 
 var allowedAppAttestationFailureModes = []string{"ALLOW_WITH_WARNING", "BLOCK"}
+
+var allowedNumberVerifyEnvironments = []string{"PRODUCTION", "SANDBOX"}
+
+var allowedNumberVerifyRegions = []string{"NA_01"}
 
 func allowedValues(values []string) string {
 	quoted := make([]string, 0, len(values))
@@ -481,6 +486,13 @@ func passkeyResponseDiagnostics(response *authsignal.PasskeyAuthenticatorConfigu
 func pushResponseDiagnostics(response *authsignal.PushAuthenticatorConfiguration) diag.Diagnostics {
 	diags := serverOwnedDiagnostics("push", response.AuthenticatorId, response.VerificationMethod)
 	requiredResponseString("push", "pushProvider", response.PushProvider, &diags)
+
+	return diags
+}
+
+func numberVerifyResponseDiagnostics(response *authsignal.NumberVerifyAuthenticatorConfiguration) diag.Diagnostics {
+	diags := serverOwnedDiagnostics("Number Verify", response.AuthenticatorId, response.VerificationMethod)
+	requiredResponseString("Number Verify", "appId", response.AppId, &diags)
 
 	return diags
 }

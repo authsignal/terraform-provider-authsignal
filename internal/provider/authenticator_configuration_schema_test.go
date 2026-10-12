@@ -16,10 +16,11 @@ func authenticatorResourceSchemas(t *testing.T) map[string]schema.Schema {
 	t.Helper()
 
 	return map[string]schema.Schema{
-		"authsignal_sms_authenticator_configuration":       resourceSchemaOf(t, NewSmsAuthenticatorConfigurationResource()),
-		"authsignal_email_otp_authenticator_configuration": resourceSchemaOf(t, NewEmailOtpAuthenticatorConfigurationResource()),
-		"authsignal_passkey_authenticator_configuration":   resourceSchemaOf(t, NewPasskeyAuthenticatorConfigurationResource()),
-		"authsignal_push_authenticator_configuration":      resourceSchemaOf(t, NewPushAuthenticatorConfigurationResource()),
+		"authsignal_sms_authenticator_configuration":           resourceSchemaOf(t, NewSmsAuthenticatorConfigurationResource()),
+		"authsignal_email_otp_authenticator_configuration":     resourceSchemaOf(t, NewEmailOtpAuthenticatorConfigurationResource()),
+		"authsignal_passkey_authenticator_configuration":       resourceSchemaOf(t, NewPasskeyAuthenticatorConfigurationResource()),
+		"authsignal_push_authenticator_configuration":          resourceSchemaOf(t, NewPushAuthenticatorConfigurationResource()),
+		"authsignal_number_verify_authenticator_configuration": resourceSchemaOf(t, NewNumberVerifyAuthenticatorConfigurationResource()),
 	}
 }
 
@@ -423,6 +424,9 @@ func responseReadableOptionals() map[string][]string {
 			"is_active", "webhook_url", "credential_lifetime_in_minutes",
 			"require_app_attestation", "app_attestation_failure_mode",
 			"sending_rate_limit_configurations",
+		},
+		"number_verify": {
+			"is_active", "environment", "region",
 		},
 	}
 }

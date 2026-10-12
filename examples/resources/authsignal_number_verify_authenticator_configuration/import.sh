@@ -1,0 +1,1 @@
+terraform import authsignal_number_verify_authenticator_configuration.number_verify number-verify

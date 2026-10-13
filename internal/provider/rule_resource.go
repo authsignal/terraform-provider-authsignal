@@ -289,6 +289,12 @@ func (r *ruleResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 		return
 	}
 
+	// The API soft-deletes rules, so a deleted rule still reads back, with deletedAt set.
+	if rule.DeletedAt != nil {
+		resp.State.RemoveResource(ctx)
+		return
+	}
+
 	verificationMethodsList, diags := types.ListValueFrom(ctx, types.StringType, rule.VerificationMethods)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
@@ -29,7 +30,7 @@ func flowSchema(t *testing.T) schema.Schema {
 }
 
 // Attributes the caller leaves out are null, as Terraform sends them for an unset optional.
-func resourceObject(t *testing.T, resourceSchema schema.Schema, attributes map[string]tftypes.Value) tftypes.Value {
+func resourceObject(t *testing.T, resourceSchema interface{ Type() attr.Type }, attributes map[string]tftypes.Value) tftypes.Value {
 	t.Helper()
 
 	objectType, ok := resourceSchema.Type().TerraformType(context.Background()).(tftypes.Object)

@@ -120,6 +120,14 @@ func (d *ruleDataSource) Read(ctx context.Context, req datasource.ReadRequest, r
 		return
 	}
 
+	if rule.DeletedAt != nil {
+		resp.Diagnostics.AddError(
+			"Rule Deleted",
+			"Rule "+data.RuleId.ValueString()+" of action configuration "+data.ActionCode.ValueString()+" was deleted at "+*rule.DeletedAt+".",
+		)
+		return
+	}
+
 	verificationMethodsList, diags := types.ListValueFrom(ctx, types.StringType, rule.VerificationMethods)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {

@@ -279,6 +279,7 @@ func (r *tenantSettingsResource) Create(ctx context.Context, req resource.Create
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, tenantSettingsStateAfterWrite(config, tenant))...)
+	resp.Diagnostics.Append(storeDefaults(ctx, resp.Private, tenant.Defaults)...)
 }
 
 func (r *tenantSettingsResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -298,6 +299,7 @@ func (r *tenantSettingsResource) Read(ctx context.Context, req resource.ReadRequ
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, tenantSettingsModelFromResponse(tenant))...)
+	resp.Diagnostics.Append(storeDefaults(ctx, resp.Private, tenant.Defaults)...)
 }
 
 func (r *tenantSettingsResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
@@ -315,6 +317,7 @@ func (r *tenantSettingsResource) Update(ctx context.Context, req resource.Update
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, tenantSettingsStateAfterWrite(config, tenant))...)
+	resp.Diagnostics.Append(storeDefaults(ctx, resp.Private, tenant.Defaults)...)
 }
 
 func (r *tenantSettingsResource) Delete(_ context.Context, _ resource.DeleteRequest, _ *resource.DeleteResponse) {

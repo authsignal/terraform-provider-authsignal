@@ -265,6 +265,7 @@ func (r *pushAuthenticatorConfigurationResource) Create(ctx context.Context, req
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, pushStateAfterWrite(plan, response))...)
+	resp.Diagnostics.Append(storeDefaults(ctx, resp.Private, response.Defaults)...)
 }
 
 func (r *pushAuthenticatorConfigurationResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -295,6 +296,7 @@ func (r *pushAuthenticatorConfigurationResource) Read(ctx context.Context, req r
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, pushStateFromResponse(response, state))...)
+	resp.Diagnostics.Append(storeDefaults(ctx, resp.Private, response.Defaults)...)
 }
 
 func (r *pushAuthenticatorConfigurationResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
@@ -327,6 +329,7 @@ func (r *pushAuthenticatorConfigurationResource) Update(ctx context.Context, req
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, pushStateAfterWrite(plan, response))...)
+	resp.Diagnostics.Append(storeDefaults(ctx, resp.Private, response.Defaults)...)
 }
 
 func (r *pushAuthenticatorConfigurationResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {

@@ -326,6 +326,7 @@ func (r *emailOtpAuthenticatorConfigurationResource) Create(ctx context.Context,
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, emailOtpStateAfterWrite(plan, response))...)
+	resp.Diagnostics.Append(storeDefaults(ctx, resp.Private, response.Defaults)...)
 }
 
 func (r *emailOtpAuthenticatorConfigurationResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -356,6 +357,7 @@ func (r *emailOtpAuthenticatorConfigurationResource) Read(ctx context.Context, r
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, emailOtpStateFromResponse(response, state))...)
+	resp.Diagnostics.Append(storeDefaults(ctx, resp.Private, response.Defaults)...)
 }
 
 func (r *emailOtpAuthenticatorConfigurationResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
@@ -388,6 +390,7 @@ func (r *emailOtpAuthenticatorConfigurationResource) Update(ctx context.Context,
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, emailOtpStateAfterWrite(plan, response))...)
+	resp.Diagnostics.Append(storeDefaults(ctx, resp.Private, response.Defaults)...)
 }
 
 func (r *emailOtpAuthenticatorConfigurationResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {

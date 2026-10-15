@@ -412,6 +412,7 @@ func (r *smsAuthenticatorConfigurationResource) Create(ctx context.Context, req 
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, smsStateAfterWrite(plan, response))...)
+	resp.Diagnostics.Append(storeDefaults(ctx, resp.Private, response.Defaults)...)
 }
 
 func (r *smsAuthenticatorConfigurationResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -442,6 +443,7 @@ func (r *smsAuthenticatorConfigurationResource) Read(ctx context.Context, req re
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, smsStateFromResponse(response, state))...)
+	resp.Diagnostics.Append(storeDefaults(ctx, resp.Private, response.Defaults)...)
 }
 
 func (r *smsAuthenticatorConfigurationResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
@@ -474,6 +476,7 @@ func (r *smsAuthenticatorConfigurationResource) Update(ctx context.Context, req 
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, smsStateAfterWrite(plan, response))...)
+	resp.Diagnostics.Append(storeDefaults(ctx, resp.Private, response.Defaults)...)
 }
 
 func (r *smsAuthenticatorConfigurationResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {

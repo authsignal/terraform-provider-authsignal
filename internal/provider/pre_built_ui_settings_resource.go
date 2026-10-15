@@ -82,6 +82,7 @@ func (r *preBuiltUiSettingsResource) Create(ctx context.Context, req resource.Cr
 
 	diags = resp.State.Set(ctx, preBuiltUiSettingsModelFromResponse(tenant))
 	resp.Diagnostics.Append(diags...)
+	resp.Diagnostics.Append(storeDefaults(ctx, resp.Private, tenant.Defaults)...)
 }
 
 func (r *preBuiltUiSettingsResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -102,6 +103,7 @@ func (r *preBuiltUiSettingsResource) Read(ctx context.Context, req resource.Read
 
 	diags := resp.State.Set(ctx, preBuiltUiSettingsModelFromResponse(tenant))
 	resp.Diagnostics.Append(diags...)
+	resp.Diagnostics.Append(storeDefaults(ctx, resp.Private, tenant.Defaults)...)
 }
 
 func (r *preBuiltUiSettingsResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
@@ -123,6 +125,7 @@ func (r *preBuiltUiSettingsResource) Update(ctx context.Context, req resource.Up
 
 	diags = resp.State.Set(ctx, preBuiltUiSettingsModelFromResponse(tenant))
 	resp.Diagnostics.Append(diags...)
+	resp.Diagnostics.Append(storeDefaults(ctx, resp.Private, tenant.Defaults)...)
 }
 
 // Delete drops the settings from state without calling the API. These settings live on the tenant,

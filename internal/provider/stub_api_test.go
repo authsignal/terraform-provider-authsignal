@@ -45,6 +45,7 @@ func (c recordedCall) route() string {
 
 type stubAPI struct {
 	t         *testing.T
+	url       string
 	mu        sync.Mutex
 	calls     []recordedCall
 	routes    map[string][]stubResponse
@@ -58,6 +59,7 @@ func newStubAPI(t *testing.T, routes map[string][]stubResponse) (*authsignal.Cli
 
 	server := httptest.NewServer(http.HandlerFunc(stub.serve))
 	t.Cleanup(server.Close)
+	stub.url = server.URL
 
 	client := authsignal.NewClient(server.URL, "tenant", "secret")
 

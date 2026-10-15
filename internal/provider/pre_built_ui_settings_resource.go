@@ -14,6 +14,7 @@ var (
 	_ resource.Resource                = &preBuiltUiSettingsResource{}
 	_ resource.ResourceWithConfigure   = &preBuiltUiSettingsResource{}
 	_ resource.ResourceWithImportState = &preBuiltUiSettingsResource{}
+	_ resource.ResourceWithModifyPlan  = &preBuiltUiSettingsResource{}
 )
 
 func NewPreBuiltUiSettingsResource() resource.Resource {
@@ -34,7 +35,7 @@ func (r *preBuiltUiSettingsResource) Metadata(_ context.Context, req resource.Me
 
 func (r *preBuiltUiSettingsResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: "Manages a tenant's pre-built UI settings. The tenant itself already exists and cannot be created or deleted through this API, so this resource only ever updates settings. Applying it changes the settings configured here and leaves the rest of the tenant untouched. Destroying it stops Terraform managing those settings rather than resetting them. A setting left out of the configuration stays unmanaged, so it can still be set in the admin portal.",
+		Description: "Manages a tenant's pre-built UI settings. The tenant itself already exists and cannot be created or deleted through this API, so this resource only ever updates settings. Applying it changes the settings configured here and leaves the rest of the tenant untouched. Destroying it stops Terraform managing those settings rather than resetting them. A setting left out of the configuration fails the plan unless the tenant has it at its default.",
 		Attributes: map[string]schema.Attribute{
 			"hide_success_screen_on_enrollment": schema.BoolAttribute{
 				Description: "Whether the pre-built UI skips the success screen shown after a user enrolls an authenticator.",
@@ -61,6 +62,10 @@ func preBuiltUiSettingsModelFromResponse(tenant *authsignal.TenantResponse) preB
 	return preBuiltUiSettingsResourceModel{
 		HideSuccessScreenOnEnrollment: types.BoolPointerValue(tenant.HideSuccessScreenOnEnrollment),
 	}
+}
+
+func (r *preBuiltUiSettingsResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
+	checkUnmanagedSettings(ctx, req, resp)
 }
 
 func (r *preBuiltUiSettingsResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {

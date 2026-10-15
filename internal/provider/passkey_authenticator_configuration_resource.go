@@ -21,6 +21,7 @@ var (
 	_ resource.Resource                = &passkeyAuthenticatorConfigurationResource{}
 	_ resource.ResourceWithConfigure   = &passkeyAuthenticatorConfigurationResource{}
 	_ resource.ResourceWithImportState = &passkeyAuthenticatorConfigurationResource{}
+	_ resource.ResourceWithModifyPlan  = &passkeyAuthenticatorConfigurationResource{}
 )
 
 func NewPasskeyAuthenticatorConfigurationResource() resource.Resource {
@@ -115,6 +116,10 @@ func (r *passkeyAuthenticatorConfigurationResource) Schema(_ context.Context, _ 
 			},
 		},
 	}
+}
+
+func (r *passkeyAuthenticatorConfigurationResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
+	checkUnmanagedSettings(ctx, req, resp)
 }
 
 func (r *passkeyAuthenticatorConfigurationResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {

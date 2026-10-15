@@ -48,3 +48,63 @@ resource "authsignal_passkey_authenticator_configuration" "passkey" {
 		},
 	})
 }
+
+func TestPlanToCreateTenantSettingsFailsForWhatTheTenantAlreadyHas(t *testing.T) {
+	skipUnlessAcceptance(t)
+
+	_, stub := newStubAPI(t, map[string][]stubResponse{
+		"GET /tenant": okResponse(`{"tokenDurationInMinutes":30,"hideSuccessScreenOnEnrollment":true,"ipWhitelist":[],` +
+			`"authenticatorEventsWebhookConfig":{"url":"https://example.com/hook","includeCredentialPublicKey":true},` +
+			`"logEventsWebhookConfig":{"endpointUrl":"https://example.com/logs"},` +
+			`"defaults":{"hideSuccessScreenOnEnrollment":false,"tokenDurationInMinutes":10}}`),
+	})
+	t.Setenv("AUTHSIGNAL_HOST", stub.url)
+
+	resource.UnitTest(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: `
+resource "authsignal_tenant_settings" "tenant" {
+  authenticator_events_webhook_config = {
+    url = "https://example.com/hook"
+  }
+}
+`,
+				PlanOnly: true,
+				ExpectError: regexp.MustCompile(`token_duration_in_minutes\s+=\s+30\s+#\s+default:\s+10\s+` +
+					`authenticator_events_webhook_config\s+=\s+\{\s+include_credential_public_key\s+=\s+true\s+#\s+no\s+default\s+\}\s+` +
+					`log_events_webhook_config\s+=\s+\{\s+endpoint_url\s+=\s+"https://example.com/logs"\s+#\s+no\s+default\s+\}`),
+			},
+			{
+				Config:      `resource "authsignal_pre_built_ui_settings" "ui" {}`,
+				PlanOnly:    true,
+				ExpectError: regexp.MustCompile(`hide_success_screen_on_enrollment\s+=\s+true\s+#\s+default:\s+false`),
+			},
+			{
+				Config: `
+resource "authsignal_tenant_settings" "tenant" {
+  token_duration_in_minutes = 30
+
+  authenticator_events_webhook_config = {
+    url                           = "https://example.com/hook"
+    include_credential_public_key = true
+  }
+
+  log_events_webhook_config = {
+    endpoint_url = "https://example.com/logs"
+  }
+}
+
+resource "authsignal_pre_built_ui_settings" "ui" {
+  hide_success_screen_on_enrollment = true
+}
+`,
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: true,
+			},
+		},
+	})
+
+	stub.assertNotCalled(t, "PATCH /tenant")
+}

@@ -147,9 +147,8 @@ func (r *pushAuthenticatorConfigurationResource) Schema(_ context.Context, _ res
 			},
 		},
 		"sending_rate_limit_configurations": schema.ListNestedAttribute{
-			Description: "Notification delivery limits. All configured limits apply.",
+			Description: "Notification delivery limits. All configured limits apply. Leaving it out removes them.",
 			Optional:    true,
-			Computed:    true,
 			NestedObject: schema.NestedAttributeObject{
 				Attributes: rateLimitAttributes(),
 			},
@@ -500,6 +499,8 @@ func pushUpdateBody(ctx context.Context, plan pushAuthenticatorConfigurationReso
 		if sending != nil {
 			body.SendingRateLimitConfigurations = authsignal.SetValue(*sending)
 		}
+	} else if removedFromConfig(config.SendingRateLimitConfigurations, state.SendingRateLimitConfigurations) {
+		body.SendingRateLimitConfigurations = authsignal.SetNull([]authsignal.RateLimitConfiguration{})
 	}
 
 	for _, block := range pushCredentialBlocks {

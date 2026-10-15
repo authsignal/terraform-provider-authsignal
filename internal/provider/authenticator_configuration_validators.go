@@ -46,6 +46,13 @@ func clearedCountryCodesDiagnostic() diag.Diagnostic {
 	)
 }
 
+func emptyPrefixRateLimitsDiagnostic() diag.Diagnostic {
+	return diag.NewErrorDiagnostic(
+		"Empty Prefix Rate Limits",
+		"`prefix_rate_limit_configurations` is set to `[]`. Leave it out of the configuration to remove the prefix limits.",
+	)
+}
+
 func missingVersionMarkerDiagnostic(block credentialBlock) diag.Diagnostic {
 	return diag.NewErrorDiagnostic(
 		"Missing Version Marker for a Write-Only Credential Block",

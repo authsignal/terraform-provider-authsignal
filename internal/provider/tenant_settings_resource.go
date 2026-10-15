@@ -105,9 +105,8 @@ func (r *tenantSettingsResource) Schema(_ context.Context, _ resource.SchemaRequ
 				},
 			},
 			"authenticator_events_webhook_config": schema.SingleNestedAttribute{
-				Description: "Authenticator events webhook.",
+				Description: "Authenticator events webhook. Leaving it out removes the webhook.",
 				Optional:    true,
-				Computed:    true,
 				Attributes: map[string]schema.Attribute{
 					"url": schema.StringAttribute{
 						Description: "HTTPS endpoint for authenticator events.",
@@ -124,9 +123,8 @@ func (r *tenantSettingsResource) Schema(_ context.Context, _ resource.SchemaRequ
 				},
 			},
 			"log_events_webhook_config": schema.SingleNestedAttribute{
-				Description: "Log events webhook.",
+				Description: "Log events webhook. Leaving it out removes the webhook.",
 				Optional:    true,
-				Computed:    true,
 				Attributes: map[string]schema.Attribute{
 					"endpoint_url": schema.StringAttribute{
 						Description: "HTTPS endpoint for batched log events.",
@@ -150,7 +148,7 @@ func (r *tenantSettingsResource) Schema(_ context.Context, _ resource.SchemaRequ
 	}
 }
 
-func tenantSettingsRequestFrom(ctx context.Context, model tenantSettingsResourceModel) (authsignal.TenantSettings, diag.Diagnostics) {
+func tenantSettingsRequestFrom(ctx context.Context, model tenantSettingsResourceModel, state tenantSettingsResourceModel) (authsignal.TenantSettings, diag.Diagnostics) {
 	var settings authsignal.TenantSettings
 	var diags diag.Diagnostics
 
@@ -173,6 +171,8 @@ func tenantSettingsRequestFrom(ctx context.Context, model tenantSettingsResource
 		}
 
 		settings.AuthenticatorEventsWebhookConfig = authsignal.SetValue(webhook)
+	} else if removedFromConfig(model.AuthenticatorEventsWebhookConfig, state.AuthenticatorEventsWebhookConfig) {
+		settings.AuthenticatorEventsWebhookConfig = authsignal.SetNull(authsignal.AuthenticatorEventsWebhookConfig{})
 	}
 
 	if isKnownAndSet(model.LogEventsWebhookConfig) {
@@ -186,6 +186,8 @@ func tenantSettingsRequestFrom(ctx context.Context, model tenantSettingsResource
 		}
 
 		settings.LogEventsWebhookConfig = authsignal.SetValue(webhook)
+	} else if removedFromConfig(model.LogEventsWebhookConfig, state.LogEventsWebhookConfig) {
+		settings.LogEventsWebhookConfig = authsignal.SetNull(authsignal.LogEventsWebhookConfig{})
 	}
 
 	if isKnownAndSet(model.IpWhitelist) {
@@ -227,8 +229,24 @@ func tenantSettingsModelFromResponse(tenant *authsignal.TenantResponse) tenantSe
 	}
 }
 
-func (r *tenantSettingsResource) write(ctx context.Context, config tenantSettingsResourceModel) (*authsignal.TenantResponse, diag.Diagnostics) {
-	settings, diags := tenantSettingsRequestFrom(ctx, config)
+// State has to match the plan, so a webhook the configuration leaves out is recorded as none even
+// when the tenant still has one.
+func tenantSettingsStateAfterWrite(config tenantSettingsResourceModel, tenant *authsignal.TenantResponse) tenantSettingsResourceModel {
+	state := tenantSettingsModelFromResponse(tenant)
+
+	if config.AuthenticatorEventsWebhookConfig.IsNull() {
+		state.AuthenticatorEventsWebhookConfig = types.ObjectNull(authenticatorEventsWebhookConfigAttributeTypes)
+	}
+
+	if config.LogEventsWebhookConfig.IsNull() {
+		state.LogEventsWebhookConfig = types.ObjectNull(logEventsWebhookConfigAttributeTypes)
+	}
+
+	return state
+}
+
+func (r *tenantSettingsResource) write(ctx context.Context, config tenantSettingsResourceModel, state tenantSettingsResourceModel) (*authsignal.TenantResponse, diag.Diagnostics) {
+	settings, diags := tenantSettingsRequestFrom(ctx, config, state)
 	if diags.HasError() {
 		return nil, diags
 	}
@@ -252,13 +270,15 @@ func (r *tenantSettingsResource) Create(ctx context.Context, req resource.Create
 		return
 	}
 
-	tenant, diags := r.write(ctx, config)
+	// The plan for a create can't show the tenant's existing webhooks, so create clears none of them.
+	// One the configuration leaves out shows up as a removal in the next plan instead.
+	tenant, diags := r.write(ctx, config, emptyTenantSettingsModel())
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	resp.Diagnostics.Append(resp.State.Set(ctx, tenantSettingsModelFromResponse(tenant))...)
+	resp.Diagnostics.Append(resp.State.Set(ctx, tenantSettingsStateAfterWrite(config, tenant))...)
 }
 
 func (r *tenantSettingsResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -281,19 +301,20 @@ func (r *tenantSettingsResource) Read(ctx context.Context, req resource.ReadRequ
 }
 
 func (r *tenantSettingsResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var config tenantSettingsResourceModel
+	var config, state tenantSettingsResourceModel
 	resp.Diagnostics.Append(req.Config.Get(ctx, &config)...)
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	tenant, diags := r.write(ctx, config)
+	tenant, diags := r.write(ctx, config, state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
-	resp.Diagnostics.Append(resp.State.Set(ctx, tenantSettingsModelFromResponse(tenant))...)
+	resp.Diagnostics.Append(resp.State.Set(ctx, tenantSettingsStateAfterWrite(config, tenant))...)
 }
 
 func (r *tenantSettingsResource) Delete(_ context.Context, _ resource.DeleteRequest, _ *resource.DeleteResponse) {

@@ -188,15 +188,13 @@ func (r *smsAuthenticatorConfigurationResource) Schema(_ context.Context, _ reso
 			},
 		},
 		"submission_rate_limit_configuration": schema.SingleNestedAttribute{
-			Description: "Code submission limit.",
+			Description: "Code submission limit. Leaving it out removes the limit.",
 			Optional:    true,
-			Computed:    true,
 			Attributes:  rateLimitAttributes(),
 		},
 		"sending_rate_limit_configurations": schema.ListNestedAttribute{
-			Description: "Message delivery limits. All configured limits apply.",
+			Description: "Message delivery limits. All configured limits apply. Leaving it out removes them.",
 			Optional:    true,
-			Computed:    true,
 			NestedObject: schema.NestedAttributeObject{
 				Attributes: rateLimitAttributes(),
 			},
@@ -206,9 +204,8 @@ func (r *smsAuthenticatorConfigurationResource) Schema(_ context.Context, _ reso
 			},
 		},
 		"prefix_rate_limit_configurations": schema.ListNestedAttribute{
-			Description: "Message delivery limits by number prefix. Set to `[]` to clear them.",
+			Description: "Message delivery limits by number prefix. Leaving it out removes them.",
 			Optional:    true,
-			Computed:    true,
 			NestedObject: schema.NestedAttributeObject{
 				Attributes: prefixRateLimitAttributes(),
 			},
@@ -320,6 +317,10 @@ func (r *smsAuthenticatorConfigurationResource) ValidateConfig(ctx context.Conte
 	resp.Diagnostics.Append(writeOnlyBlockDiagnostics(smsCredentialBlocks, config.credentialObject, config.credentialVersion)...)
 
 	resp.Diagnostics.Append(countryCodeDiagnostics(ctx, config.SmsCountryCodes, config.DefaultCountryCode)...)
+
+	if isKnownAndSet(config.PrefixRateLimitConfigurations) && len(config.PrefixRateLimitConfigurations.Elements()) == 0 {
+		resp.Diagnostics.Append(emptyPrefixRateLimitsDiagnostic())
+	}
 
 	if !isKnownAndSet(config.SmsProvider) {
 		return
@@ -675,6 +676,8 @@ func smsUpdateBody(ctx context.Context, plan smsAuthenticatorConfigurationResour
 		prefixes, prefixDiags := prefixRateLimitsFrom(ctx, config.PrefixRateLimitConfigurations)
 		diags.Append(prefixDiags...)
 		body.PrefixRateLimitConfigurations = authsignal.SetList(prefixes)
+	} else if removedFromConfig(config.PrefixRateLimitConfigurations, state.PrefixRateLimitConfigurations) {
+		body.PrefixRateLimitConfigurations = authsignal.SetList([]authsignal.PrefixRateLimitConfiguration{})
 	}
 
 	if isKnownAndSet(config.SubmissionRateLimitConfiguration) {
@@ -683,6 +686,8 @@ func smsUpdateBody(ctx context.Context, plan smsAuthenticatorConfigurationResour
 		if submission != nil {
 			body.SubmissionRateLimitConfiguration = authsignal.SetValue(*submission)
 		}
+	} else if removedFromConfig(config.SubmissionRateLimitConfiguration, state.SubmissionRateLimitConfiguration) {
+		body.SubmissionRateLimitConfiguration = authsignal.SetNull(authsignal.RateLimitConfiguration{})
 	}
 
 	if isKnownAndSet(config.SendingRateLimitConfigurations) {
@@ -691,6 +696,8 @@ func smsUpdateBody(ctx context.Context, plan smsAuthenticatorConfigurationResour
 		if sending != nil {
 			body.SendingRateLimitConfigurations = authsignal.SetValue(*sending)
 		}
+	} else if removedFromConfig(config.SendingRateLimitConfigurations, state.SendingRateLimitConfigurations) {
+		body.SendingRateLimitConfigurations = authsignal.SetNull([]authsignal.RateLimitConfiguration{})
 	}
 
 	for _, block := range smsCredentialBlocks {

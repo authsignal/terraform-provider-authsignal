@@ -22,6 +22,7 @@ var (
 	_ resource.Resource                   = &pushAuthenticatorConfigurationResource{}
 	_ resource.ResourceWithConfigure      = &pushAuthenticatorConfigurationResource{}
 	_ resource.ResourceWithImportState    = &pushAuthenticatorConfigurationResource{}
+	_ resource.ResourceWithModifyPlan     = &pushAuthenticatorConfigurationResource{}
 	_ resource.ResourceWithValidateConfig = &pushAuthenticatorConfigurationResource{}
 )
 
@@ -228,6 +229,10 @@ func (m pushAuthenticatorConfigurationResourceModel) credentialVersion(name stri
 	default:
 		return types.StringNull()
 	}
+}
+
+func (r *pushAuthenticatorConfigurationResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
+	checkUnmanagedSettings(ctx, req, resp)
 }
 
 func (r *pushAuthenticatorConfigurationResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {

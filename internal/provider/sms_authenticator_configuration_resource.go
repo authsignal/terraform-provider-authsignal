@@ -24,6 +24,7 @@ var (
 	_ resource.Resource                   = &smsAuthenticatorConfigurationResource{}
 	_ resource.ResourceWithConfigure      = &smsAuthenticatorConfigurationResource{}
 	_ resource.ResourceWithImportState    = &smsAuthenticatorConfigurationResource{}
+	_ resource.ResourceWithModifyPlan     = &smsAuthenticatorConfigurationResource{}
 	_ resource.ResourceWithValidateConfig = &smsAuthenticatorConfigurationResource{}
 )
 
@@ -375,6 +376,10 @@ func (m smsAuthenticatorConfigurationResourceModel) credentialVersion(name strin
 	default:
 		return types.StringNull()
 	}
+}
+
+func (r *smsAuthenticatorConfigurationResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
+	checkUnmanagedSettings(ctx, req, resp)
 }
 
 func (r *smsAuthenticatorConfigurationResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {

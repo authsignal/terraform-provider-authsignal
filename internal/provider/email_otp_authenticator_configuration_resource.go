@@ -21,6 +21,7 @@ var (
 	_ resource.Resource                   = &emailOtpAuthenticatorConfigurationResource{}
 	_ resource.ResourceWithConfigure      = &emailOtpAuthenticatorConfigurationResource{}
 	_ resource.ResourceWithImportState    = &emailOtpAuthenticatorConfigurationResource{}
+	_ resource.ResourceWithModifyPlan     = &emailOtpAuthenticatorConfigurationResource{}
 	_ resource.ResourceWithValidateConfig = &emailOtpAuthenticatorConfigurationResource{}
 )
 
@@ -289,6 +290,10 @@ func (m emailOtpAuthenticatorConfigurationResourceModel) credentialVersion(name 
 	default:
 		return types.StringNull()
 	}
+}
+
+func (r *emailOtpAuthenticatorConfigurationResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
+	checkUnmanagedSettings(ctx, req, resp)
 }
 
 func (r *emailOtpAuthenticatorConfigurationResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {

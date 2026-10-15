@@ -287,7 +287,7 @@ Optional:
 Optional:
 
 - `content_alignment` (String) Allowed values: `left`, `center`, `right`.
-- `exit_position` (String) Where the exit control sits: in the header band, or below the content. Shared by light and dark mode. Leaving it out keeps whatever the theme editor set, so clear it there rather than here. Allowed values: `top`, `bottom`.
+- `exit_position` (String) Where the exit control sits: in the header band, or below the content. Shared by light and dark mode. Leaving it out fails the plan once the theme editor has set it. Allowed values: `top`, `bottom`.
 - `logo_alignment` (String) Allowed values: `left`, `center`, `right`.
 - `logo_height` (Number)
 - `logo_position` (String) Allowed values: `inside`, `outside`.

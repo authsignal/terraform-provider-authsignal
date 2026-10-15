@@ -63,6 +63,7 @@ func checkUnmanagedSettings(ctx context.Context, req resource.ModifyPlanRequest,
 }
 
 type unmanagedSetting struct {
+	block        string
 	name         string
 	value        attr.Value
 	defaultValue json.RawMessage
@@ -75,8 +76,8 @@ func unmanagedSettingsDiagnostics(ctx context.Context, resourceSchema schema.Sch
 		return diags
 	}
 
-	objects := make([]types.Object, 0, 2)
-	for _, raw := range []tftypes.Value{config, state} {
+	objects := make([]types.Object, 0, 3)
+	for _, raw := range []tftypes.Value{config, state, plan} {
 		value, err := resourceSchema.Type().ValueFromTerraform(ctx, raw)
 		if err != nil {
 			diags.AddError("Unable to Check for Unmanaged Settings", err.Error())
@@ -91,7 +92,7 @@ func unmanagedSettingsDiagnostics(ctx context.Context, resourceSchema schema.Sch
 		objects = append(objects, object)
 	}
 
-	settings := unmanagedSettingsIn(resourceSchema.Attributes, objects[0].Attributes(), objects[1].Attributes(), defaults)
+	settings := unmanagedSettingsIn("", resourceSchema.Attributes, objects[0].Attributes(), objects[1].Attributes(), objects[2].Attributes(), defaults)
 	if len(settings) > 0 {
 		diags.Append(unmanagedSettingsDiagnostic(settings))
 	}
@@ -99,10 +100,33 @@ func unmanagedSettingsDiagnostics(ctx context.Context, resourceSchema schema.Sch
 	return diags
 }
 
-func unmanagedSettingsIn(attributes map[string]schema.Attribute, config map[string]attr.Value, state map[string]attr.Value, defaults authsignal.Defaults) []unmanagedSetting {
+func unmanagedSettingsIn(block string, attributes map[string]schema.Attribute, config map[string]attr.Value, state map[string]attr.Value, plan map[string]attr.Value, defaults authsignal.Defaults) []unmanagedSetting {
 	var settings []unmanagedSetting
 
 	for _, name := range sortedNames(attributes) {
+		if nested, ok := attributes[name].(schema.SingleNestedAttribute); ok {
+			stateBlock, stateOk := state[name].(types.Object)
+			planBlock, planOk := plan[name].(types.Object)
+
+			// A block the plan removes is cleared whole, so nothing inside it is left unmanaged.
+			if !stateOk || !planOk || !isKnownAndSet(stateBlock) || !isKnownAndSet(planBlock) {
+				continue
+			}
+
+			configMembers := map[string]attr.Value{}
+			if configBlock, ok := config[name].(types.Object); ok && isKnownAndSet(configBlock) {
+				configMembers = configBlock.Attributes()
+			}
+
+			nestedBlock := name
+			if block != "" {
+				nestedBlock = block + "." + name
+			}
+
+			settings = append(settings, unmanagedSettingsIn(nestedBlock, nested.Attributes, configMembers, stateBlock.Attributes(), planBlock.Attributes(), defaults)...)
+			continue
+		}
+
 		if !isUnmanagedWhenLeftOut(attributes[name]) {
 			continue
 		}
@@ -116,12 +140,17 @@ func unmanagedSettingsIn(attributes map[string]schema.Attribute, config map[stri
 			continue
 		}
 
-		defaultValue := defaults[jsonFieldName(name)]
+		// The API reports defaults for top-level settings only.
+		var defaultValue json.RawMessage
+		if block == "" {
+			defaultValue = defaults[jsonFieldName(name)]
+		}
+
 		if matchesDefault(value, defaultValue) {
 			continue
 		}
 
-		settings = append(settings, unmanagedSetting{name: name, value: value, defaultValue: defaultValue})
+		settings = append(settings, unmanagedSetting{block: block, name: name, value: value, defaultValue: defaultValue})
 	}
 
 	return settings
@@ -215,10 +244,39 @@ func sortedNames(attributes map[string]schema.Attribute) []string {
 }
 
 func unmanagedSettingsDiagnostic(settings []unmanagedSetting) diag.Diagnostic {
+	var topLevel []unmanagedSetting
+	nested := map[string][]unmanagedSetting{}
+	var blocks []string
+
+	for _, setting := range settings {
+		if setting.block == "" {
+			topLevel = append(topLevel, setting)
+			continue
+		}
+
+		if _, seen := nested[setting.block]; !seen {
+			blocks = append(blocks, setting.block)
+		}
+		nested[setting.block] = append(nested[setting.block], setting)
+	}
+
+	var lines []string
+	lines = append(lines, hclSettingLines(topLevel, "  ")...)
+
+	for _, block := range blocks {
+		if len(lines) > 0 {
+			lines = append(lines, "")
+		}
+
+		lines = append(lines, "  "+block+" = {")
+		lines = append(lines, hclSettingLines(nested[block], "    ")...)
+		lines = append(lines, "  }")
+	}
+
 	return diag.NewErrorDiagnostic(
 		"Settings Missing From the Configuration",
 		"The tenant has values for these settings, but the configuration doesn't set them:\n\n"+
-			strings.Join(hclSettingLines(settings, "  "), "\n")+"\n\n"+
+			strings.Join(lines, "\n")+"\n\n"+
 			"Changes made to them outside Terraform won't show in a plan, and a tenant built from this configuration "+
 			"won't get these values. Add them to the configuration.",
 	)

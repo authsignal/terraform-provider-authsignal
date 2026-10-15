@@ -72,7 +72,7 @@ const (
 var twilioBlock = credentialBlock{
 	Name:        twilioCredentialsBlock,
 	Providers:   []string{"TWILIO"},
-	Description: "Twilio credentials. Required when `sms_provider` is `TWILIO` and no Twilio credentials are stored yet.",
+	Description: "Twilio credentials. Required when `sms_provider` is `TWILIO`.",
 	Members: []credentialMember{
 		{Name: "auth_token", Kind: credentialString, Secret: true, Required: true, Description: "Twilio auth token."},
 		{Name: "messaging_service_sid", Kind: credentialString, Required: true, Description: "Twilio Messaging Service SID."},
@@ -83,7 +83,7 @@ var twilioBlock = credentialBlock{
 var birdSmsBlock = credentialBlock{
 	Name:        birdSmsCredentialsBlock,
 	Providers:   []string{"BIRD"},
-	Description: "Bird SMS credentials. Required when `sms_provider` is `BIRD` and no Bird credentials are stored yet.",
+	Description: "Bird SMS credentials. Required when `sms_provider` is `BIRD`.",
 	Members: []credentialMember{
 		{Name: "access_key", Kind: credentialString, Secret: true, Required: true, Description: "Bird access key."},
 		{Name: "workspace_id", Kind: credentialString, Required: true, Description: "Bird workspace ID."},
@@ -98,7 +98,7 @@ var birdSmsBlock = credentialBlock{
 var messageMediaBlock = credentialBlock{
 	Name:        messageMediaCredentialsBlock,
 	Providers:   []string{"MESSAGE_MEDIA"},
-	Description: "MessageMedia credentials. Required when `sms_provider` is `MESSAGE_MEDIA` and no MessageMedia credentials are stored yet.",
+	Description: "MessageMedia credentials. Required when `sms_provider` is `MESSAGE_MEDIA`.",
 	Members: []credentialMember{
 		{Name: "api_key", Kind: credentialString, Secret: true, Required: true, Description: "MessageMedia API key."},
 		{Name: "api_secret", Kind: credentialString, Secret: true, Required: true, Description: "MessageMedia API secret."},
@@ -109,7 +109,7 @@ var messageMediaBlock = credentialBlock{
 var modicaGroupBlock = credentialBlock{
 	Name:        modicaGroupCredentialsBlock,
 	Providers:   []string{"MODICA_GROUP"},
-	Description: "Modica Group credentials. Required when `sms_provider` is `MODICA_GROUP` and no Modica Group credentials are stored yet.",
+	Description: "Modica Group credentials. Required when `sms_provider` is `MODICA_GROUP`.",
 	Members: []credentialMember{
 		{Name: "username", Kind: credentialString, Required: true, Description: "Modica Group username."},
 		{Name: "password", Kind: credentialString, Secret: true, Required: true, Description: "Modica Group password."},
@@ -119,7 +119,7 @@ var modicaGroupBlock = credentialBlock{
 var tnzBlock = credentialBlock{
 	Name:        tnzCredentialsBlock,
 	Providers:   []string{"TNZ"},
-	Description: "TNZ credentials. Required when `sms_provider` is `TNZ` and no TNZ credentials are stored.",
+	Description: "TNZ credentials. Required when `sms_provider` is `TNZ`.",
 	Members: []credentialMember{
 		{Name: "api_key", Kind: credentialString, Secret: true, Required: true, Description: "TNZ API key."},
 	},
@@ -150,7 +150,7 @@ func (r *smsAuthenticatorConfigurationResource) Schema(_ context.Context, _ reso
 			Computed: true,
 		},
 		"sms_provider": schema.StringAttribute{
-			Description: "SMS delivery provider. Supply its credential block when first selecting it." + allowedValues(allowedSmsProviders),
+			Description: "SMS delivery provider. Every provider except `WEBHOOK` requires its credential block, and `WEBHOOK` requires `webhook_url`." + allowedValues(allowedSmsProviders),
 			Required:    true,
 			Validators: []validator.String{
 				stringvalidator.OneOf(allowedSmsProviders...),
@@ -328,11 +328,13 @@ func (r *smsAuthenticatorConfigurationResource) ValidateConfig(ctx context.Conte
 	provider := config.SmsProvider.ValueString()
 
 	for _, block := range smsCredentialBlocks {
-		if block.appliesTo(provider) {
-			continue
+		credentials := config.credentialObject(block.Name)
+
+		if block.appliesTo(provider) && credentials.IsNull() {
+			resp.Diagnostics.Append(missingCredentialDiagnostic(block.Name, "sms_provider", provider))
 		}
 
-		if isKnownAndSet(config.credentialObject(block.Name)) {
+		if !block.appliesTo(provider) && isKnownAndSet(credentials) {
 			resp.Diagnostics.Append(mismatchedCredentialDiagnostic(block.Name, "sms_provider", provider))
 		}
 	}

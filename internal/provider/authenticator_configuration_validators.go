@@ -24,7 +24,7 @@ func mismatchedCredentialDiagnostic(blockName string, providerAttribute string, 
 func missingCredentialDiagnostic(blockName string, providerAttribute string, provider string) diag.Diagnostic {
 	return diag.NewErrorDiagnostic(
 		"Missing Credentials for the Configured Provider",
-		fmt.Sprintf("`%s` is %q, so `%s` has to be set when the configuration is created.", providerAttribute, provider, blockName),
+		fmt.Sprintf("`%s` is %q, so `%s` has to be set.", providerAttribute, provider, blockName),
 	)
 }
 

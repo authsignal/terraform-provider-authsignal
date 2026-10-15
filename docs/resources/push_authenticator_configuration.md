@@ -35,7 +35,7 @@ resource "authsignal_push_authenticator_configuration" "push" {
 
 ### Required
 
-- `push_provider` (String) Push delivery provider. `DEFAULT` supports APNs and Firebase; `WEBHOOK` requires `webhook_url`. One of `DEFAULT`, `FIREBASE`, `WEBHOOK`.
+- `push_provider` (String) Push delivery provider. `DEFAULT` supports APNs and Firebase and requires at least one of `apns_credentials` and `fcm_credentials`; `FIREBASE` requires `fcm_credentials`; `WEBHOOK` requires `webhook_url`. One of `DEFAULT`, `FIREBASE`, `WEBHOOK`.
 
 ### Optional
 

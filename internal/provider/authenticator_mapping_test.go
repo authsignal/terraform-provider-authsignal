@@ -176,13 +176,70 @@ func TestSmsUpdateSendsTheValuesTheConfigurationSets(t *testing.T) {
 	}
 }
 
-func TestSmsUpdateOmitsTheFieldsTheConfigurationStoppedSetting(t *testing.T) {
-	encoded := smsUpdatePatch(t)
+func TestSmsUpdateOmitsADefaultCountryCodeTheConfigurationStoppedSetting(t *testing.T) {
+	if value, ok := smsUpdatePatch(t)["defaultCountryCode"]; ok {
+		t.Errorf("defaultCountryCode is present as %v; omitting it from the configuration has to leave the stored value alone", value)
+	}
+}
 
-	for _, omitted := range []string{"defaultCountryCode", "sendingRateLimitConfigurations"} {
-		if value, ok := encoded[omitted]; ok {
-			t.Errorf("%q is present as %v; omitting it from the configuration has to leave the stored value alone", omitted, value)
+func assertSentAsNull(t *testing.T, encoded map[string]any, fields ...string) {
+	t.Helper()
+
+	for _, field := range fields {
+		value, ok := encoded[field]
+		if !ok {
+			t.Errorf("%q should be sent as null so the API clears it, but it is left out", field)
+			continue
 		}
+
+		if value != nil {
+			t.Errorf("%q should be sent as null so the API clears it, got %v", field, value)
+		}
+	}
+}
+
+func TestSmsUpdateClearsTheRateLimitsTheConfigurationStoppedSetting(t *testing.T) {
+	state := smsModelFor("TWILIO")
+	twilioConfigured(t, &state)
+	state.SubmissionRateLimitConfiguration = types.ObjectValueMust(rateLimitAttributeTypes, map[string]attr.Value{
+		"rate_limit":        types.Int64Value(5),
+		"window_in_minutes": types.Float64Value(10),
+	})
+	state.SendingRateLimitConfigurations = rateLimitListOf(t, [2]float64{3, 60})
+	state.PrefixRateLimitConfigurations = types.ListValueMust(prefixRateLimitObjectType(), []attr.Value{
+		types.ObjectValueMust(prefixRateLimitAttributeTypes, map[string]attr.Value{
+			"enabled":           types.BoolValue(true),
+			"block_size":        types.StringValue("3"),
+			"rate_limit":        types.Int64Value(10),
+			"window_in_minutes": types.Float64Value(60),
+			"country_codes":     types.SetNull(types.StringType),
+		}),
+	})
+
+	config := smsModelFor("TWILIO")
+	twilioConfigured(t, &config)
+
+	body, diags := smsUpdateBody(context.Background(), config, config, state)
+	if diags.HasError() {
+		t.Fatalf("unexpected diagnostics: %v", diags)
+	}
+
+	encoded := marshalBody(t, body)
+
+	assertSentAsNull(t, encoded, "submissionRateLimitConfiguration", "sendingRateLimitConfigurations")
+
+	prefixes, ok := encoded["prefixRateLimitConfigurations"].([]any)
+	if !ok || len(prefixes) != 0 {
+		t.Errorf("prefixRateLimitConfigurations is %v, want [] — the API rejects null here", encoded["prefixRateLimitConfigurations"])
+	}
+}
+
+func TestSmsReadTreatsAnEmptyPrefixListAsNoLimits(t *testing.T) {
+	empty := []authsignal.PrefixRateLimitConfiguration{}
+	response := &authsignal.SmsAuthenticatorConfiguration{PrefixRateLimitConfigurations: &empty}
+
+	if read := smsStateFromResponse(response, emptySmsModel()); !read.PrefixRateLimitConfigurations.IsNull() {
+		t.Errorf("an empty list should read as null, got %v", read.PrefixRateLimitConfigurations)
 	}
 }
 
@@ -598,6 +655,22 @@ func TestPushIntegerAndDecimalFieldsKeepTheirTypes(t *testing.T) {
 	}
 }
 
+func TestPushUpdateClearsTheSendingLimitsTheConfigurationStoppedSetting(t *testing.T) {
+	state := pushModelFor("WEBHOOK")
+	state.WebhookUrl = types.StringValue("https://example.com/hook")
+	state.SendingRateLimitConfigurations = rateLimitListOf(t, [2]float64{5, 10})
+
+	config := state
+	config.SendingRateLimitConfigurations = types.ListNull(rateLimitObjectType())
+
+	body, diags := pushUpdateBody(context.Background(), config, config, state)
+	if diags.HasError() {
+		t.Fatalf("unexpected diagnostics: %v", diags)
+	}
+
+	assertSentAsNull(t, marshalBody(t, body), "sendingRateLimitConfigurations")
+}
+
 func TestFullyWriteOnlyBlocksStayOutOfState(t *testing.T) {
 	provider := "TNZ"
 	response := &authsignal.SmsAuthenticatorConfiguration{
@@ -730,7 +803,7 @@ func TestEmailOtpUpdateSendsTheValuesTheConfigurationSets(t *testing.T) {
 	}
 }
 
-func TestEmailOtpUpdateOmitsTheRateLimitsTheConfigurationStoppedSetting(t *testing.T) {
+func TestEmailOtpUpdateClearsTheRateLimitsTheConfigurationStoppedSetting(t *testing.T) {
 	state := emailOtpModelFor("SENDGRID")
 	state.SendgridEmailCredentials = sendgridCredentials(t, randomId("SG"), randomId("template"))
 	state.SubmissionRateLimitConfiguration = types.ObjectValueMust(rateLimitAttributeTypes, map[string]attr.Value{
@@ -748,11 +821,23 @@ func TestEmailOtpUpdateOmitsTheRateLimitsTheConfigurationStoppedSetting(t *testi
 		t.Fatalf("unexpected diagnostics: %v", diags)
 	}
 
+	assertSentAsNull(t, marshalBody(t, body), "submissionRateLimitConfiguration", "sendingRateLimitConfigurations")
+}
+
+func TestEmailOtpUpdateLeavesOutARateLimitThatWasNeverSet(t *testing.T) {
+	state := emailOtpModelFor("SENDGRID")
+	state.SendgridEmailCredentials = sendgridCredentials(t, randomId("SG"), randomId("template"))
+
+	body, diags := emailOtpUpdateBody(context.Background(), state, state, state)
+	if diags.HasError() {
+		t.Fatalf("unexpected diagnostics: %v", diags)
+	}
+
 	encoded := marshalBody(t, body)
 
 	for _, omitted := range []string{"submissionRateLimitConfiguration", "sendingRateLimitConfigurations"} {
 		if value, ok := encoded[omitted]; ok {
-			t.Errorf("%q is present as %v; omitting it has to leave the stored limit alone", omitted, value)
+			t.Errorf("%q is present as %v; there is nothing to clear", omitted, value)
 		}
 	}
 }

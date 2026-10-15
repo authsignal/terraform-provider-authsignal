@@ -25,7 +25,13 @@ func authenticatorEventsWebhook(url attr.Value, includePublicKey attr.Value) typ
 func requestBodyOf(t *testing.T, model tenantSettingsResourceModel) map[string]any {
 	t.Helper()
 
-	settings, diags := tenantSettingsRequestFrom(context.Background(), model)
+	return requestBodyAgainst(t, model, emptyTenantSettingsModel())
+}
+
+func requestBodyAgainst(t *testing.T, model tenantSettingsResourceModel, state tenantSettingsResourceModel) map[string]any {
+	t.Helper()
+
+	settings, diags := tenantSettingsRequestFrom(context.Background(), model, state)
 	if diags.HasError() {
 		t.Fatalf("unexpected diagnostics: %v", diags)
 	}
@@ -77,6 +83,50 @@ func TestTenantSettingsSendsAConfiguredWebhook(t *testing.T) {
 	logs, ok := body["logEventsWebhookConfig"].(map[string]any)
 	if !ok || logs["endpointUrl"] != "https://example.com/logs" {
 		t.Errorf("expected the log events webhook to be sent, got %v", body)
+	}
+}
+
+func TestTenantSettingsClearsAWebhookTheConfigurationStoppedSetting(t *testing.T) {
+	state := emptyTenantSettingsModel()
+	state.AuthenticatorEventsWebhookConfig = authenticatorEventsWebhook(types.StringValue("https://example.com/events"), types.BoolValue(true))
+	state.LogEventsWebhookConfig = types.ObjectValueMust(logEventsWebhookConfigAttributeTypes, map[string]attr.Value{
+		"endpoint_url": types.StringValue("https://example.com/logs"),
+	})
+
+	body := requestBodyAgainst(t, emptyTenantSettingsModel(), state)
+
+	assertSentAsNull(t, body, "authenticatorEventsWebhookConfig", "logEventsWebhookConfig")
+}
+
+// The plan for a create can't show the tenant's existing webhooks, so create must not clear one.
+func TestTenantSettingsCreateLeavesAnExistingWebhookForTheNextPlan(t *testing.T) {
+	client, stub := newStubAPI(t, map[string][]stubResponse{
+		"PATCH /tenant": okResponse(`{"tokenDurationInMinutes":10,"logEventsWebhookConfig":{"endpointUrl":"https://example.com/logs"}}`),
+	})
+
+	res := &tenantSettingsResource{client: client}
+	resourceSchema := resourceSchemaOf(t, res)
+	config := resourceObject(t, resourceSchema, map[string]tftypes.Value{})
+
+	resp := &resource.CreateResponse{State: tfsdk.State{Schema: resourceSchema}}
+	res.Create(context.Background(), resource.CreateRequest{
+		Config: tfsdk.Config{Schema: resourceSchema, Raw: config},
+		Plan:   tfsdk.Plan{Schema: resourceSchema, Raw: config},
+	}, resp)
+
+	if resp.Diagnostics.HasError() {
+		t.Fatal(detailsOf(resp.Diagnostics))
+	}
+
+	if body := stub.bodyOf(t, "PATCH /tenant"); body != "{}" {
+		t.Errorf("create should send nothing the configuration leaves out, got %s", body)
+	}
+
+	var model tenantSettingsResourceModel
+	resp.Diagnostics.Append(resp.State.Get(context.Background(), &model)...)
+
+	if !model.LogEventsWebhookConfig.IsNull() {
+		t.Errorf("state has to match the plan, which has no webhook, got %v", model.LogEventsWebhookConfig)
 	}
 }
 

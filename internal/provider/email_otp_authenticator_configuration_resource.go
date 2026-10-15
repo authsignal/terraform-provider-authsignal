@@ -188,15 +188,13 @@ func (r *emailOtpAuthenticatorConfigurationResource) Schema(_ context.Context, _
 			},
 		},
 		"submission_rate_limit_configuration": schema.SingleNestedAttribute{
-			Description: "Code submission limit.",
+			Description: "Code submission limit. Leaving it out removes the limit.",
 			Optional:    true,
-			Computed:    true,
 			Attributes:  rateLimitAttributes(),
 		},
 		"sending_rate_limit_configurations": schema.ListNestedAttribute{
-			Description: "Email delivery limits. All configured limits apply.",
+			Description: "Email delivery limits. All configured limits apply. Leaving it out removes them.",
 			Optional:    true,
-			Computed:    true,
 			NestedObject: schema.NestedAttributeObject{
 				Attributes: rateLimitAttributes(),
 			},
@@ -585,6 +583,8 @@ func emailOtpUpdateBody(ctx context.Context, plan emailOtpAuthenticatorConfigura
 		if submission != nil {
 			body.SubmissionRateLimitConfiguration = authsignal.SetValue(*submission)
 		}
+	} else if removedFromConfig(config.SubmissionRateLimitConfiguration, state.SubmissionRateLimitConfiguration) {
+		body.SubmissionRateLimitConfiguration = authsignal.SetNull(authsignal.RateLimitConfiguration{})
 	}
 
 	if isKnownAndSet(config.SendingRateLimitConfigurations) {
@@ -593,6 +593,8 @@ func emailOtpUpdateBody(ctx context.Context, plan emailOtpAuthenticatorConfigura
 		if sending != nil {
 			body.SendingRateLimitConfigurations = authsignal.SetValue(*sending)
 		}
+	} else if removedFromConfig(config.SendingRateLimitConfigurations, state.SendingRateLimitConfigurations) {
+		body.SendingRateLimitConfigurations = authsignal.SetNull([]authsignal.RateLimitConfiguration{})
 	}
 
 	for _, block := range emailOtpCredentialBlocks {

@@ -54,10 +54,10 @@ resource "authsignal_email_otp_authenticator_configuration" "email_otp" {
 - `mandrill_email_credentials_version` (String) Credential rotation marker for `mandrill_email_credentials`. Change it to resend the credentials. Use an opaque counter or date, never a secret.
 - `sendgrid_email_credentials` (Attributes) SendGrid credentials. Required when `email_provider` is `SENDGRID`. (see [below for nested schema](#nestedatt--sendgrid_email_credentials))
 - `sendgrid_email_credentials_version` (String) Credential rotation marker for `sendgrid_email_credentials`. Change it to resend the credentials. Use an opaque counter or date, never a secret.
-- `sending_rate_limit_configurations` (Attributes List) Email delivery limits. All configured limits apply. (see [below for nested schema](#nestedatt--sending_rate_limit_configurations))
+- `sending_rate_limit_configurations` (Attributes List) Email delivery limits. All configured limits apply. Leaving it out removes them. (see [below for nested schema](#nestedatt--sending_rate_limit_configurations))
 - `smtp_email_credentials` (Attributes) SMTP credentials. Required when `email_provider` is `SMTP`. (see [below for nested schema](#nestedatt--smtp_email_credentials))
 - `smtp_email_credentials_version` (String) Credential rotation marker for `smtp_email_credentials`. Change it to resend the credentials. Use an opaque counter or date, never a secret.
-- `submission_rate_limit_configuration` (Attributes) Code submission limit. (see [below for nested schema](#nestedatt--submission_rate_limit_configuration))
+- `submission_rate_limit_configuration` (Attributes) Code submission limit. Leaving it out removes the limit. (see [below for nested schema](#nestedatt--submission_rate_limit_configuration))
 - `webhook_url` (String) HTTPS endpoint for verification codes. Required for `WEBHOOK`; omit for other providers. Changing providers clears it.
 
 ### Read-Only

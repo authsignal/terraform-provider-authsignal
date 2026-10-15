@@ -54,10 +54,10 @@ resource "authsignal_sms_authenticator_configuration" "sms" {
 - `message_media_credentials_version` (String) Credential rotation marker for `message_media_credentials`. Change it to resend the credentials. Use an opaque counter or date, never a secret.
 - `modica_group_credentials` (Attributes) Modica Group credentials. Required when `sms_provider` is `MODICA_GROUP`. (see [below for nested schema](#nestedatt--modica_group_credentials))
 - `modica_group_credentials_version` (String) Credential rotation marker for `modica_group_credentials`. Change it to resend the credentials. Use an opaque counter or date, never a secret.
-- `prefix_rate_limit_configurations` (Attributes List) Message delivery limits by number prefix. Set to `[]` to clear them. (see [below for nested schema](#nestedatt--prefix_rate_limit_configurations))
-- `sending_rate_limit_configurations` (Attributes List) Message delivery limits. All configured limits apply. (see [below for nested schema](#nestedatt--sending_rate_limit_configurations))
+- `prefix_rate_limit_configurations` (Attributes List) Message delivery limits by number prefix. Leaving it out removes them. (see [below for nested schema](#nestedatt--prefix_rate_limit_configurations))
+- `sending_rate_limit_configurations` (Attributes List) Message delivery limits. All configured limits apply. Leaving it out removes them. (see [below for nested schema](#nestedatt--sending_rate_limit_configurations))
 - `sms_country_codes` (Set of String) Allowed two-letter destination country codes. Set to `[]` to clear the restriction and `default_country_code`.
-- `submission_rate_limit_configuration` (Attributes) Code submission limit. (see [below for nested schema](#nestedatt--submission_rate_limit_configuration))
+- `submission_rate_limit_configuration` (Attributes) Code submission limit. Leaving it out removes the limit. (see [below for nested schema](#nestedatt--submission_rate_limit_configuration))
 - `tnz_credentials` (Attributes, [Write-only](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments)) TNZ credentials. Required when `sms_provider` is `TNZ`. This block is entirely write-only, so `tnz_credentials_version` is required when it is set. (see [below for nested schema](#nestedatt--tnz_credentials))
 - `tnz_credentials_version` (String) Credential rotation marker for `tnz_credentials`. Change it to resend the credentials. Use an opaque counter or date, never a secret.
 - `twilio_credentials` (Attributes) Twilio credentials. Required when `sms_provider` is `TWILIO`. (see [below for nested schema](#nestedatt--twilio_credentials))

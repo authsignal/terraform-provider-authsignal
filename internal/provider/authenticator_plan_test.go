@@ -400,6 +400,33 @@ resource "authsignal_sms_authenticator_configuration" "sms" {
 	})
 }
 
+func TestPlanSmsRejectsAnEmptyPrefixLimitList(t *testing.T) {
+	skipUnlessAcceptance(t)
+
+	resource.UnitTest(t, resource.TestCase{
+		TerraformVersionChecks:   []tfversion.TerraformVersionCheck{writeOnlyTerraform},
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config: `
+resource "authsignal_sms_authenticator_configuration" "sms" {
+  sms_provider                     = "TWILIO"
+  prefix_rate_limit_configurations = []
+
+  twilio_credentials = {
+    auth_token            = "secret-token"
+    messaging_service_sid = "MG123"
+    account_sid           = "AC123"
+  }
+}
+`,
+				PlanOnly:    true,
+				ExpectError: regexp.MustCompile(`Empty Prefix Rate Limits`),
+			},
+		},
+	})
+}
+
 func TestPlanSmsRejectsADefaultCountryCodeOutsideTheRestriction(t *testing.T) {
 	skipUnlessAcceptance(t)
 

@@ -106,7 +106,7 @@ func (r *tenantSettingsResource) Schema(_ context.Context, _ resource.SchemaRequ
 				},
 			},
 			"authenticator_events_webhook_config": schema.SingleNestedAttribute{
-				Description: "Authenticator events webhook. Leaving it out removes the webhook.",
+				Description: "Authenticator events webhook. Leaving it out removes the webhook. The first plan fails instead if the tenant already has one.",
 				Optional:    true,
 				Attributes: map[string]schema.Attribute{
 					"url": schema.StringAttribute{
@@ -124,7 +124,7 @@ func (r *tenantSettingsResource) Schema(_ context.Context, _ resource.SchemaRequ
 				},
 			},
 			"log_events_webhook_config": schema.SingleNestedAttribute{
-				Description: "Log events webhook. Leaving it out removes the webhook.",
+				Description: "Log events webhook. Leaving it out removes the webhook. The first plan fails instead if the tenant already has one.",
 				Optional:    true,
 				Attributes: map[string]schema.Attribute{
 					"endpoint_url": schema.StringAttribute{
@@ -265,7 +265,7 @@ func (r *tenantSettingsResource) write(ctx context.Context, config tenantSetting
 }
 
 func (r *tenantSettingsResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
-	checkUnmanagedSettings(ctx, req, resp)
+	checkUnmanagedTenantSettings(ctx, r.client, tenantSettingsModelFromResponse, req, resp)
 }
 
 func (r *tenantSettingsResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -275,8 +275,7 @@ func (r *tenantSettingsResource) Create(ctx context.Context, req resource.Create
 		return
 	}
 
-	// The plan for a create can't show the tenant's existing webhooks, so create clears none of them.
-	// One the configuration leaves out shows up as a removal in the next plan instead.
+	// A create plan fails for any webhook the configuration leaves out, so there is none for create to clear.
 	tenant, diags := r.write(ctx, config, emptyTenantSettingsModel())
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {

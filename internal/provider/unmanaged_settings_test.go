@@ -6,18 +6,21 @@ import (
 	"reflect"
 	"regexp"
 	"sort"
+	"strings"
 	"testing"
 
 	"github.com/authsignal/authsignal-management-go/v6"
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
+	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
 )
 
 // A setting that keeps the tenant's value when the configuration leaves it out has to fail the plan
-// when that value is unexpected, whichever resource it is on.
+// when that value is unexpected, wherever it sits in the schema and whichever resource it is on.
 func TestEverySettingTheConfigurationCanLeaveOutIsChecked(t *testing.T) {
 	ctx := context.Background()
 
@@ -54,7 +57,12 @@ func TestEverySettingTheConfigurationCanLeaveOutIsChecked(t *testing.T) {
 			}
 
 			for _, path := range paths {
-				if !regexp.MustCompile(`(?m)^ +` + regexp.QuoteMeta(path) + ` += `).MatchString(detail) {
+				block, name := splitSettingPath(path)
+				if block != "" && !regexp.MustCompile(`(?m)^  `+regexp.QuoteMeta(block)+` = \{$`).MatchString(detail) {
+					t.Errorf("%s is not listed inside its block:\n%s", path, detail)
+				}
+
+				if !regexp.MustCompile(`(?m)^ +` + regexp.QuoteMeta(name) + ` += `).MatchString(detail) {
 					t.Errorf("%s is not listed:\n%s", path, detail)
 				}
 			}
@@ -86,8 +94,29 @@ func TestUnmanagedSettingsAreListedWithTheirDefaults(t *testing.T) {
 	}
 }
 
+func TestUnmanagedSettingsInsideABlockAreListedInsideIt(t *testing.T) {
+	resourceSchema := resourceSchemaOf(t, &tenantSettingsResource{})
+	config := resourceObject(t, resourceSchema, map[string]tftypes.Value{
+		"authenticator_events_webhook_config": authenticatorEventsWebhookValue(t, types.BoolNull()),
+	})
+	state := resourceObject(t, resourceSchema, map[string]tftypes.Value{
+		"authenticator_events_webhook_config": authenticatorEventsWebhookValue(t, types.BoolValue(true)),
+	})
+
+	diags := unmanagedSettingsDiagnostics(context.Background(), resourceSchema, config, state, state, authsignal.Defaults{})
+
+	expected := "  authenticator_events_webhook_config = {\n" +
+		"    include_credential_public_key = true  # no default\n" +
+		"  }"
+
+	if detail := unmanagedSettingsDetail(t, diags); !strings.Contains(detail, expected) {
+		t.Errorf("expected the detail to contain\n%s\ngot\n%s", expected, detail)
+	}
+}
+
 func TestSettingsThatAreNotUnmanagedPassThePlan(t *testing.T) {
 	resourceSchema := resourceSchemaOf(t, &tenantSettingsResource{})
+	webhook := authenticatorEventsWebhookValue(t, types.BoolValue(true))
 	whitelist := func(addresses ...string) tftypes.Value {
 		values := make([]tftypes.Value, len(addresses))
 		for index, address := range addresses {
@@ -114,6 +143,9 @@ func TestSettingsThatAreNotUnmanagedPassThePlan(t *testing.T) {
 		"at the default": {
 			state: map[string]tftypes.Value{"token_duration_in_minutes": tftypes.NewValue(tftypes.Number, 10)},
 			plan:  map[string]tftypes.Value{"token_duration_in_minutes": tftypes.NewValue(tftypes.Number, 10)},
+		},
+		"inside a block the plan removes": {
+			state: map[string]tftypes.Value{"authenticator_events_webhook_config": webhook},
 		},
 	}
 
@@ -144,6 +176,17 @@ func passkeyDefaults() authsignal.Defaults {
 	}
 }
 
+func authenticatorEventsWebhookValue(t *testing.T, includeCredentialPublicKey attr.Value) tftypes.Value {
+	t.Helper()
+
+	value, err := authenticatorEventsWebhook(types.StringValue("https://example.com/hook"), includeCredentialPublicKey).ToTerraformValue(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return value
+}
+
 func unmanagedSettingsDetail(t *testing.T, diags diag.Diagnostics) string {
 	t.Helper()
 
@@ -162,7 +205,8 @@ func keptWhenLeftOut(prefix string, attributes map[string]schema.Attribute) []st
 	for name, attribute := range attributes {
 		path := prefix + name
 
-		if _, ok := attribute.(schema.SingleNestedAttribute); ok {
+		if single, ok := attribute.(schema.SingleNestedAttribute); ok {
+			paths = append(paths, keptWhenLeftOut(path+".", single.Attributes)...)
 			continue
 		}
 
@@ -197,6 +241,15 @@ func hasSchemaDefault(attribute schema.Attribute) bool {
 	field := reflect.ValueOf(attribute).FieldByName("Default")
 
 	return field.IsValid() && !field.IsNil()
+}
+
+func splitSettingPath(path string) (string, string) {
+	index := strings.LastIndex(path, ".")
+	if index < 0 {
+		return "", path
+	}
+
+	return path[:index], path[index+1:]
 }
 
 // sampleValue fills every attribute with a value that is neither blank nor any API default.

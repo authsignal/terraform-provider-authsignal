@@ -20,6 +20,7 @@ var (
 	_ resource.Resource                = &themeResource{}
 	_ resource.ResourceWithConfigure   = &themeResource{}
 	_ resource.ResourceWithImportState = &themeResource{}
+	_ resource.ResourceWithModifyPlan  = &themeResource{}
 )
 
 // The range the Management API accepts for a container padding, universal or per axis.
@@ -185,7 +186,7 @@ func (r *themeResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 						Optional: true,
 					},
 					"exit_position": schema.StringAttribute{
-						Description: "Where the exit control sits: in the header band, or below the content. Shared by light and dark mode. Leaving it out keeps whatever the theme editor set, so clear it there rather than here. Allowed values: `top`, `bottom`.",
+						Description: "Where the exit control sits: in the header band, or below the content. Shared by light and dark mode. Leaving it out fails the plan once the theme editor has set it. Allowed values: `top`, `bottom`.",
 						Optional:    true,
 						Computed:    true,
 						Validators: []validator.String{
@@ -503,6 +504,10 @@ func (r *themeResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 			},
 		},
 	}
+}
+
+func (r *themeResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
+	checkUnmanagedSettings(ctx, req, resp)
 }
 
 func (r *themeResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {

@@ -152,6 +152,7 @@ func (r *passkeyAuthenticatorConfigurationResource) Create(ctx context.Context, 
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, passkeyStateAfterWrite(plan, response))...)
+	resp.Diagnostics.Append(storeDefaults(ctx, resp.Private, response.Defaults)...)
 }
 
 func (r *passkeyAuthenticatorConfigurationResource) Read(ctx context.Context, req resource.ReadRequest, resp *resource.ReadResponse) {
@@ -176,6 +177,7 @@ func (r *passkeyAuthenticatorConfigurationResource) Read(ctx context.Context, re
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, passkeyStateFromResponse(response))...)
+	resp.Diagnostics.Append(storeDefaults(ctx, resp.Private, response.Defaults)...)
 }
 
 func (r *passkeyAuthenticatorConfigurationResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
@@ -208,6 +210,7 @@ func (r *passkeyAuthenticatorConfigurationResource) Update(ctx context.Context, 
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, passkeyStateAfterWrite(plan, response))...)
+	resp.Diagnostics.Append(storeDefaults(ctx, resp.Private, response.Defaults)...)
 }
 
 func (r *passkeyAuthenticatorConfigurationResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {

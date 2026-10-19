@@ -88,14 +88,7 @@ func TestUnmanagedSettingsAreListedWithTheirDefaults(t *testing.T) {
 
 func TestSettingsThatAreNotUnmanagedPassThePlan(t *testing.T) {
 	resourceSchema := resourceSchemaOf(t, &tenantSettingsResource{})
-	whitelist := func(addresses ...string) tftypes.Value {
-		values := make([]tftypes.Value, len(addresses))
-		for index, address := range addresses {
-			values[index] = tftypes.NewValue(tftypes.String, address)
-		}
-
-		return tftypes.NewValue(tftypes.Set{ElementType: tftypes.String}, values)
-	}
+	emptyWhitelist := tftypes.NewValue(tftypes.Set{ElementType: tftypes.String}, []tftypes.Value{})
 
 	testCases := map[string]struct {
 		config map[string]tftypes.Value
@@ -108,8 +101,8 @@ func TestSettingsThatAreNotUnmanagedPassThePlan(t *testing.T) {
 			plan:   map[string]tftypes.Value{"token_duration_in_minutes": tftypes.NewValue(tftypes.Number, 30)},
 		},
 		"blank on the tenant": {
-			state: map[string]tftypes.Value{"ip_whitelist": whitelist()},
-			plan:  map[string]tftypes.Value{"ip_whitelist": whitelist()},
+			state: map[string]tftypes.Value{"ip_whitelist": emptyWhitelist},
+			plan:  map[string]tftypes.Value{"ip_whitelist": emptyWhitelist},
 		},
 		"at the default": {
 			state: map[string]tftypes.Value{"token_duration_in_minutes": tftypes.NewValue(tftypes.Number, 10)},

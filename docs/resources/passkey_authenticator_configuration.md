@@ -36,6 +36,7 @@ resource "authsignal_passkey_authenticator_configuration" "passkey" {
 - `authenticator_attachment` (String) Which kinds of authenticator the browser may offer. One of `all-supported`, `cross-platform`, `platform`.
 - `is_active` (Boolean)
 - `passkey_registration_hints` (List of String) Ordered browser hints for preferred authenticator types. Set to `[]` to clear them. Each element is one of `client-device`, `hybrid`, or `security-key`.
+- `prevent_removing_last_passkey` (Boolean) Whether users are stopped from removing their last passkey, even when they have another authentication method. Admins and the Server API can still remove it.
 - `user_verification_requirement` (String) Whether the authenticator must verify the user, rather than only proving possession. One of `preferred`, `required`.
 
 ### Read-Only

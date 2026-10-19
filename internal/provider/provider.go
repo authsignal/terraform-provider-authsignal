@@ -2,6 +2,8 @@ package provider
 
 import (
 	"context"
+	"net"
+	"net/url"
 	"os"
 
 	"github.com/authsignal/authsignal-management-go/v6"
@@ -45,7 +47,7 @@ func (p *authsignalProvider) Schema(_ context.Context, _ provider.SchemaRequest,
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
 			"host": schema.StringAttribute{
-				Description: "The host URL of the Authsignal Management API for your tenant.",
+				Description: "The host URL of the Authsignal Management API for your tenant. It must start with `https://`.",
 				Optional:    true,
 			},
 			"tenant_id": schema.StringAttribute{
@@ -124,6 +126,14 @@ func (p *authsignalProvider) Configure(ctx context.Context, req provider.Configu
 				"Set the host value in the configuration or use the AUTHSIGNAL_HOST environment variable. "+
 				"If either is already set, ensure the value is not empty.",
 		)
+	} else if !isSecureHost(host) {
+		resp.Diagnostics.AddAttributeError(
+			path.Root("host"),
+			"Insecure Authsignal API Host",
+			"The Authsignal API host must start with https://, because the provider sends the API secret with every request. "+
+				"Plain http is only allowed for a loopback address such as localhost. "+
+				"Check the host value in the configuration and the AUTHSIGNAL_HOST environment variable. Got: "+host,
+		)
 	}
 
 	if tenant_id == "" {
@@ -159,6 +169,32 @@ func (p *authsignalProvider) Configure(ctx context.Context, req provider.Configu
 	resp.ResourceData = &client
 
 	tflog.Info(ctx, "Configured Authsignal client", map[string]any{"success": true})
+}
+
+func isSecureHost(host string) bool {
+	parsed, err := url.Parse(host)
+	if err != nil || parsed.Hostname() == "" {
+		return false
+	}
+
+	switch parsed.Scheme {
+	case "https":
+		return true
+	case "http":
+		return isLoopback(parsed.Hostname())
+	default:
+		return false
+	}
+}
+
+func isLoopback(hostname string) bool {
+	if hostname == "localhost" {
+		return true
+	}
+
+	ip := net.ParseIP(hostname)
+
+	return ip != nil && ip.IsLoopback()
 }
 
 func (p *authsignalProvider) DataSources(_ context.Context) []func() datasource.DataSource {

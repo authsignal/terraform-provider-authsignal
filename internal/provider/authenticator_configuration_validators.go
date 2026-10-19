@@ -24,7 +24,7 @@ func mismatchedCredentialDiagnostic(blockName string, providerAttribute string, 
 func missingCredentialDiagnostic(blockName string, providerAttribute string, provider string) diag.Diagnostic {
 	return diag.NewErrorDiagnostic(
 		"Missing Credentials for the Configured Provider",
-		fmt.Sprintf("`%s` is %q, so `%s` has to be set when the configuration is created.", providerAttribute, provider, blockName),
+		fmt.Sprintf("`%s` is %q, so `%s` has to be set.", providerAttribute, provider, blockName),
 	)
 }
 
@@ -43,6 +43,13 @@ func clearedCountryCodesDiagnostic() diag.Diagnostic {
 			"`default_country_code` along with it, so the Management API rejects a request that sends both. "+
 			"Remove `default_country_code`, or list the country codes you want to allow in `sms_country_codes` "+
 			"and keep the default among them.",
+	)
+}
+
+func emptyPrefixRateLimitsDiagnostic() diag.Diagnostic {
+	return diag.NewErrorDiagnostic(
+		"Empty Prefix Rate Limits",
+		"`prefix_rate_limit_configurations` is set to `[]`. Leave it out of the configuration to remove the prefix limits.",
 	)
 }
 

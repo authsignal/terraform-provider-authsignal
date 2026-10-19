@@ -35,7 +35,7 @@ resource "authsignal_push_authenticator_configuration" "push" {
 
 ### Required
 
-- `push_provider` (String) Push delivery provider. `DEFAULT` supports APNs and Firebase; `WEBHOOK` requires `webhook_url`. One of `DEFAULT`, `FIREBASE`, `WEBHOOK`.
+- `push_provider` (String) Push delivery provider. `DEFAULT` supports APNs and Firebase and requires at least one of `apns_credentials` and `fcm_credentials`; `FIREBASE` requires `fcm_credentials`; `WEBHOOK` requires `webhook_url`. One of `DEFAULT`, `FIREBASE`, `WEBHOOK`.
 
 ### Optional
 
@@ -49,7 +49,7 @@ resource "authsignal_push_authenticator_configuration" "push" {
 - `fcm_credentials_version` (String) Credential rotation marker for `fcm_credentials`. Change it to resend the credentials. Use an opaque counter or date, never a secret.
 - `is_active` (Boolean)
 - `require_app_attestation` (Boolean) Whether the app must attest its integrity before a push challenge is accepted. `app_attestation_failure_mode` decides what happens when attestation fails.
-- `sending_rate_limit_configurations` (Attributes List) Notification delivery limits. All configured limits apply. (see [below for nested schema](#nestedatt--sending_rate_limit_configurations))
+- `sending_rate_limit_configurations` (Attributes List) Notification delivery limits. All configured limits apply. Leaving it out removes them. (see [below for nested schema](#nestedatt--sending_rate_limit_configurations))
 - `webhook_url` (String) HTTPS delivery endpoint. Required for `WEBHOOK` and rejected for other providers. Switching providers clears it.
 
 ### Read-Only

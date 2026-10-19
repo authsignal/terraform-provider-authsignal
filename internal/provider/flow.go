@@ -41,6 +41,19 @@ func classicActionDiagnostics(actionCode string) diag.Diagnostics {
 	return diags
 }
 
+func flowAlreadyExistsDiagnostics(actionCode string) diag.Diagnostics {
+	var diags diag.Diagnostics
+
+	diags.AddError(
+		"Action configuration already exists",
+		"Action configuration "+actionCode+" already exists. Import it instead of creating it:\n\n"+
+			"  terraform import ADDRESS "+actionCode+"\n\n"+
+			"where ADDRESS is this resource's address, such as authsignal_flow.sign_in.",
+	)
+
+	return diags
+}
+
 // existingActionType reports the type of an action configuration that already exists, so
 // a create can refuse to write across the CLASSIC/FLOW boundary before it mutates
 // anything. Only a 404 means the action is absent; every other failure is returned as an

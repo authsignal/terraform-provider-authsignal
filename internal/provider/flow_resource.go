@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"fmt"
+	"net/http"
 
 	"github.com/authsignal/authsignal-management-go/v6"
 	"github.com/hashicorp/terraform-plugin-framework/path"
@@ -56,7 +57,9 @@ func (r *flowResource) Schema(_ context.Context, _ resource.SchemaRequest, resp 
 				CustomType: FlowType{},
 				Description: "The flow document as JSON. It must contain `actionNodes` and `rules`. " +
 					"Use `file()` to load a flow exported from the Authsignal Portal, or `jsonencode()` to define it inline. " +
-					"Before using a verification method in a flow, enable its authenticator configuration in Authsignal.",
+					"Before using a verification method in a flow, enable its authenticator configuration in Authsignal. " +
+					"Every custom data point and value list the rules read must exist before the flow is published. " +
+					"Add the resources that create them to `depends_on`, unless the flow reads their names from those resources.",
 				Required: true,
 				Validators: []validator.String{
 					flowValidator{},
@@ -149,7 +152,12 @@ func (r *flowResource) Create(ctx context.Context, req resource.CreateRequest, r
 		ActionType: authsignal.SetValue(actionTypeFlow),
 	}
 
-	actionConfiguration, _, err := r.client.CreateActionConfiguration(actionConfigurationToCreate)
+	actionConfiguration, statusCode, err := r.client.CreateActionConfiguration(actionConfigurationToCreate)
+	if statusCode == http.StatusConflict {
+		resp.Diagnostics.Append(flowAlreadyExistsDiagnostics(actionCode)...)
+		return
+	}
+
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating action configuration",

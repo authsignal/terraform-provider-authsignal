@@ -72,7 +72,7 @@ const (
 var twilioBlock = credentialBlock{
 	Name:        twilioCredentialsBlock,
 	Providers:   []string{"TWILIO"},
-	Description: "Twilio credentials. Required when `sms_provider` is `TWILIO` and no Twilio credentials are stored yet.",
+	Description: "Twilio credentials. Required when `sms_provider` is `TWILIO`.",
 	Members: []credentialMember{
 		{Name: "auth_token", Kind: credentialString, Secret: true, Required: true, Description: "Twilio auth token."},
 		{Name: "messaging_service_sid", Kind: credentialString, Required: true, Description: "Twilio Messaging Service SID."},
@@ -83,7 +83,7 @@ var twilioBlock = credentialBlock{
 var birdSmsBlock = credentialBlock{
 	Name:        birdSmsCredentialsBlock,
 	Providers:   []string{"BIRD"},
-	Description: "Bird SMS credentials. Required when `sms_provider` is `BIRD` and no Bird credentials are stored yet.",
+	Description: "Bird SMS credentials. Required when `sms_provider` is `BIRD`.",
 	Members: []credentialMember{
 		{Name: "access_key", Kind: credentialString, Secret: true, Required: true, Description: "Bird access key."},
 		{Name: "workspace_id", Kind: credentialString, Required: true, Description: "Bird workspace ID."},
@@ -98,7 +98,7 @@ var birdSmsBlock = credentialBlock{
 var messageMediaBlock = credentialBlock{
 	Name:        messageMediaCredentialsBlock,
 	Providers:   []string{"MESSAGE_MEDIA"},
-	Description: "MessageMedia credentials. Required when `sms_provider` is `MESSAGE_MEDIA` and no MessageMedia credentials are stored yet.",
+	Description: "MessageMedia credentials. Required when `sms_provider` is `MESSAGE_MEDIA`.",
 	Members: []credentialMember{
 		{Name: "api_key", Kind: credentialString, Secret: true, Required: true, Description: "MessageMedia API key."},
 		{Name: "api_secret", Kind: credentialString, Secret: true, Required: true, Description: "MessageMedia API secret."},
@@ -109,7 +109,7 @@ var messageMediaBlock = credentialBlock{
 var modicaGroupBlock = credentialBlock{
 	Name:        modicaGroupCredentialsBlock,
 	Providers:   []string{"MODICA_GROUP"},
-	Description: "Modica Group credentials. Required when `sms_provider` is `MODICA_GROUP` and no Modica Group credentials are stored yet.",
+	Description: "Modica Group credentials. Required when `sms_provider` is `MODICA_GROUP`.",
 	Members: []credentialMember{
 		{Name: "username", Kind: credentialString, Required: true, Description: "Modica Group username."},
 		{Name: "password", Kind: credentialString, Secret: true, Required: true, Description: "Modica Group password."},
@@ -119,7 +119,7 @@ var modicaGroupBlock = credentialBlock{
 var tnzBlock = credentialBlock{
 	Name:        tnzCredentialsBlock,
 	Providers:   []string{"TNZ"},
-	Description: "TNZ credentials. Required when `sms_provider` is `TNZ` and no TNZ credentials are stored.",
+	Description: "TNZ credentials. Required when `sms_provider` is `TNZ`.",
 	Members: []credentialMember{
 		{Name: "api_key", Kind: credentialString, Secret: true, Required: true, Description: "TNZ API key."},
 	},
@@ -150,7 +150,7 @@ func (r *smsAuthenticatorConfigurationResource) Schema(_ context.Context, _ reso
 			Computed: true,
 		},
 		"sms_provider": schema.StringAttribute{
-			Description: "SMS delivery provider. Supply its credential block when first selecting it." + allowedValues(allowedSmsProviders),
+			Description: "SMS delivery provider. Every provider except `WEBHOOK` requires its credential block, and `WEBHOOK` requires `webhook_url`." + allowedValues(allowedSmsProviders),
 			Required:    true,
 			Validators: []validator.String{
 				stringvalidator.OneOf(allowedSmsProviders...),
@@ -188,15 +188,13 @@ func (r *smsAuthenticatorConfigurationResource) Schema(_ context.Context, _ reso
 			},
 		},
 		"submission_rate_limit_configuration": schema.SingleNestedAttribute{
-			Description: "Code submission limit.",
+			Description: "Code submission limit. Leaving it out removes the limit.",
 			Optional:    true,
-			Computed:    true,
 			Attributes:  rateLimitAttributes(),
 		},
 		"sending_rate_limit_configurations": schema.ListNestedAttribute{
-			Description: "Message delivery limits. All configured limits apply.",
+			Description: "Message delivery limits. All configured limits apply. Leaving it out removes them.",
 			Optional:    true,
-			Computed:    true,
 			NestedObject: schema.NestedAttributeObject{
 				Attributes: rateLimitAttributes(),
 			},
@@ -206,9 +204,8 @@ func (r *smsAuthenticatorConfigurationResource) Schema(_ context.Context, _ reso
 			},
 		},
 		"prefix_rate_limit_configurations": schema.ListNestedAttribute{
-			Description: "Message delivery limits by number prefix. Set to `[]` to clear them.",
+			Description: "Message delivery limits by number prefix. Leaving it out removes them.",
 			Optional:    true,
-			Computed:    true,
 			NestedObject: schema.NestedAttributeObject{
 				Attributes: prefixRateLimitAttributes(),
 			},
@@ -321,6 +318,10 @@ func (r *smsAuthenticatorConfigurationResource) ValidateConfig(ctx context.Conte
 
 	resp.Diagnostics.Append(countryCodeDiagnostics(ctx, config.SmsCountryCodes, config.DefaultCountryCode)...)
 
+	if isKnownAndSet(config.PrefixRateLimitConfigurations) && len(config.PrefixRateLimitConfigurations.Elements()) == 0 {
+		resp.Diagnostics.Append(emptyPrefixRateLimitsDiagnostic())
+	}
+
 	if !isKnownAndSet(config.SmsProvider) {
 		return
 	}
@@ -328,11 +329,13 @@ func (r *smsAuthenticatorConfigurationResource) ValidateConfig(ctx context.Conte
 	provider := config.SmsProvider.ValueString()
 
 	for _, block := range smsCredentialBlocks {
-		if block.appliesTo(provider) {
-			continue
+		credentials := config.credentialObject(block.Name)
+
+		if block.appliesTo(provider) && credentials.IsNull() {
+			resp.Diagnostics.Append(missingCredentialDiagnostic(block.Name, "sms_provider", provider))
 		}
 
-		if isKnownAndSet(config.credentialObject(block.Name)) {
+		if !block.appliesTo(provider) && isKnownAndSet(credentials) {
 			resp.Diagnostics.Append(mismatchedCredentialDiagnostic(block.Name, "sms_provider", provider))
 		}
 	}
@@ -673,6 +676,8 @@ func smsUpdateBody(ctx context.Context, plan smsAuthenticatorConfigurationResour
 		prefixes, prefixDiags := prefixRateLimitsFrom(ctx, config.PrefixRateLimitConfigurations)
 		diags.Append(prefixDiags...)
 		body.PrefixRateLimitConfigurations = authsignal.SetList(prefixes)
+	} else if removedFromConfig(config.PrefixRateLimitConfigurations, state.PrefixRateLimitConfigurations) {
+		body.PrefixRateLimitConfigurations = authsignal.SetList([]authsignal.PrefixRateLimitConfiguration{})
 	}
 
 	if isKnownAndSet(config.SubmissionRateLimitConfiguration) {
@@ -681,6 +686,8 @@ func smsUpdateBody(ctx context.Context, plan smsAuthenticatorConfigurationResour
 		if submission != nil {
 			body.SubmissionRateLimitConfiguration = authsignal.SetValue(*submission)
 		}
+	} else if removedFromConfig(config.SubmissionRateLimitConfiguration, state.SubmissionRateLimitConfiguration) {
+		body.SubmissionRateLimitConfiguration = authsignal.SetNull(authsignal.RateLimitConfiguration{})
 	}
 
 	if isKnownAndSet(config.SendingRateLimitConfigurations) {
@@ -689,6 +696,8 @@ func smsUpdateBody(ctx context.Context, plan smsAuthenticatorConfigurationResour
 		if sending != nil {
 			body.SendingRateLimitConfigurations = authsignal.SetValue(*sending)
 		}
+	} else if removedFromConfig(config.SendingRateLimitConfigurations, state.SendingRateLimitConfigurations) {
+		body.SendingRateLimitConfigurations = authsignal.SetNull([]authsignal.RateLimitConfiguration{})
 	}
 
 	for _, block := range smsCredentialBlocks {

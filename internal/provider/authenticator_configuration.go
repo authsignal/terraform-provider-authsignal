@@ -223,8 +223,9 @@ func blockSizeValue(blockSize *authsignal.BlockSize) types.String {
 	return types.StringValue(strconv.FormatInt(blockSize.Numeric, 10))
 }
 
+// The API rejects null for prefix limits, so it stores [] once they are removed.
 func prefixRateLimitListValue(rateLimits *[]authsignal.PrefixRateLimitConfiguration) types.List {
-	if rateLimits == nil {
+	if rateLimits == nil || len(*rateLimits) == 0 {
 		return types.ListNull(prefixRateLimitObjectType())
 	}
 
@@ -301,6 +302,10 @@ func prefixRateLimitsFrom(ctx context.Context, list types.List) ([]authsignal.Pr
 
 func isKnownAndSet(value attr.Value) bool {
 	return !value.IsNull() && !value.IsUnknown()
+}
+
+func removedFromConfig(config attr.Value, state attr.Value) bool {
+	return config.IsNull() && isKnownAndSet(state)
 }
 
 func stringSetValue(values []string) types.Set {
@@ -404,7 +409,11 @@ func resolvedValue[T attr.Value](planned T, fromResponse T) T {
 func webhookUrlDiagnostics(providerAttribute string, provider string, webhookUrl types.String) diag.Diagnostics {
 	var diags diag.Diagnostics
 
-	if provider == webhookProvider && !isKnownAndSet(webhookUrl) {
+	if webhookUrl.IsUnknown() {
+		return diags
+	}
+
+	if provider == webhookProvider && webhookUrl.IsNull() {
 		diags.AddError(
 			"Missing Webhook URL",
 			fmt.Sprintf("`webhook_url` is required when `%s` is %q.", providerAttribute, webhookProvider),

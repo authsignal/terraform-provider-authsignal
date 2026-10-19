@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"slices"
 	"strings"
 	"testing"
 
@@ -32,6 +33,12 @@ func validateResourceConfig(t *testing.T, res resource.ResourceWithValidateConfi
 	}
 
 	return summaries
+}
+
+func hasSummary(summaries []string, want string) bool {
+	return slices.ContainsFunc(summaries, func(summary string) bool {
+		return strings.Contains(summary, want)
+	})
 }
 
 func credentialTftypesObject(t *testing.T, resourceSchema schema.Schema, blockName string, members map[string]tftypes.Value) tftypes.Value {
@@ -72,7 +79,7 @@ func TestSmsValidateConfigRejectsCredentialsForAnotherProvider(t *testing.T) {
 		}),
 	})
 
-	if len(summaries) != 1 || !strings.Contains(summaries[0], "Credentials Do Not Match") {
+	if !hasSummary(summaries, "Credentials Do Not Match") {
 		t.Errorf("expected a mismatched-credentials error, got %v", summaries)
 	}
 }
@@ -108,7 +115,7 @@ func TestEmailOtpValidateConfigRejectsCredentialsForAnotherProvider(t *testing.T
 		}),
 	})
 
-	if len(summaries) != 1 || !strings.Contains(summaries[0], "Credentials Do Not Match") {
+	if !hasSummary(summaries, "Credentials Do Not Match") {
 		t.Errorf("expected a mismatched-credentials error, got %v", summaries)
 	}
 }
@@ -207,7 +214,7 @@ func TestPushValidateConfigRejectsApnsCredentialsUnderFirebase(t *testing.T) {
 		}),
 	})
 
-	if len(summaries) != 1 || !strings.Contains(summaries[0], "Credentials Do Not Match") {
+	if !hasSummary(summaries, "Credentials Do Not Match") {
 		t.Errorf("expected a mismatched-credentials error, got %v", summaries)
 	}
 }
@@ -622,6 +629,32 @@ func TestEmailOtpValidateConfigRequiresAWebhookUrlForTheWebhookProvider(t *testi
 
 	if len(summaries) != 1 || !strings.Contains(summaries[0], "Missing Webhook URL") {
 		t.Errorf("expected a missing-webhook-url error, got %v", summaries)
+	}
+}
+
+func TestValidateConfigAcceptsAnUnknownWebhookUrlForTheWebhookProvider(t *testing.T) {
+	cases := map[string]struct {
+		res               resource.ResourceWithValidateConfig
+		providerAttribute string
+	}{
+		"email-otp": {&emailOtpAuthenticatorConfigurationResource{}, "email_provider"},
+		"sms":       {&smsAuthenticatorConfigurationResource{}, "sms_provider"},
+		"push":      {&pushAuthenticatorConfigurationResource{}, "push_provider"},
+	}
+
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			resourceSchema := resourceSchemaOf(t, tc.res)
+
+			summaries := validateResourceConfig(t, tc.res, resourceSchema, map[string]tftypes.Value{
+				tc.providerAttribute: tftypes.NewValue(tftypes.String, "WEBHOOK"),
+				"webhook_url":        tftypes.NewValue(tftypes.String, tftypes.UnknownValue),
+			})
+
+			if len(summaries) != 0 {
+				t.Errorf("an unknown webhook_url produced %v; there is nothing to judge yet", summaries)
+			}
+		})
 	}
 }
 

@@ -223,16 +223,18 @@ func TestSchemasCarryNothingOutOfScope(t *testing.T) {
 	}
 }
 
-func TestRateLimitAttributesUseTheContractNames(t *testing.T) {
-	schemas := authenticatorResourceSchemas(t)
-
-	expected := map[string][]string{
+func rateLimitAttributeNames() map[string][]string {
+	return map[string][]string{
 		"authsignal_sms_authenticator_configuration":       {"submission_rate_limit_configuration", "sending_rate_limit_configurations", "prefix_rate_limit_configurations"},
 		"authsignal_email_otp_authenticator_configuration": {"submission_rate_limit_configuration", "sending_rate_limit_configurations"},
 		"authsignal_push_authenticator_configuration":      {"sending_rate_limit_configurations"},
 	}
+}
 
-	for name, attributeNames := range expected {
+func TestRateLimitAttributesUseTheContractNames(t *testing.T) {
+	schemas := authenticatorResourceSchemas(t)
+
+	for name, attributeNames := range rateLimitAttributeNames() {
 		for _, attributeName := range attributeNames {
 			if _, ok := schemas[name].Attributes[attributeName]; !ok {
 				t.Errorf("%s: schema has no %q attribute", name, attributeName)
@@ -243,6 +245,22 @@ func TestRateLimitAttributesUseTheContractNames(t *testing.T) {
 	for _, name := range []string{"authsignal_email_otp_authenticator_configuration", "authsignal_passkey_authenticator_configuration", "authsignal_push_authenticator_configuration"} {
 		if _, ok := schemas[name].Attributes["prefix_rate_limit_configurations"]; ok {
 			t.Errorf("%s: prefix rate limits are an SMS-only field", name)
+		}
+	}
+}
+
+// Terraform plans a computed nested attribute the configuration leaves out as unknown, so removing a
+// limit would never clear it and a limit set in the portal would plan a change on every run.
+func TestRateLimitsAreOptionalButNotComputed(t *testing.T) {
+	schemas := authenticatorResourceSchemas(t)
+
+	for name, attributeNames := range rateLimitAttributeNames() {
+		for _, attributeName := range attributeNames {
+			attribute := schemas[name].Attributes[attributeName]
+
+			if !attribute.IsOptional() || attribute.IsComputed() {
+				t.Errorf("%s: %q should be optional and not computed", name, attributeName)
+			}
 		}
 	}
 }
@@ -407,21 +425,19 @@ func responseReadableOptionals() map[string][]string {
 	return map[string][]string{
 		"sms": {
 			"is_active", "sms_country_codes", "default_country_code",
-			"submission_rate_limit_configuration", "sending_rate_limit_configurations",
-			"prefix_rate_limit_configurations", "allowed_custom_sms_variables",
+			"allowed_custom_sms_variables",
 		},
 		"email_otp": {
-			"is_active", "submission_rate_limit_configuration",
-			"sending_rate_limit_configurations", "allowed_custom_email_variables",
+			"is_active", "allowed_custom_email_variables",
 		},
 		"passkey": {
 			"is_active", "passkey_registration_hints",
 			"user_verification_requirement", "authenticator_attachment",
+			"prevent_removing_last_passkey",
 		},
 		"push": {
 			"is_active", "webhook_url", "credential_lifetime_in_minutes",
 			"require_app_attestation", "app_attestation_failure_mode",
-			"sending_rate_limit_configurations",
 		},
 	}
 }

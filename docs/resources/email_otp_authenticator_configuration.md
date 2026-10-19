@@ -38,26 +38,26 @@ resource "authsignal_email_otp_authenticator_configuration" "email_otp" {
 
 ### Required
 
-- `email_provider` (String) Email delivery provider. Supply its credential block when first selecting it. One of `BIRD`, `MAILGUN`, `MAILJET`, `MANDRILL`, `SENDGRID`, `SES`, `SMTP`, `WEBHOOK`.
+- `email_provider` (String) Email delivery provider. Every provider except `SES` and `WEBHOOK` requires its credential block, and `WEBHOOK` requires `webhook_url`. One of `BIRD`, `MAILGUN`, `MAILJET`, `MANDRILL`, `SENDGRID`, `SES`, `SMTP`, `WEBHOOK`.
 
 ### Optional
 
 - `allowed_custom_email_variables` (Set of String) Custom email template variables. Set to `[]` to clear them.
-- `bird_email_credentials` (Attributes) Bird email credentials. Required when `email_provider` is `BIRD` and no Bird credentials are stored yet. (see [below for nested schema](#nestedatt--bird_email_credentials))
+- `bird_email_credentials` (Attributes) Bird email credentials. Required when `email_provider` is `BIRD`. (see [below for nested schema](#nestedatt--bird_email_credentials))
 - `bird_email_credentials_version` (String) Credential rotation marker for `bird_email_credentials`. Change it to resend the credentials. Use an opaque counter or date, never a secret.
 - `is_active` (Boolean)
-- `mailgun_email_credentials` (Attributes) Mailgun credentials. Required when `email_provider` is `MAILGUN` and no Mailgun credentials are stored yet. (see [below for nested schema](#nestedatt--mailgun_email_credentials))
+- `mailgun_email_credentials` (Attributes) Mailgun credentials. Required when `email_provider` is `MAILGUN`. (see [below for nested schema](#nestedatt--mailgun_email_credentials))
 - `mailgun_email_credentials_version` (String) Credential rotation marker for `mailgun_email_credentials`. Change it to resend the credentials. Use an opaque counter or date, never a secret.
-- `mailjet_email_credentials` (Attributes) Mailjet credentials. Required when `email_provider` is `MAILJET` and no Mailjet credentials are stored yet. (see [below for nested schema](#nestedatt--mailjet_email_credentials))
+- `mailjet_email_credentials` (Attributes) Mailjet credentials. Required when `email_provider` is `MAILJET`. (see [below for nested schema](#nestedatt--mailjet_email_credentials))
 - `mailjet_email_credentials_version` (String) Credential rotation marker for `mailjet_email_credentials`. Change it to resend the credentials. Use an opaque counter or date, never a secret.
-- `mandrill_email_credentials` (Attributes) Mandrill credentials. Required when `email_provider` is `MANDRILL` and no Mandrill credentials are stored yet. (see [below for nested schema](#nestedatt--mandrill_email_credentials))
+- `mandrill_email_credentials` (Attributes) Mandrill credentials. Required when `email_provider` is `MANDRILL`. (see [below for nested schema](#nestedatt--mandrill_email_credentials))
 - `mandrill_email_credentials_version` (String) Credential rotation marker for `mandrill_email_credentials`. Change it to resend the credentials. Use an opaque counter or date, never a secret.
-- `sendgrid_email_credentials` (Attributes) SendGrid credentials. Required when `email_provider` is `SENDGRID` and no SendGrid credentials are stored yet. (see [below for nested schema](#nestedatt--sendgrid_email_credentials))
+- `sendgrid_email_credentials` (Attributes) SendGrid credentials. Required when `email_provider` is `SENDGRID`. (see [below for nested schema](#nestedatt--sendgrid_email_credentials))
 - `sendgrid_email_credentials_version` (String) Credential rotation marker for `sendgrid_email_credentials`. Change it to resend the credentials. Use an opaque counter or date, never a secret.
-- `sending_rate_limit_configurations` (Attributes List) Email delivery limits. All configured limits apply. (see [below for nested schema](#nestedatt--sending_rate_limit_configurations))
-- `smtp_email_credentials` (Attributes) SMTP credentials. Required when `email_provider` is `SMTP` and no SMTP credentials are stored yet. (see [below for nested schema](#nestedatt--smtp_email_credentials))
+- `sending_rate_limit_configurations` (Attributes List) Email delivery limits. All configured limits apply. Leaving it out removes them. (see [below for nested schema](#nestedatt--sending_rate_limit_configurations))
+- `smtp_email_credentials` (Attributes) SMTP credentials. Required when `email_provider` is `SMTP`. (see [below for nested schema](#nestedatt--smtp_email_credentials))
 - `smtp_email_credentials_version` (String) Credential rotation marker for `smtp_email_credentials`. Change it to resend the credentials. Use an opaque counter or date, never a secret.
-- `submission_rate_limit_configuration` (Attributes) Code submission limit. (see [below for nested schema](#nestedatt--submission_rate_limit_configuration))
+- `submission_rate_limit_configuration` (Attributes) Code submission limit. Leaving it out removes the limit. (see [below for nested schema](#nestedatt--submission_rate_limit_configuration))
 - `webhook_url` (String) HTTPS endpoint for verification codes. Required for `WEBHOOK`; omit for other providers. Changing providers clears it.
 
 ### Read-Only

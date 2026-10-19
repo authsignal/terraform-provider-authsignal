@@ -108,7 +108,7 @@ func (r *pushAuthenticatorConfigurationResource) Schema(_ context.Context, _ res
 			Computed: true,
 		},
 		"push_provider": schema.StringAttribute{
-			Description: "Push delivery provider. `DEFAULT` supports APNs and Firebase; `WEBHOOK` requires `webhook_url`." + allowedValues(allowedPushProviders),
+			Description: "Push delivery provider. `DEFAULT` supports APNs and Firebase and requires at least one of `apns_credentials` and `fcm_credentials`; `FIREBASE` requires `fcm_credentials`; `WEBHOOK` requires `webhook_url`." + allowedValues(allowedPushProviders),
 			Required:    true,
 			Validators: []validator.String{
 				stringvalidator.OneOf(allowedPushProviders...),
@@ -147,9 +147,8 @@ func (r *pushAuthenticatorConfigurationResource) Schema(_ context.Context, _ res
 			},
 		},
 		"sending_rate_limit_configurations": schema.ListNestedAttribute{
-			Description: "Notification delivery limits. All configured limits apply.",
+			Description: "Notification delivery limits. All configured limits apply. Leaving it out removes them.",
 			Optional:    true,
-			Computed:    true,
 			NestedObject: schema.NestedAttributeObject{
 				Attributes: rateLimitAttributes(),
 			},
@@ -205,6 +204,7 @@ func (r *pushAuthenticatorConfigurationResource) ValidateConfig(ctx context.Cont
 		}
 	}
 
+	resp.Diagnostics.Append(pushCredentialsSufficient(provider, !config.ApnsCredentials.IsNull(), !config.FcmCredentials.IsNull())...)
 	resp.Diagnostics.Append(webhookUrlDiagnostics("push_provider", provider, config.WebhookUrl)...)
 }
 
@@ -432,7 +432,7 @@ func pushCredentialsSufficient(provider string, hasApns bool, hasFcm bool) diag.
 		if !hasApns && !hasFcm {
 			diags.AddError(
 				"Missing Credentials for the Configured Provider",
-				"`push_provider` is \"DEFAULT\", so at least one of `apns_credentials` and `fcm_credentials` has to be set when the configuration is created.",
+				"`push_provider` is \"DEFAULT\", so at least one of `apns_credentials` and `fcm_credentials` has to be set.",
 			)
 		}
 	case "FIREBASE":
@@ -499,6 +499,8 @@ func pushUpdateBody(ctx context.Context, plan pushAuthenticatorConfigurationReso
 		if sending != nil {
 			body.SendingRateLimitConfigurations = authsignal.SetValue(*sending)
 		}
+	} else if removedFromConfig(config.SendingRateLimitConfigurations, state.SendingRateLimitConfigurations) {
+		body.SendingRateLimitConfigurations = authsignal.SetNull([]authsignal.RateLimitConfiguration{})
 	}
 
 	for _, block := range pushCredentialBlocks {

@@ -34,9 +34,9 @@ resource "authsignal_tenant_settings" "tenant_settings" {
 
 ### Optional
 
-- `authenticator_events_webhook_config` (Attributes) Authenticator events webhook. (see [below for nested schema](#nestedatt--authenticator_events_webhook_config))
+- `authenticator_events_webhook_config` (Attributes) Authenticator events webhook. Leaving it out removes the webhook. (see [below for nested schema](#nestedatt--authenticator_events_webhook_config))
 - `ip_whitelist` (Set of String) IPv4 ranges in CIDR notation allowed to call the Server API. Set to `[]` to allow every address.
-- `log_events_webhook_config` (Attributes) Log events webhook. (see [below for nested schema](#nestedatt--log_events_webhook_config))
+- `log_events_webhook_config` (Attributes) Log events webhook. Leaving it out removes the webhook. (see [below for nested schema](#nestedatt--log_events_webhook_config))
 - `token_duration_in_minutes` (Number) Challenge token lifetime in minutes. Also sets the pre-built UI session length.
 
 <a id="nestedatt--authenticator_events_webhook_config"></a>
@@ -65,5 +65,7 @@ Import is supported using the following syntax:
 The [`terraform import` command](https://developer.hashicorp.com/terraform/cli/commands/import) can be used, for example:
 
 ```shell
+# A tenant has one set of settings, so the provider ignores the import ID and "" works here.
+# In an import block, use a non-empty placeholder instead, such as id = "tenant_settings", because Terraform rejects an empty id.
 terraform import authsignal_tenant_settings.tenant_settings ""
 ```

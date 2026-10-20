@@ -21,6 +21,7 @@ var (
 	_ resource.Resource                = &tenantSettingsResource{}
 	_ resource.ResourceWithConfigure   = &tenantSettingsResource{}
 	_ resource.ResourceWithImportState = &tenantSettingsResource{}
+	_ resource.ResourceWithModifyPlan  = &tenantSettingsResource{}
 )
 
 func NewTenantSettingsResource() resource.Resource {
@@ -261,6 +262,10 @@ func (r *tenantSettingsResource) write(ctx context.Context, config tenantSetting
 	}
 
 	return tenant, diags
+}
+
+func (r *tenantSettingsResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
+	checkUnmanagedSettings(ctx, req, resp)
 }
 
 func (r *tenantSettingsResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {

@@ -65,7 +65,7 @@ func preBuiltUiSettingsModelFromResponse(tenant *authsignal.TenantResponse) preB
 }
 
 func (r *preBuiltUiSettingsResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
-	checkUnmanagedSettings(ctx, req, resp)
+	checkUnmanagedSettingsIncludingCreate(ctx, r.client, preBuiltUiSettingsModelFromResponse, req, resp)
 }
 
 func (r *preBuiltUiSettingsResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {

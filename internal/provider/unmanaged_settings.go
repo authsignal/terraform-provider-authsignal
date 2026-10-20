@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"reflect"
 	"sort"
@@ -15,6 +16,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/hashicorp/terraform-plugin-go/tftypes"
 )
@@ -37,6 +39,45 @@ func storeDefaults(ctx context.Context, private interface {
 	}
 
 	return private.SetKey(ctx, defaultsPrivateStateKey, encoded)
+}
+
+// Creating tenant settings or pre-built UI settings takes over a tenant that already has values, and
+// the create only sends what the configuration sets. The plan reads the tenant so that it fails for
+// anything else the create would keep, before anything is written.
+func checkUnmanagedSettingsIncludingCreate[M any](ctx context.Context, client *authsignal.Client, modelFrom func(*authsignal.TenantResponse) M, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
+	creating := req.State.Raw.IsNull() && !req.Plan.Raw.IsNull()
+	if !creating {
+		checkUnmanagedSettings(ctx, req, resp)
+		return
+	}
+
+	resourceSchema, ok := req.Plan.Schema.(schema.Schema)
+	if !ok {
+		return
+	}
+
+	tenant, _, err := client.GetTenant()
+	if err != nil {
+		resp.Diagnostics.AddError("Unable to Read Authsignal Tenant Settings", err.Error())
+		return
+	}
+
+	existing := tfsdk.State{Schema: resourceSchema}
+	resp.Diagnostics.Append(existing.Set(ctx, modelFrom(tenant))...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	configAttributes, configErr := objectAttributes(ctx, resourceSchema, req.Config.Raw)
+	existingAttributes, existingErr := objectAttributes(ctx, resourceSchema, existing.Raw)
+	if err := errors.Join(configErr, existingErr); err != nil {
+		resp.Diagnostics.AddError("Unable to Check for Unmanaged Settings", err.Error())
+		return
+	}
+
+	if settings := keptByCreate("", resourceSchema.Attributes, configAttributes, existingAttributes, tenant.Defaults); len(settings) > 0 {
+		resp.Diagnostics.Append(unmanagedSettingsDiagnostic(settings))
+	}
 }
 
 // An Optional+Computed setting the configuration leaves out keeps whatever the tenant has, so no plan
@@ -70,34 +111,36 @@ type unmanagedSetting struct {
 }
 
 func unmanagedSettingsDiagnostics(ctx context.Context, resourceSchema schema.Schema, config tftypes.Value, state tftypes.Value, plan tftypes.Value, defaults authsignal.Defaults) diag.Diagnostics {
-	var diags diag.Diagnostics
-
 	if state.IsNull() || plan.IsNull() {
-		return diags
+		return nil
 	}
 
-	objects := make([]types.Object, 0, 3)
-	for _, raw := range []tftypes.Value{config, state, plan} {
-		value, err := resourceSchema.Type().ValueFromTerraform(ctx, raw)
-		if err != nil {
-			diags.AddError("Unable to Check for Unmanaged Settings", err.Error())
-			return diags
-		}
-
-		object, ok := value.(types.Object)
-		if !ok {
-			return diags
-		}
-
-		objects = append(objects, object)
+	configAttributes, configErr := objectAttributes(ctx, resourceSchema, config)
+	stateAttributes, stateErr := objectAttributes(ctx, resourceSchema, state)
+	planAttributes, planErr := objectAttributes(ctx, resourceSchema, plan)
+	if err := errors.Join(configErr, stateErr, planErr); err != nil {
+		return diag.Diagnostics{diag.NewErrorDiagnostic("Unable to Check for Unmanaged Settings", err.Error())}
 	}
 
-	settings := unmanagedSettingsIn("", resourceSchema.Attributes, objects[0].Attributes(), objects[1].Attributes(), objects[2].Attributes(), defaults)
-	if len(settings) > 0 {
-		diags.Append(unmanagedSettingsDiagnostic(settings))
+	if settings := unmanagedSettingsIn("", resourceSchema.Attributes, configAttributes, stateAttributes, planAttributes, defaults); len(settings) > 0 {
+		return diag.Diagnostics{unmanagedSettingsDiagnostic(settings)}
 	}
 
-	return diags
+	return nil
+}
+
+func objectAttributes(ctx context.Context, resourceSchema schema.Schema, raw tftypes.Value) (map[string]attr.Value, error) {
+	value, err := resourceSchema.Type().ValueFromTerraform(ctx, raw)
+	if err != nil {
+		return nil, err
+	}
+
+	object, ok := value.(types.Object)
+	if !ok {
+		return nil, fmt.Errorf("expected an object, got %T", value)
+	}
+
+	return object.Attributes(), nil
 }
 
 func unmanagedSettingsIn(block string, attributes map[string]schema.Attribute, config map[string]attr.Value, state map[string]attr.Value, plan map[string]attr.Value, defaults authsignal.Defaults) []unmanagedSetting {
@@ -118,12 +161,7 @@ func unmanagedSettingsIn(block string, attributes map[string]schema.Attribute, c
 				configMembers = configBlock.Attributes()
 			}
 
-			nestedBlock := name
-			if block != "" {
-				nestedBlock = block + "." + name
-			}
-
-			settings = append(settings, unmanagedSettingsIn(nestedBlock, nested.Attributes, configMembers, stateBlock.Attributes(), planBlock.Attributes(), defaults)...)
+			settings = append(settings, unmanagedSettingsIn(nestedPath(block, name), nested.Attributes, configMembers, stateBlock.Attributes(), planBlock.Attributes(), defaults)...)
 			continue
 		}
 
@@ -156,9 +194,13 @@ func unmanagedSettingsIn(block string, attributes map[string]schema.Attribute, c
 	return settings
 }
 
-// A schema default already plans a change when the configuration leaves the setting out.
 func isUnmanagedWhenLeftOut(attribute schema.Attribute) bool {
-	if !attribute.IsOptional() || !attribute.IsComputed() {
+	return attribute.IsComputed() && isOptionalWithoutDefault(attribute)
+}
+
+// A schema default already plans a change when the configuration leaves the setting out.
+func isOptionalWithoutDefault(attribute schema.Attribute) bool {
+	if !attribute.IsOptional() {
 		return false
 	}
 
@@ -178,6 +220,74 @@ func isUnmanagedWhenLeftOut(attribute schema.Attribute) bool {
 	default:
 		return false
 	}
+}
+
+func keptByCreate(block string, attributes map[string]schema.Attribute, config map[string]attr.Value, existing map[string]attr.Value, defaults authsignal.Defaults) []unmanagedSetting {
+	var settings []unmanagedSetting
+
+	for _, name := range sortedNames(attributes) {
+		value, ok := existing[name]
+		if !ok || isBlank(value) {
+			continue
+		}
+
+		configured, ok := config[name]
+		isConfigured := ok && !configured.IsNull()
+
+		if nested, ok := attributes[name].(schema.SingleNestedAttribute); ok {
+			existingBlock, ok := value.(types.Object)
+			if !ok {
+				continue
+			}
+
+			if !isConfigured {
+				settings = append(settings, wholeBlock(nestedPath(block, name), nested.Attributes, existingBlock.Attributes())...)
+				continue
+			}
+
+			if configBlock, ok := configured.(types.Object); ok && !configBlock.IsUnknown() {
+				settings = append(settings, keptByCreate(nestedPath(block, name), nested.Attributes, configBlock.Attributes(), existingBlock.Attributes(), defaults)...)
+			}
+			continue
+		}
+
+		if isConfigured || !isOptionalWithoutDefault(attributes[name]) {
+			continue
+		}
+
+		var defaultValue json.RawMessage
+		if block == "" {
+			defaultValue = defaults[jsonFieldName(name)]
+		}
+
+		if matchesDefault(value, defaultValue) {
+			continue
+		}
+
+		settings = append(settings, unmanagedSetting{block: block, name: name, value: value, defaultValue: defaultValue})
+	}
+
+	return settings
+}
+
+func wholeBlock(block string, attributes map[string]schema.Attribute, existing map[string]attr.Value) []unmanagedSetting {
+	var settings []unmanagedSetting
+
+	for _, name := range sortedNames(attributes) {
+		if value, ok := existing[name]; ok && !isBlank(value) {
+			settings = append(settings, unmanagedSetting{block: block, name: name, value: value})
+		}
+	}
+
+	return settings
+}
+
+func nestedPath(block string, name string) string {
+	if block == "" {
+		return name
+	}
+
+	return block + "." + name
 }
 
 func isBlank(value attr.Value) bool {

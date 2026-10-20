@@ -95,7 +95,7 @@ func (r *tenantSettingsResource) Metadata(_ context.Context, req resource.Metada
 
 func (r *tenantSettingsResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: "Manages webhook, session, and network settings for the existing tenant.",
+		Description: "Manages webhook, session, and network settings for the existing tenant. The Management API can't delete them, so a plan to destroy this resource fails. Use a `removed` block with `destroy = false` to stop managing them.",
 		Attributes: map[string]schema.Attribute{
 			"token_duration_in_minutes": schema.Int64Attribute{
 				Description: "Challenge token lifetime in minutes. Also sets the pre-built UI session length.",
@@ -265,6 +265,11 @@ func (r *tenantSettingsResource) write(ctx context.Context, config tenantSetting
 }
 
 func (r *tenantSettingsResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
+	if req.Plan.Raw.IsNull() {
+		refuseTenantSettingsDestroy(ctx, req, resp, "authsignal_tenant_settings", "settings")
+		return
+	}
+
 	checkUnmanagedSettingsIncludingCreate(ctx, r.client, tenantSettingsModelFromResponse, req, resp)
 }
 
@@ -324,7 +329,9 @@ func (r *tenantSettingsResource) Update(ctx context.Context, req resource.Update
 	resp.Diagnostics.Append(storeDefaults(ctx, resp.Private, tenant.Defaults)...)
 }
 
-func (r *tenantSettingsResource) Delete(_ context.Context, _ resource.DeleteRequest, _ *resource.DeleteResponse) {
+// A replace skips the destroy check in ModifyPlan.
+func (r *tenantSettingsResource) Delete(_ context.Context, _ resource.DeleteRequest, resp *resource.DeleteResponse) {
+	resp.Diagnostics.Append(refuseDestroy("authsignal_tenant_settings", "settings", nil))
 }
 
 func (r *tenantSettingsResource) ImportState(ctx context.Context, _ resource.ImportStateRequest, resp *resource.ImportStateResponse) {

@@ -32,6 +32,9 @@ func TestAccPreBuiltUiSettingsResource(t *testing.T) {
 					resource.TestCheckResourceAttr("authsignal_pre_built_ui_settings.terraform-acc-test", "hide_success_screen_on_enrollment", "false"),
 				),
 			},
+			{
+				Config: testAccRemovedConfig("authsignal_pre_built_ui_settings.terraform-acc-test"),
+			},
 		},
 	})
 }

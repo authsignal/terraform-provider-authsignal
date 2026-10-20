@@ -3,12 +3,12 @@
 page_title: "authsignal_theme Resource - terraform-provider-authsignal"
 subcategory: ""
 description: |-
-  
+  Manages the existing tenant's theme. Import it before the first apply. The Management API can't delete a theme, so a plan to destroy this resource fails. Use a removed block with destroy = false to stop managing it.
 ---
 
 # authsignal_theme (Resource)
 
-
+Manages the existing tenant's theme. Import it before the first apply. The Management API can't delete a theme, so a plan to destroy this resource fails. Use a `removed` block with `destroy = false` to stop managing it.
 
 ## Example Usage
 

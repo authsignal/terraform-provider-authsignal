@@ -3,12 +3,12 @@
 page_title: "authsignal_tenant_settings Resource - terraform-provider-authsignal"
 subcategory: ""
 description: |-
-  Manages webhook, session, and network settings for the existing tenant.
+  Manages webhook, session, and network settings for the existing tenant. The Management API can't delete them, so a plan to destroy this resource fails. Use a removed block with destroy = false to stop managing them.
 ---
 
 # authsignal_tenant_settings (Resource)
 
-Manages webhook, session, and network settings for the existing tenant.
+Manages webhook, session, and network settings for the existing tenant. The Management API can't delete them, so a plan to destroy this resource fails. Use a `removed` block with `destroy = false` to stop managing them.
 
 ## Example Usage
 

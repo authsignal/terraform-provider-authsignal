@@ -35,7 +35,7 @@ func (r *preBuiltUiSettingsResource) Metadata(_ context.Context, req resource.Me
 
 func (r *preBuiltUiSettingsResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: "Manages a tenant's pre-built UI settings. The tenant itself already exists and cannot be created or deleted through this API, so this resource only ever updates settings. Applying it changes the settings configured here and leaves the rest of the tenant untouched. Destroying it stops Terraform managing those settings rather than resetting them. A setting left out of the configuration fails the plan unless the tenant has it at its default.",
+		Description: "Manages a tenant's pre-built UI settings. The tenant itself already exists and cannot be created or deleted through this API, so this resource only ever updates settings. Applying it changes the settings configured here and leaves the rest of the tenant untouched. A plan to destroy this resource fails. Use a `removed` block with `destroy = false` to stop managing these settings. A setting left out of the configuration fails the plan unless the tenant has it at its default.",
 		Attributes: map[string]schema.Attribute{
 			"hide_success_screen_on_enrollment": schema.BoolAttribute{
 				Description: "Whether the pre-built UI skips the success screen shown after a user enrolls an authenticator.",
@@ -65,6 +65,11 @@ func preBuiltUiSettingsModelFromResponse(tenant *authsignal.TenantResponse) preB
 }
 
 func (r *preBuiltUiSettingsResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
+	if req.Plan.Raw.IsNull() {
+		refuseTenantSettingsDestroy(ctx, req, resp, "authsignal_pre_built_ui_settings", "pre-built UI settings")
+		return
+	}
+
 	checkUnmanagedSettingsIncludingCreate(ctx, r.client, preBuiltUiSettingsModelFromResponse, req, resp)
 }
 
@@ -133,10 +138,9 @@ func (r *preBuiltUiSettingsResource) Update(ctx context.Context, req resource.Up
 	resp.Diagnostics.Append(storeDefaults(ctx, resp.Private, tenant.Defaults)...)
 }
 
-// Delete drops the settings from state without calling the API. These settings live on the tenant,
-// which cannot be deleted through the Management API, and resetting them would be a surprising
-// thing for a destroy to do.
-func (r *preBuiltUiSettingsResource) Delete(_ context.Context, _ resource.DeleteRequest, _ *resource.DeleteResponse) {
+// A replace skips the destroy check in ModifyPlan.
+func (r *preBuiltUiSettingsResource) Delete(_ context.Context, _ resource.DeleteRequest, resp *resource.DeleteResponse) {
+	resp.Diagnostics.Append(refuseDestroy("authsignal_pre_built_ui_settings", "pre-built UI settings", nil))
 }
 
 func (r *preBuiltUiSettingsResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {

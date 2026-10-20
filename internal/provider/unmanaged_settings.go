@@ -75,7 +75,7 @@ func checkUnmanagedSettingsIncludingCreate[M any](ctx context.Context, client *a
 		return
 	}
 
-	if settings := keptByCreate("", resourceSchema.Attributes, configAttributes, existingAttributes, tenant.Defaults); len(settings) > 0 {
+	if settings := unconfiguredSettings("", resourceSchema.Attributes, configAttributes, existingAttributes, tenant.Defaults); len(settings) > 0 {
 		resp.Diagnostics.Append(unmanagedSettingsDiagnostic(settings))
 	}
 }
@@ -89,18 +89,27 @@ func checkUnmanagedSettings(ctx context.Context, req resource.ModifyPlanRequest,
 		return
 	}
 
-	encoded, diags := req.Private.GetKey(ctx, defaultsPrivateStateKey)
+	defaults, diags := storedDefaults(ctx, req)
 	resp.Diagnostics.Append(diags...)
-
-	var defaults authsignal.Defaults
-	if len(encoded) > 0 {
-		if err := json.Unmarshal(encoded, &defaults); err != nil {
-			resp.Diagnostics.AddError("Unable to Read the Management API's Defaults", err.Error())
-			return
-		}
+	if diags.HasError() {
+		return
 	}
 
 	resp.Diagnostics.Append(unmanagedSettingsDiagnostics(ctx, resourceSchema, req.Config.Raw, req.State.Raw, req.Plan.Raw, defaults)...)
+}
+
+func storedDefaults(ctx context.Context, req resource.ModifyPlanRequest) (authsignal.Defaults, diag.Diagnostics) {
+	encoded, diags := req.Private.GetKey(ctx, defaultsPrivateStateKey)
+	if diags.HasError() || len(encoded) == 0 {
+		return nil, diags
+	}
+
+	var defaults authsignal.Defaults
+	if err := json.Unmarshal(encoded, &defaults); err != nil {
+		diags.AddError("Unable to Read the Management API's Defaults", err.Error())
+	}
+
+	return defaults, diags
 }
 
 type unmanagedSetting struct {
@@ -222,7 +231,8 @@ func isOptionalWithoutDefault(attribute schema.Attribute) bool {
 	}
 }
 
-func keptByCreate(block string, attributes map[string]schema.Attribute, config map[string]attr.Value, existing map[string]attr.Value, defaults authsignal.Defaults) []unmanagedSetting {
+// The settings the tenant has that the configuration doesn't set, and that differ from a new tenant's.
+func unconfiguredSettings(block string, attributes map[string]schema.Attribute, config map[string]attr.Value, existing map[string]attr.Value, defaults authsignal.Defaults) []unmanagedSetting {
 	var settings []unmanagedSetting
 
 	for _, name := range sortedNames(attributes) {
@@ -246,7 +256,7 @@ func keptByCreate(block string, attributes map[string]schema.Attribute, config m
 			}
 
 			if configBlock, ok := configured.(types.Object); ok && !configBlock.IsUnknown() {
-				settings = append(settings, keptByCreate(nestedPath(block, name), nested.Attributes, configBlock.Attributes(), existingBlock.Attributes(), defaults)...)
+				settings = append(settings, unconfiguredSettings(nestedPath(block, name), nested.Attributes, configBlock.Attributes(), existingBlock.Attributes(), defaults)...)
 			}
 			continue
 		}
@@ -354,6 +364,16 @@ func sortedNames(attributes map[string]schema.Attribute) []string {
 }
 
 func unmanagedSettingsDiagnostic(settings []unmanagedSetting) diag.Diagnostic {
+	return diag.NewErrorDiagnostic(
+		"Settings Missing From the Configuration",
+		"The tenant has values for these settings, but the configuration doesn't set them:\n\n"+
+			strings.Join(hclLines(settings), "\n")+"\n\n"+
+			"Changes made to them outside Terraform won't show in a plan, and a tenant built from this configuration "+
+			"won't get these values. Add them to the configuration.",
+	)
+}
+
+func hclLines(settings []unmanagedSetting) []string {
 	var topLevel []unmanagedSetting
 	nested := map[string][]unmanagedSetting{}
 	var blocks []string
@@ -383,13 +403,7 @@ func unmanagedSettingsDiagnostic(settings []unmanagedSetting) diag.Diagnostic {
 		lines = append(lines, "  }")
 	}
 
-	return diag.NewErrorDiagnostic(
-		"Settings Missing From the Configuration",
-		"The tenant has values for these settings, but the configuration doesn't set them:\n\n"+
-			strings.Join(lines, "\n")+"\n\n"+
-			"Changes made to them outside Terraform won't show in a plan, and a tenant built from this configuration "+
-			"won't get these values. Add them to the configuration.",
-	)
+	return lines
 }
 
 func hclSettingLines(settings []unmanagedSetting, indent string) []string {

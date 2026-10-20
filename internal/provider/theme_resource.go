@@ -91,6 +91,7 @@ func (r *themeResource) Metadata(_ context.Context, req resource.MetadataRequest
 
 func (r *themeResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
+		Description: "Manages the existing tenant's theme. Import it before the first apply. The Management API can't delete a theme, so a plan to destroy this resource fails. Use a `removed` block with `destroy = false` to stop managing it.",
 		Attributes: map[string]schema.Attribute{
 			"name": schema.StringAttribute{
 				Description: "The name of the tenant which is visible to users.",
@@ -507,6 +508,11 @@ func (r *themeResource) Schema(_ context.Context, _ resource.SchemaRequest, resp
 }
 
 func (r *themeResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
+	if req.Plan.Raw.IsNull() {
+		resp.Diagnostics.Append(refuseDestroy("authsignal_theme", "theme", nil))
+		return
+	}
+
 	checkUnmanagedSettings(ctx, req, resp)
 }
 
@@ -573,28 +579,9 @@ func (r *themeResource) Update(ctx context.Context, req resource.UpdateRequest, 
 	}
 }
 
-func (r *themeResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
-	var state themeModel
-	diags := req.State.Get(ctx, &state)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	var themeToCreate = buildAuthsignalThemeDeleteObject(state)
-
-	_, _, err := r.client.UpdateTheme(themeToCreate)
-	if err != nil {
-		resp.Diagnostics.AddError(
-			"Error deleting theme",
-			"Could not create theme, unexpected error: "+err.Error(),
-		)
-		return
-	}
-
-	if resp.Diagnostics.HasError() {
-		return
-	}
+// A replace skips the destroy check in ModifyPlan.
+func (r *themeResource) Delete(_ context.Context, _ resource.DeleteRequest, resp *resource.DeleteResponse) {
+	resp.Diagnostics.Append(refuseDestroy("authsignal_theme", "theme", nil))
 }
 
 func (r *themeResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {

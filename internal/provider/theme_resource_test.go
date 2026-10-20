@@ -36,16 +36,15 @@ func TestAccThemeRejectsAPerModeExitPosition(t *testing.T) {
 	})
 }
 
-// Needs AUTHSIGNAL_DESTRUCTIVE_THEME_ACC=1. The test leaves the tenant with an empty theme, because
-// Terraform destroys what it owns and a theme delete clears every field. Seed the theme again
-// afterwards, or TestAccThemeDataSource fails.
+// Needs AUTHSIGNAL_DESTRUCTIVE_THEME_ACC=1. The test overwrites the tenant's theme with the fixture
+// theme.
 //
 // Terraform owns the axis paddings: a configured value is written, a zero is a padding, and an axis
 // dropped from the configuration clears the stored override. Each apply is followed by an empty
 // plan, since a value that does not survive the round trip shows up as a perpetual diff.
 func TestAccThemeAxisPadding(t *testing.T) {
 	if os.Getenv("AUTHSIGNAL_DESTRUCTIVE_THEME_ACC") == "" {
-		t.Skip("set AUTHSIGNAL_DESTRUCTIVE_THEME_ACC=1 to run. The test clears the tenant's theme when it finishes.")
+		t.Skip("set AUTHSIGNAL_DESTRUCTIVE_THEME_ACC=1 to run. The test overwrites the tenant's theme.")
 	}
 
 	resource.Test(t, resource.TestCase{
@@ -174,6 +173,9 @@ func TestAccThemeAxisPadding(t *testing.T) {
 				ImportStateVerify: true,
 				// A theme is identified by its name. It has no id.
 				ImportStateVerifyIdentifierAttribute: "name",
+			},
+			{
+				Config: testAccRemovedConfig("authsignal_theme.theme"),
 			},
 		},
 	})

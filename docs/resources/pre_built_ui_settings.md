@@ -3,12 +3,12 @@
 page_title: "authsignal_pre_built_ui_settings Resource - terraform-provider-authsignal"
 subcategory: ""
 description: |-
-  Manages a tenant's pre-built UI settings. The tenant itself already exists and cannot be created or deleted through this API, so this resource only ever updates settings. Applying it changes the settings configured here and leaves the rest of the tenant untouched. Destroying it stops Terraform managing those settings rather than resetting them. A setting left out of the configuration fails the plan unless the tenant has it at its default.
+  Manages a tenant's pre-built UI settings. The tenant itself already exists and cannot be created or deleted through this API, so this resource only ever updates settings. Applying it changes the settings configured here and leaves the rest of the tenant untouched. A plan to destroy this resource fails. Use a removed block with destroy = false to stop managing these settings. A setting left out of the configuration fails the plan unless the tenant has it at its default.
 ---
 
 # authsignal_pre_built_ui_settings (Resource)
 
-Manages a tenant's pre-built UI settings. The tenant itself already exists and cannot be created or deleted through this API, so this resource only ever updates settings. Applying it changes the settings configured here and leaves the rest of the tenant untouched. Destroying it stops Terraform managing those settings rather than resetting them. A setting left out of the configuration fails the plan unless the tenant has it at its default.
+Manages a tenant's pre-built UI settings. The tenant itself already exists and cannot be created or deleted through this API, so this resource only ever updates settings. Applying it changes the settings configured here and leaves the rest of the tenant untouched. A plan to destroy this resource fails. Use a `removed` block with `destroy = false` to stop managing these settings. A setting left out of the configuration fails the plan unless the tenant has it at its default.
 
 ## Example Usage
 

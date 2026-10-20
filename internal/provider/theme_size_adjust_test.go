@@ -129,24 +129,6 @@ func TestSizeAdjustIsClearedWhenItLeavesTheConfiguration(t *testing.T) {
 	}
 }
 
-func TestADeleteClearsTheSizeAdjustOnEveryTypeface(t *testing.T) {
-	theme := authsignal.Theme{Typography: authsignal.SetValue(buildAuthsignalTypographyDeleteObject())}
-
-	jsonBody, err := json.Marshal(theme)
-	if err != nil {
-		t.Fatalf("failed to marshal json: %v", err)
-	}
-
-	expectedJson := "{\"typography\":{" +
-		"\"text\":{\"faces\":null,\"fontUrl\":null,\"sizeAdjust\":null}," +
-		"\"display\":{\"faces\":null,\"fontUrl\":null,\"sizeAdjust\":null}," +
-		"\"button\":{\"faces\":null,\"fontUrl\":null,\"sizeAdjust\":null}}}"
-
-	if string(jsonBody) != expectedJson {
-		t.Fatalf("bad json. expected: %v. got : %v", expectedJson, string(jsonBody))
-	}
-}
-
 func TestEveryTypefaceTakesARangeCheckedSizeAdjust(t *testing.T) {
 	response := &fwresource.SchemaResponse{}
 	NewThemeResource().(*themeResource).Schema(context.Background(), fwresource.SchemaRequest{}, response)
@@ -211,12 +193,11 @@ func TestAccThemeRejectsASizeAdjustOutsideTheRange(t *testing.T) {
 	}
 }
 
-// Needs AUTHSIGNAL_DESTRUCTIVE_THEME_ACC=1. The test leaves the tenant with an empty theme, because
-// Terraform destroys what it owns and a theme delete clears every field. Seed the theme again
-// afterwards, or TestAccThemeDataSource fails.
+// Needs AUTHSIGNAL_DESTRUCTIVE_THEME_ACC=1. The test overwrites the tenant's theme with the fixture
+// theme.
 func TestAccThemeSizeAdjust(t *testing.T) {
 	if os.Getenv("AUTHSIGNAL_DESTRUCTIVE_THEME_ACC") == "" {
-		t.Skip("set AUTHSIGNAL_DESTRUCTIVE_THEME_ACC=1 to run. The test clears the tenant's theme when it finishes.")
+		t.Skip("set AUTHSIGNAL_DESTRUCTIVE_THEME_ACC=1 to run. The test overwrites the tenant's theme.")
 	}
 
 	bothSlots := `
@@ -315,6 +296,9 @@ func TestAccThemeSizeAdjust(t *testing.T) {
 				ImportStateVerify: true,
 				// A theme is identified by its name. It has no id.
 				ImportStateVerifyIdentifierAttribute: "name",
+			},
+			{
+				Config: testAccRemovedConfig("authsignal_theme.theme"),
 			},
 		},
 	})

@@ -191,23 +191,6 @@ func TestAxisPaddingIsOmittedFromACreateUntilItIsSet(t *testing.T) {
 	}
 }
 
-// A delete gives the theme back to the platform default, both axes included.
-func TestADeleteClearsBothAxisPaddings(t *testing.T) {
-	theme := authsignal.Theme{
-		Container: authsignal.SetValue(buildAuthsignalContainerDeleteObject(containerModel{PaddingHorizontal: types.Int64Value(24), PaddingVertical: types.Int64Value(48)})),
-	}
-
-	jsonBody, err := json.Marshal(theme)
-	if err != nil {
-		t.Fatalf("failed to marshal json: %v", err)
-	}
-
-	expectedJson := "{\"container\":{\"contentAlignment\":null,\"padding\":null,\"paddingHorizontal\":null,\"paddingVertical\":null,\"logoAlignment\":null,\"logoPosition\":null,\"logoHeight\":null}}"
-	if string(jsonBody) != expectedJson {
-		t.Fatalf("bad json. expected: %v. got : %v", expectedJson, string(jsonBody))
-	}
-}
-
 // A per-axis override is theme-wide, so the API keeps the axis paddings off dark mode.
 func TestTheDarkModeContainerHasNoAxisPadding(t *testing.T) {
 	response := &resource.SchemaResponse{}

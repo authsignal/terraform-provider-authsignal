@@ -25,10 +25,12 @@ jobs:
         with:
           # Allow goreleaser to access older tag information.
           fetch-depth: 0
-      - uses: actions/setup-go@v6.1.0
+          persist-credentials: false
+      - uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c # v6.1.0
         with:
           go-version-file: "go.mod"
-          cache: true
+          # Any workflow on main can write the cache, so the build that gets signed starts without one.
+          cache: false
       - name: Import GPG key
         uses: crazy-max/ghaction-import-gpg@01dd5d3ca463c7f10f7f4f7b4f177225ac661ee4 # v6.1.0
         id: import_gpg

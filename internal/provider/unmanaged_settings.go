@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"reflect"
 	"sort"
@@ -43,8 +44,9 @@ func storeDefaults(ctx context.Context, private interface {
 // Creating tenant settings or pre-built UI settings takes over a tenant that already has values, and
 // the create only sends what the configuration sets. The plan reads the tenant so that it fails for
 // anything else the create would keep, before anything is written.
-func checkUnmanagedTenantSettings[M any](ctx context.Context, client *authsignal.Client, modelFrom func(*authsignal.TenantResponse) M, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
-	if !req.State.Raw.IsNull() || req.Plan.Raw.IsNull() {
+func checkUnmanagedSettingsIncludingCreate[M any](ctx context.Context, client *authsignal.Client, modelFrom func(*authsignal.TenantResponse) M, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
+	creating := req.State.Raw.IsNull() && !req.Plan.Raw.IsNull()
+	if !creating {
 		checkUnmanagedSettings(ctx, req, resp)
 		return
 	}
@@ -66,13 +68,14 @@ func checkUnmanagedTenantSettings[M any](ctx context.Context, client *authsignal
 		return
 	}
 
-	attributes, diags := objectAttributes(ctx, resourceSchema, req.Config.Raw, existing.Raw)
-	resp.Diagnostics.Append(diags...)
-	if resp.Diagnostics.HasError() {
+	configAttributes, configErr := objectAttributes(ctx, resourceSchema, req.Config.Raw)
+	existingAttributes, existingErr := objectAttributes(ctx, resourceSchema, existing.Raw)
+	if err := errors.Join(configErr, existingErr); err != nil {
+		resp.Diagnostics.AddError("Unable to Check for Unmanaged Settings", err.Error())
 		return
 	}
 
-	if settings := keptByCreate("", resourceSchema.Attributes, attributes[0], attributes[1], tenant.Defaults); len(settings) > 0 {
+	if settings := keptByCreate("", resourceSchema.Attributes, configAttributes, existingAttributes, tenant.Defaults); len(settings) > 0 {
 		resp.Diagnostics.Append(unmanagedSettingsDiagnostic(settings))
 	}
 }
@@ -112,39 +115,32 @@ func unmanagedSettingsDiagnostics(ctx context.Context, resourceSchema schema.Sch
 		return nil
 	}
 
-	attributes, diags := objectAttributes(ctx, resourceSchema, config, state, plan)
-	if diags.HasError() {
-		return diags
+	configAttributes, configErr := objectAttributes(ctx, resourceSchema, config)
+	stateAttributes, stateErr := objectAttributes(ctx, resourceSchema, state)
+	planAttributes, planErr := objectAttributes(ctx, resourceSchema, plan)
+	if err := errors.Join(configErr, stateErr, planErr); err != nil {
+		return diag.Diagnostics{diag.NewErrorDiagnostic("Unable to Check for Unmanaged Settings", err.Error())}
 	}
 
-	if settings := unmanagedSettingsIn("", resourceSchema.Attributes, attributes[0], attributes[1], attributes[2], defaults); len(settings) > 0 {
-		diags.Append(unmanagedSettingsDiagnostic(settings))
+	if settings := unmanagedSettingsIn("", resourceSchema.Attributes, configAttributes, stateAttributes, planAttributes, defaults); len(settings) > 0 {
+		return diag.Diagnostics{unmanagedSettingsDiagnostic(settings)}
 	}
 
-	return diags
+	return nil
 }
 
-func objectAttributes(ctx context.Context, resourceSchema schema.Schema, raws ...tftypes.Value) ([]map[string]attr.Value, diag.Diagnostics) {
-	var diags diag.Diagnostics
-	attributes := make([]map[string]attr.Value, 0, len(raws))
-
-	for _, raw := range raws {
-		value, err := resourceSchema.Type().ValueFromTerraform(ctx, raw)
-		if err != nil {
-			diags.AddError("Unable to Check for Unmanaged Settings", err.Error())
-			return nil, diags
-		}
-
-		object, ok := value.(types.Object)
-		if !ok {
-			diags.AddError("Unable to Check for Unmanaged Settings", fmt.Sprintf("expected an object, got %T", value))
-			return nil, diags
-		}
-
-		attributes = append(attributes, object.Attributes())
+func objectAttributes(ctx context.Context, resourceSchema schema.Schema, raw tftypes.Value) (map[string]attr.Value, error) {
+	value, err := resourceSchema.Type().ValueFromTerraform(ctx, raw)
+	if err != nil {
+		return nil, err
 	}
 
-	return attributes, diags
+	object, ok := value.(types.Object)
+	if !ok {
+		return nil, fmt.Errorf("expected an object, got %T", value)
+	}
+
+	return object.Attributes(), nil
 }
 
 func unmanagedSettingsIn(block string, attributes map[string]schema.Attribute, config map[string]attr.Value, state map[string]attr.Value, plan map[string]attr.Value, defaults authsignal.Defaults) []unmanagedSetting {

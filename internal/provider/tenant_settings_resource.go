@@ -265,7 +265,7 @@ func (r *tenantSettingsResource) write(ctx context.Context, config tenantSetting
 }
 
 func (r *tenantSettingsResource) ModifyPlan(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse) {
-	checkUnmanagedTenantSettings(ctx, r.client, tenantSettingsModelFromResponse, req, resp)
+	checkUnmanagedSettingsIncludingCreate(ctx, r.client, tenantSettingsModelFromResponse, req, resp)
 }
 
 func (r *tenantSettingsResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {

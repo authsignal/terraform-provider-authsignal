@@ -71,7 +71,7 @@ Required:
 Optional:
 
 - `private_key` (String, Sensitive, [Write-only](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments)) APNs signing key (.p8 contents). Requires Terraform 1.11 or later; supply it through an ephemeral, sensitive variable.
-- `sandbox` (Boolean) Whether notifications go to the APNs sandbox rather than production.
+- `sandbox` (Boolean) Whether notifications go to the APNs sandbox rather than production. Defaults to `false`.
 
 
 <a id="nestedatt--fcm_credentials"></a>

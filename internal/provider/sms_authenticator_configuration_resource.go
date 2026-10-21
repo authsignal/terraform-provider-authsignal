@@ -92,7 +92,7 @@ var birdSmsBlock = credentialBlock{
 		{Name: "navigator_id", Kind: credentialString, Description: "Bird navigator ID."},
 		{Name: "project_id", Kind: credentialString, Description: "Bird project ID."},
 		{Name: "locale", Kind: credentialString, Description: "The locale Bird renders message templates in."},
-		{Name: "enable_message_templates", Kind: credentialBool, Description: "Whether Bird message templates are used instead of the message body Authsignal sends."},
+		{Name: "enable_message_templates", Kind: credentialBool, DefaultsToFalse: true, Description: "Whether Bird message templates are used instead of the message body Authsignal sends. Defaults to `false`."},
 	},
 }
 
@@ -721,7 +721,7 @@ func smsUpdateBody(ctx context.Context, plan smsAuthenticatorConfigurationResour
 		})
 
 		if decision.Send == credentialWrite {
-			applySmsUpdateCredentials(&body, block, values, decision.IncludeSecrets)
+			applySmsUpdateCredentials(&body, block, block.withClearedMembers(values, state.credentialObject(block.Name)), decision.IncludeSecrets)
 		}
 	}
 
@@ -816,12 +816,12 @@ func smsStateFromResponse(response *authsignal.SmsAuthenticatorConfiguration, pr
 		TnzCredentialsVersion:          prior.TnzCredentialsVersion,
 	}
 
-	applySmsCredentialReadState(&state, response, prior)
+	applySmsCredentialReadState(&state, response)
 
 	return state
 }
 
-func applySmsCredentialReadState(state *smsAuthenticatorConfigurationResourceModel, response *authsignal.SmsAuthenticatorConfiguration, prior smsAuthenticatorConfigurationResourceModel) {
+func applySmsCredentialReadState(state *smsAuthenticatorConfigurationResourceModel, response *authsignal.SmsAuthenticatorConfiguration) {
 	twilioMetadata := map[string]attr.Value{}
 	if response.TwilioCredentials != nil {
 		twilioMetadata = map[string]attr.Value{
@@ -829,7 +829,7 @@ func applySmsCredentialReadState(state *smsAuthenticatorConfigurationResourceMod
 			"account_sid":           types.StringPointerValue(response.TwilioCredentials.AccountSid),
 		}
 	}
-	state.TwilioCredentials = credentialReadState(twilioBlock, twilioMetadata, response.TwilioCredentials != nil, prior.TwilioCredentials)
+	state.TwilioCredentials = credentialReadState(twilioBlock, twilioMetadata, response.TwilioCredentials != nil)
 
 	birdMetadata := map[string]attr.Value{}
 	if response.BirdSmsCredentials != nil {
@@ -842,7 +842,7 @@ func applySmsCredentialReadState(state *smsAuthenticatorConfigurationResourceMod
 			"enable_message_templates": types.BoolPointerValue(response.BirdSmsCredentials.EnableMessageTemplates),
 		}
 	}
-	state.BirdSmsCredentials = credentialReadState(birdSmsBlock, birdMetadata, response.BirdSmsCredentials != nil, prior.BirdSmsCredentials)
+	state.BirdSmsCredentials = credentialReadState(birdSmsBlock, birdMetadata, response.BirdSmsCredentials != nil)
 
 	messageMediaMetadata := map[string]attr.Value{}
 	if response.MessageMediaCredentials != nil {
@@ -850,7 +850,7 @@ func applySmsCredentialReadState(state *smsAuthenticatorConfigurationResourceMod
 			"source_number": types.StringPointerValue(response.MessageMediaCredentials.SourceNumber),
 		}
 	}
-	state.MessageMediaCredentials = credentialReadState(messageMediaBlock, messageMediaMetadata, response.MessageMediaCredentials != nil, prior.MessageMediaCredentials)
+	state.MessageMediaCredentials = credentialReadState(messageMediaBlock, messageMediaMetadata, response.MessageMediaCredentials != nil)
 
 	modicaMetadata := map[string]attr.Value{}
 	if response.ModicaGroupCredentials != nil {
@@ -858,7 +858,7 @@ func applySmsCredentialReadState(state *smsAuthenticatorConfigurationResourceMod
 			"username": types.StringPointerValue(response.ModicaGroupCredentials.Username),
 		}
 	}
-	state.ModicaGroupCredentials = credentialReadState(modicaGroupBlock, modicaMetadata, response.ModicaGroupCredentials != nil, prior.ModicaGroupCredentials)
+	state.ModicaGroupCredentials = credentialReadState(modicaGroupBlock, modicaMetadata, response.ModicaGroupCredentials != nil)
 
-	state.TnzCredentials = credentialReadState(tnzBlock, nil, response.TnzCredentials != nil, prior.TnzCredentials)
+	state.TnzCredentials = credentialReadState(tnzBlock, nil, response.TnzCredentials != nil)
 }

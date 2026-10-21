@@ -2,9 +2,13 @@ package provider
 
 import (
 	"fmt"
+	"maps"
 
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/booldefault"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
@@ -17,11 +21,37 @@ const (
 )
 
 type credentialMember struct {
-	Name        string
-	Kind        credentialMemberKind
-	Secret      bool
-	Required    bool
-	Description string
+	Name            string
+	Kind            credentialMemberKind
+	Secret          bool
+	Required        bool
+	DefaultsToFalse bool
+	Description     string
+}
+
+// The admin portal clears a member by saving an empty string or false, and the runtime treats either
+// as unset, so state reads both as unset and a clear sends the same.
+func (m credentialMember) unsetValue() attr.Value {
+	if m.DefaultsToFalse {
+		return types.BoolValue(false)
+	}
+
+	return nullValueFor(credentialMemberType(m.Kind))
+}
+
+func (m credentialMember) isUnset(value attr.Value) bool {
+	return value == nil || value.IsNull() || value.Equal(types.StringValue("")) || (m.DefaultsToFalse && value.Equal(types.BoolValue(false)))
+}
+
+func (m credentialMember) clearedValue() (attr.Value, bool) {
+	switch {
+	case m.DefaultsToFalse:
+		return types.BoolValue(false), true
+	case m.Kind == credentialString:
+		return types.StringValue(""), true
+	default:
+		return nil, false
+	}
 }
 
 type credentialBlock struct {
@@ -117,20 +147,34 @@ func (b credentialBlock) schemaAttributes() map[string]schema.Attribute {
 				WriteOnly:   writeOnly,
 			}
 		case credentialBool:
-			members[member.Name] = schema.BoolAttribute{
+			attribute := schema.BoolAttribute{
 				Description: description,
 				Required:    required,
 				Optional:    !required,
 				WriteOnly:   writeOnly,
 			}
+
+			if member.DefaultsToFalse {
+				attribute.Computed = true
+				attribute.Default = booldefault.StaticBool(false)
+			}
+
+			members[member.Name] = attribute
 		default:
-			members[member.Name] = schema.StringAttribute{
+			attribute := schema.StringAttribute{
 				Description: description,
 				Required:    required,
 				Optional:    !required,
 				Sensitive:   member.Secret,
 				WriteOnly:   writeOnly,
 			}
+
+			// An empty string is how a member is cleared, so the configuration leaves the member out instead.
+			if !member.Secret && !required {
+				attribute.Validators = []validator.String{stringvalidator.LengthAtLeast(1)}
+			}
+
+			members[member.Name] = attribute
 		}
 	}
 
@@ -287,40 +331,50 @@ func credentialPlannedState(block credentialBlock, planned types.Object) types.O
 	return types.ObjectValueMust(block.attributeTypes(), values)
 }
 
-// Terraform forbids a computed nested attribute from holding a write-only child, so a credential block
-// is optional and not computed. An optional attribute's stored value must match the plan, and the plan
-// for an unmentioned block is null, so a read must not volunteer a block, or a member of one, that the
-// configuration never mentioned: that produces a diff apply can never settle.
-func credentialReadState(block credentialBlock, metadata map[string]attr.Value, present bool, prior types.Object) types.Object {
-	if !isKnownAndSet(prior) || !present || block.allSecret() {
+// The API only returns the current provider's block, and the configuration has to set that block, so a
+// read fills it in, import included. That way a value the configuration gets wrong shows in the plan.
+func credentialReadState(block credentialBlock, metadata map[string]attr.Value, present bool) types.Object {
+	if !present || block.allSecret() {
 		return types.ObjectNull(block.attributeTypes())
 	}
 
-	priorMembers := prior.Attributes()
 	values := map[string]attr.Value{}
 
 	for _, member := range block.Members {
-		memberType := credentialMemberType(member.Kind)
+		value := metadata[member.Name]
 
-		if member.Secret {
-			values[member.Name] = nullValueFor(memberType)
+		if member.Secret || member.isUnset(value) {
+			values[member.Name] = member.unsetValue()
 			continue
 		}
 
-		if tracked, ok := priorMembers[member.Name]; !ok || !isKnownAndSet(tracked) {
-			values[member.Name] = nullValueFor(memberType)
-			continue
-		}
-
-		if value, ok := metadata[member.Name]; ok && value != nil {
-			values[member.Name] = value
-			continue
-		}
-
-		values[member.Name] = nullValueFor(memberType)
+		values[member.Name] = value
 	}
 
 	return types.ObjectValueMust(block.attributeTypes(), values)
+}
+
+// The API merges credential updates, so a member the configuration stopped setting has to be sent as
+// cleared, or the tenant keeps it.
+func (b credentialBlock) withClearedMembers(values credentialValues, stateObject types.Object) credentialValues {
+	if !values.present || !isKnownAndSet(stateObject) {
+		return values
+	}
+
+	stored := stateObject.Attributes()
+	members := maps.Clone(values.members)
+
+	for _, member := range b.Members {
+		if member.Secret || values.has(member.Name) || member.isUnset(stored[member.Name]) {
+			continue
+		}
+
+		if cleared, ok := member.clearedValue(); ok {
+			members[member.Name] = cleared
+		}
+	}
+
+	return credentialValues{present: values.present, members: members}
 }
 
 func nullValueFor(attributeType attr.Type) attr.Value {
@@ -400,7 +454,7 @@ func credentialMetadataChanged(block credentialBlock, values credentialValues, s
 		stored, isStored := attributes[member.Name]
 
 		if !isConfigured {
-			if isStored && isKnownAndSet(stored) {
+			if isStored && !member.isUnset(stored) {
 				return true
 			}
 			continue

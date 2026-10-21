@@ -70,7 +70,7 @@ var apnsBlock = credentialBlock{
 		{Name: "team_id", Kind: credentialString, Required: true, Description: "Apple developer team ID."},
 		{Name: "key_id", Kind: credentialString, Required: true, Description: "ID of the APNs signing key."},
 		{Name: "bundle_id", Kind: credentialString, Required: true, Description: "Bundle ID of the app receiving the notification."},
-		{Name: "sandbox", Kind: credentialBool, Description: "Whether notifications go to the APNs sandbox rather than production."},
+		{Name: "sandbox", Kind: credentialBool, DefaultsToFalse: true, Description: "Whether notifications go to the APNs sandbox rather than production. Defaults to `false`."},
 	},
 }
 
@@ -524,7 +524,12 @@ func pushUpdateBody(ctx context.Context, plan pushAuthenticatorConfigurationReso
 		})
 
 		if decision.Send == credentialWrite {
-			applyPushUpdateCredentials(&body, block, values, decision.IncludeSecrets)
+			applyPushUpdateCredentials(&body, block, block.withClearedMembers(values, state.credentialObject(block.Name)), decision.IncludeSecrets)
+		}
+
+		// DEFAULT needs only one platform's block, so the configuration can leave out APNs credentials the tenant has.
+		if block.Name == apnsCredentialsBlock && !providerChanging && removedFromConfig(config.ApnsCredentials, state.ApnsCredentials) {
+			body.ApnsCredentials = authsignal.SetNull(authsignal.ApnsCredentialsUpdate{})
 		}
 	}
 
@@ -592,12 +597,12 @@ func pushStateFromResponse(response *authsignal.PushAuthenticatorConfiguration, 
 		FcmCredentialsVersion:  prior.FcmCredentialsVersion,
 	}
 
-	applyPushCredentialReadState(&state, response, prior)
+	applyPushCredentialReadState(&state, response)
 
 	return state
 }
 
-func applyPushCredentialReadState(state *pushAuthenticatorConfigurationResourceModel, response *authsignal.PushAuthenticatorConfiguration, prior pushAuthenticatorConfigurationResourceModel) {
+func applyPushCredentialReadState(state *pushAuthenticatorConfigurationResourceModel, response *authsignal.PushAuthenticatorConfiguration) {
 	apnsMetadata := map[string]attr.Value{}
 	if response.ApnsCredentials != nil {
 		apnsMetadata = map[string]attr.Value{
@@ -607,9 +612,9 @@ func applyPushCredentialReadState(state *pushAuthenticatorConfigurationResourceM
 			"sandbox":   types.BoolPointerValue(response.ApnsCredentials.Sandbox),
 		}
 	}
-	state.ApnsCredentials = credentialReadState(apnsBlock, apnsMetadata, response.ApnsCredentials != nil, prior.ApnsCredentials)
+	state.ApnsCredentials = credentialReadState(apnsBlock, apnsMetadata, response.ApnsCredentials != nil)
 
-	state.FcmCredentials = credentialReadState(fcmBlock, nil, response.FcmCredentials != nil, prior.FcmCredentials)
+	state.FcmCredentials = credentialReadState(fcmBlock, nil, response.FcmCredentials != nil)
 
 	applyFirebaseDerivedState(state, response)
 }

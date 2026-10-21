@@ -973,35 +973,6 @@ func TestSmsUpdateLeavesAnOmittedCredentialBlockOutOfState(t *testing.T) {
 	}
 }
 
-func TestSmsReadLeavesAnUntrackedCredentialBlockAlone(t *testing.T) {
-	client, _ := newStubAPI(t, map[string][]stubResponse{
-		smsGetRoute: okResponse(twilioSmsJson),
-	})
-
-	resourceSchema := resourceSchemaOf(t, &smsAuthenticatorConfigurationResource{})
-	state := tfsdk.State{Schema: resourceSchema, Raw: smsConfigValue(t, map[string]tftypes.Value{
-		"sms_provider": tftypes.NewValue(tftypes.String, "TWILIO"),
-	})}
-
-	resp := &resource.ReadResponse{State: state}
-	(&smsAuthenticatorConfigurationResource{client: client}).Read(
-		context.Background(),
-		resource.ReadRequest{State: state},
-		resp,
-	)
-
-	if resp.Diagnostics.HasError() {
-		t.Fatal(detailsOf(resp.Diagnostics))
-	}
-
-	var refreshed smsAuthenticatorConfigurationResourceModel
-	resp.State.Get(context.Background(), &refreshed)
-
-	if !refreshed.TwilioCredentials.IsNull() {
-		t.Errorf("twilio_credentials is %v; a read that volunteers a block nobody configured creates a diff that never settles", refreshed.TwilioCredentials)
-	}
-}
-
 func TestSmsReadRefreshesATrackedCredentialBlock(t *testing.T) {
 	client, _ := newStubAPI(t, map[string][]stubResponse{
 		smsGetRoute: okResponse(twilioSmsJson),
@@ -1034,7 +1005,9 @@ func TestSmsReadRefreshesATrackedCredentialBlock(t *testing.T) {
 	}
 }
 
-func TestSmsImportThenReadTracksNoCredentialBlock(t *testing.T) {
+// The first plan after an import compares the configuration's credentials with the tenant's, so a
+// mistyped value shows as a change instead of overwriting the tenant unseen.
+func TestSmsImportThenReadFillsTheCredentialBlock(t *testing.T) {
 	client, _ := newStubAPI(t, map[string][]stubResponse{
 		smsGetRoute: okResponse(twilioSmsJson),
 	})
@@ -1066,8 +1039,13 @@ func TestSmsImportThenReadTracksNoCredentialBlock(t *testing.T) {
 	var refreshed smsAuthenticatorConfigurationResourceModel
 	read.State.Get(context.Background(), &refreshed)
 
-	if !refreshed.TwilioCredentials.IsNull() {
-		t.Errorf("twilio_credentials is %v after import; an imported resource must plan clean against a configuration that omits it", refreshed.TwilioCredentials)
+	sid, ok := refreshed.TwilioCredentials.Attributes()["messaging_service_sid"].(types.String)
+	if !ok || sid.ValueString() != "MG123" {
+		t.Errorf("twilio_credentials is %v after import, want the values the API reports", refreshed.TwilioCredentials)
+	}
+
+	if !refreshed.TwilioCredentials.Attributes()["auth_token"].IsNull() {
+		t.Error("auth_token reached state; a write-only secret must never be stored")
 	}
 
 	if refreshed.SmsProvider.ValueString() != "TWILIO" {

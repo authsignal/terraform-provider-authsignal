@@ -618,7 +618,7 @@ func emailOtpUpdateBody(ctx context.Context, plan emailOtpAuthenticatorConfigura
 		})
 
 		if decision.Send == credentialWrite {
-			applyEmailOtpUpdateCredentials(&body, block, values, decision.IncludeSecrets)
+			applyEmailOtpUpdateCredentials(&body, block, block.withClearedMembers(values, state.credentialObject(block.Name)), decision.IncludeSecrets)
 		}
 	}
 
@@ -727,12 +727,12 @@ func emailOtpStateFromResponse(response *authsignal.EmailOtpAuthenticatorConfigu
 		SmtpEmailCredentialsVersion:     prior.SmtpEmailCredentialsVersion,
 	}
 
-	applyEmailOtpCredentialReadState(&state, response, prior)
+	applyEmailOtpCredentialReadState(&state, response)
 
 	return state
 }
 
-func applyEmailOtpCredentialReadState(state *emailOtpAuthenticatorConfigurationResourceModel, response *authsignal.EmailOtpAuthenticatorConfiguration, prior emailOtpAuthenticatorConfigurationResourceModel) {
+func applyEmailOtpCredentialReadState(state *emailOtpAuthenticatorConfigurationResourceModel, response *authsignal.EmailOtpAuthenticatorConfiguration) {
 	birdMetadata := map[string]attr.Value{}
 	if response.BirdEmailCredentials != nil {
 		birdMetadata = map[string]attr.Value{
@@ -745,7 +745,7 @@ func applyEmailOtpCredentialReadState(state *emailOtpAuthenticatorConfigurationR
 			"sender_name":  types.StringPointerValue(response.BirdEmailCredentials.SenderName),
 		}
 	}
-	state.BirdEmailCredentials = credentialReadState(birdEmailBlock, birdMetadata, response.BirdEmailCredentials != nil, prior.BirdEmailCredentials)
+	state.BirdEmailCredentials = credentialReadState(birdEmailBlock, birdMetadata, response.BirdEmailCredentials != nil)
 
 	mailjetMetadata := map[string]attr.Value{}
 	if response.MailjetEmailCredentials != nil {
@@ -754,7 +754,7 @@ func applyEmailOtpCredentialReadState(state *emailOtpAuthenticatorConfigurationR
 			"template_id": types.Int64PointerValue(response.MailjetEmailCredentials.TemplateId),
 		}
 	}
-	state.MailjetEmailCredentials = credentialReadState(mailjetEmailBlock, mailjetMetadata, response.MailjetEmailCredentials != nil, prior.MailjetEmailCredentials)
+	state.MailjetEmailCredentials = credentialReadState(mailjetEmailBlock, mailjetMetadata, response.MailjetEmailCredentials != nil)
 
 	mailgunMetadata := map[string]attr.Value{}
 	if response.MailgunEmailCredentials != nil {
@@ -765,7 +765,7 @@ func applyEmailOtpCredentialReadState(state *emailOtpAuthenticatorConfigurationR
 			"from":          types.StringPointerValue(response.MailgunEmailCredentials.From),
 		}
 	}
-	state.MailgunEmailCredentials = credentialReadState(mailgunEmailBlock, mailgunMetadata, response.MailgunEmailCredentials != nil, prior.MailgunEmailCredentials)
+	state.MailgunEmailCredentials = credentialReadState(mailgunEmailBlock, mailgunMetadata, response.MailgunEmailCredentials != nil)
 
 	mandrillMetadata := map[string]attr.Value{}
 	if response.MandrillEmailCredentials != nil {
@@ -773,7 +773,7 @@ func applyEmailOtpCredentialReadState(state *emailOtpAuthenticatorConfigurationR
 			"template_name": types.StringPointerValue(response.MandrillEmailCredentials.TemplateName),
 		}
 	}
-	state.MandrillEmailCredentials = credentialReadState(mandrillEmailBlock, mandrillMetadata, response.MandrillEmailCredentials != nil, prior.MandrillEmailCredentials)
+	state.MandrillEmailCredentials = credentialReadState(mandrillEmailBlock, mandrillMetadata, response.MandrillEmailCredentials != nil)
 
 	sendgridMetadata := map[string]attr.Value{}
 	if response.SendgridEmailCredentials != nil {
@@ -783,7 +783,7 @@ func applyEmailOtpCredentialReadState(state *emailOtpAuthenticatorConfigurationR
 			"from_name":   types.StringPointerValue(response.SendgridEmailCredentials.FromName),
 		}
 	}
-	state.SendgridEmailCredentials = credentialReadState(sendgridEmailBlock, sendgridMetadata, response.SendgridEmailCredentials != nil, prior.SendgridEmailCredentials)
+	state.SendgridEmailCredentials = credentialReadState(sendgridEmailBlock, sendgridMetadata, response.SendgridEmailCredentials != nil)
 
 	smtpMetadata := map[string]attr.Value{}
 	if response.SmtpEmailCredentials != nil {
@@ -798,5 +798,5 @@ func applyEmailOtpCredentialReadState(state *emailOtpAuthenticatorConfigurationR
 			"reply_to_name": types.StringPointerValue(response.SmtpEmailCredentials.ReplyToName),
 		}
 	}
-	state.SmtpEmailCredentials = credentialReadState(smtpEmailBlock, smtpMetadata, response.SmtpEmailCredentials != nil, prior.SmtpEmailCredentials)
+	state.SmtpEmailCredentials = credentialReadState(smtpEmailBlock, smtpMetadata, response.SmtpEmailCredentials != nil)
 }

@@ -80,7 +80,7 @@ Optional:
 
 - `access_key` (String, Sensitive, [Write-only](https://developer.hashicorp.com/terraform/language/resources/ephemeral#write-only-arguments)) Bird access key. Requires Terraform 1.11 or later; supply it through an ephemeral, sensitive variable.
 - `channel_id` (String) Bird channel ID.
-- `enable_message_templates` (Boolean) Whether Bird message templates are used instead of the message body Authsignal sends.
+- `enable_message_templates` (Boolean) Whether Bird message templates are used instead of the message body Authsignal sends. Defaults to `false`.
 - `locale` (String) The locale Bird renders message templates in.
 - `navigator_id` (String) Bird navigator ID.
 - `project_id` (String) Bird project ID.

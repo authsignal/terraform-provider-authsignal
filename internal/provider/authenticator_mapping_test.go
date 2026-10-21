@@ -1339,103 +1339,69 @@ func memberOf(t *testing.T, object types.Object, name string) attr.Value {
 	return value
 }
 
-func TestReadLeavesAnUntrackedOptionalCredentialMemberNull(t *testing.T) {
-	prior := credentialObjectOf(t, apnsBlock, map[string]attr.Value{
-		"team_id":   types.StringValue("TEAM"),
-		"key_id":    types.StringValue("KEY"),
-		"bundle_id": types.StringValue("com.example.app"),
-	})
-
+// An import starts with nothing in state, and the read still has to fill the block so the first plan
+// compares the configuration with the tenant.
+func TestReadFillsEveryNonSecretCredentialMember(t *testing.T) {
 	refreshed := credentialReadState(apnsBlock, map[string]attr.Value{
-		"team_id":   types.StringValue("TEAM"),
-		"key_id":    types.StringValue("KEY"),
-		"bundle_id": types.StringValue("com.example.app"),
-		"sandbox":   types.BoolValue(false),
-	}, true, prior)
-
-	if !memberOf(t, refreshed, "sandbox").IsNull() {
-		t.Errorf("sandbox is %v after a read; an optional member state never tracked must stay null, or the API default becomes a permanent diff", memberOf(t, refreshed, "sandbox"))
-	}
-}
-
-func TestReadRefreshesATrackedOptionalCredentialMember(t *testing.T) {
-	prior := credentialObjectOf(t, apnsBlock, map[string]attr.Value{
 		"team_id":   types.StringValue("TEAM"),
 		"key_id":    types.StringValue("KEY"),
 		"bundle_id": types.StringValue("com.example.app"),
 		"sandbox":   types.BoolValue(true),
-	})
+	}, true)
 
+	expected := map[string]attr.Value{
+		"team_id":   types.StringValue("TEAM"),
+		"key_id":    types.StringValue("KEY"),
+		"bundle_id": types.StringValue("com.example.app"),
+		"sandbox":   types.BoolValue(true),
+	}
+
+	for name, value := range expected {
+		if !memberOf(t, refreshed, name).Equal(value) {
+			t.Errorf("%s is %v after a read, want %v", name, memberOf(t, refreshed, name), value)
+		}
+	}
+}
+
+func TestReadLeavesTheBlockNullWhenTheApiHasNone(t *testing.T) {
+	refreshed := credentialReadState(apnsBlock, map[string]attr.Value{}, false)
+
+	if !refreshed.IsNull() {
+		t.Errorf("apns_credentials is %v; the tenant has no APNs credentials", refreshed)
+	}
+}
+
+// The runtime sends to production unless sandbox is true, so an absent sandbox is false.
+func TestReadReadsAnAbsentSandboxAsFalse(t *testing.T) {
 	refreshed := credentialReadState(apnsBlock, map[string]attr.Value{
 		"team_id":   types.StringValue("TEAM"),
 		"key_id":    types.StringValue("KEY"),
 		"bundle_id": types.StringValue("com.example.app"),
-		"sandbox":   types.BoolValue(false),
-	}, true, prior)
+		"sandbox":   types.BoolNull(),
+	}, true)
 
 	if !memberOf(t, refreshed, "sandbox").Equal(types.BoolValue(false)) {
-		t.Errorf("sandbox is %v after a read; a tracked member has to refresh so drift shows up", memberOf(t, refreshed, "sandbox"))
+		t.Errorf("sandbox is %v after a read, want false", memberOf(t, refreshed, "sandbox"))
 	}
 }
 
-func TestReadRefreshesATrackedOptionalCredentialMemberStoredAsFalse(t *testing.T) {
-	prior := credentialObjectOf(t, apnsBlock, map[string]attr.Value{
-		"team_id":   types.StringValue("TEAM"),
-		"key_id":    types.StringValue("KEY"),
-		"bundle_id": types.StringValue("com.example.app"),
-		"sandbox":   types.BoolValue(false),
-	})
-
-	refreshed := credentialReadState(apnsBlock, map[string]attr.Value{
-		"team_id":   types.StringValue("TEAM"),
-		"key_id":    types.StringValue("KEY"),
-		"bundle_id": types.StringValue("com.example.app"),
-		"sandbox":   types.BoolValue(true),
-	}, true, prior)
-
-	if !memberOf(t, refreshed, "sandbox").Equal(types.BoolValue(true)) {
-		t.Errorf("sandbox is %v after a read; false is a tracked value, not an absent one, so it has to refresh", memberOf(t, refreshed, "sandbox"))
-	}
-}
-
-func TestReadLeavesAnUntrackedOptionalStringCredentialMemberNull(t *testing.T) {
-	prior := credentialObjectOf(t, messageMediaBlock, map[string]attr.Value{})
-
+// The admin portal saves a blank field as an empty string, and the runtime treats it as unset.
+func TestReadReadsAnEmptyStringAsUnset(t *testing.T) {
 	refreshed := credentialReadState(messageMediaBlock, map[string]attr.Value{
-		"source_number": types.StringValue("+6400000000"),
-	}, true, prior)
+		"source_number": types.StringValue(""),
+	}, true)
 
 	if !memberOf(t, refreshed, "source_number").IsNull() {
-		t.Errorf("source_number is %v after a read; an optional string state never tracked must stay null", memberOf(t, refreshed, "source_number"))
-	}
-}
-
-func TestReadRefreshesATrackedOptionalStringCredentialMember(t *testing.T) {
-	prior := credentialObjectOf(t, messageMediaBlock, map[string]attr.Value{
-		"source_number": types.StringValue("+6400000000"),
-	})
-
-	refreshed := credentialReadState(messageMediaBlock, map[string]attr.Value{
-		"source_number": types.StringValue("+6499999999"),
-	}, true, prior)
-
-	if !memberOf(t, refreshed, "source_number").Equal(types.StringValue("+6499999999")) {
-		t.Errorf("source_number is %v after a read; a tracked member has to refresh", memberOf(t, refreshed, "source_number"))
+		t.Errorf("source_number is %v after a read, want null", memberOf(t, refreshed, "source_number"))
 	}
 }
 
 func TestReadKeepsSecretCredentialMembersNullEvenWhenTheResponseCarriesThem(t *testing.T) {
-	prior := credentialObjectOf(t, messageMediaBlock, map[string]attr.Value{
-		"api_key":       types.StringValue("stored-key"),
-		"api_secret":    types.StringValue("stored-secret"),
-		"source_number": types.StringValue("+6400000000"),
-	})
-
 	refreshed := credentialReadState(messageMediaBlock, map[string]attr.Value{
 		"api_key":       types.StringValue("leaked-key"),
 		"api_secret":    types.StringValue("leaked-secret"),
 		"source_number": types.StringValue("+6400000000"),
-	}, true, prior)
+	}, true)
 
 	for _, secret := range []string{"api_key", "api_secret"} {
 		if !memberOf(t, refreshed, secret).IsNull() {
@@ -1465,5 +1431,130 @@ func TestResolvedValueTakesTheResponseWhenThePlanIsUnknown(t *testing.T) {
 
 	if resolved.ValueString() != "from-api" {
 		t.Errorf("resolvedValue returned %q; only the response can fill an unknown plan", resolved.ValueString())
+	}
+}
+
+// The API merges credential updates, so a member the configuration stopped setting is sent as an empty
+// string, the way the admin portal clears it.
+func TestEmailOtpUpdateClearsAMemberTheConfigurationStoppedSetting(t *testing.T) {
+	state := emailOtpModelFor("SENDGRID")
+	state.SendgridEmailCredentials = credentialObjectOf(t, sendgridEmailBlock, map[string]attr.Value{
+		"template_id": types.StringValue("d-1"),
+		"from_email":  types.StringValue("noreply@example.com"),
+		"from_name":   types.StringValue("Support team"),
+	})
+
+	plan := emailOtpModelFor("SENDGRID")
+	plan.SendgridEmailCredentials = credentialObjectOf(t, sendgridEmailBlock, map[string]attr.Value{
+		"api_key":     types.StringValue("secret-key"),
+		"template_id": types.StringValue("d-1"),
+		"from_email":  types.StringValue("noreply@example.com"),
+	})
+
+	body, diags := emailOtpUpdateBody(context.Background(), plan, plan, state)
+	if diags.HasError() {
+		t.Fatalf("unexpected diagnostics: %v", diags)
+	}
+
+	credentials, ok := marshalBody(t, body)["sendgridEmailCredentials"].(map[string]any)
+	if !ok {
+		t.Fatal("the block has to be sent, or the tenant keeps from_name")
+	}
+
+	if credentials["fromName"] != "" {
+		t.Errorf("fromName is %v, want an empty string", credentials["fromName"])
+	}
+
+	if _, ok := credentials["apiKey"]; ok {
+		t.Error("apiKey was sent although the version did not change")
+	}
+}
+
+func TestEmailOtpUpdateSendsNoClearForAMemberTheTenantDoesNotHave(t *testing.T) {
+	state := emailOtpModelFor("SENDGRID")
+	state.SendgridEmailCredentials = credentialObjectOf(t, sendgridEmailBlock, map[string]attr.Value{
+		"template_id": types.StringValue("d-1"),
+		"from_email":  types.StringValue("noreply@example.com"),
+	})
+
+	plan := emailOtpModelFor("SENDGRID")
+	plan.SendgridEmailCredentials = credentialObjectOf(t, sendgridEmailBlock, map[string]attr.Value{
+		"api_key":     types.StringValue("secret-key"),
+		"template_id": types.StringValue("d-2"),
+		"from_email":  types.StringValue("noreply@example.com"),
+	})
+
+	body, diags := emailOtpUpdateBody(context.Background(), plan, plan, state)
+	if diags.HasError() {
+		t.Fatalf("unexpected diagnostics: %v", diags)
+	}
+
+	credentials, ok := marshalBody(t, body)["sendgridEmailCredentials"].(map[string]any)
+	if !ok {
+		t.Fatal("the changed template ID should be sent")
+	}
+
+	if _, ok := credentials["fromName"]; ok {
+		t.Errorf("fromName is %v; the tenant has none to clear", credentials["fromName"])
+	}
+}
+
+func TestPushUpdateClearsASandboxTheConfigurationStoppedSetting(t *testing.T) {
+	state := pushModelFor("DEFAULT")
+	state.ApnsCredentials = credentialObjectOf(t, apnsBlock, map[string]attr.Value{
+		"team_id":   types.StringValue("TEAM"),
+		"key_id":    types.StringValue("KEY"),
+		"bundle_id": types.StringValue("com.example.app"),
+		"sandbox":   types.BoolValue(true),
+	})
+
+	config := pushModelFor("DEFAULT")
+	config.ApnsCredentials = credentialObjectOf(t, apnsBlock, map[string]attr.Value{
+		"private_key": types.StringValue("secret-key"),
+		"team_id":     types.StringValue("TEAM"),
+		"key_id":      types.StringValue("KEY"),
+		"bundle_id":   types.StringValue("com.example.app"),
+	})
+
+	body, diags := pushUpdateBody(context.Background(), config, config, state)
+	if diags.HasError() {
+		t.Fatalf("unexpected diagnostics: %v", diags)
+	}
+
+	credentials, ok := marshalBody(t, body)["apnsCredentials"].(map[string]any)
+	if !ok {
+		t.Fatal("the block has to be sent, or the tenant stays on the sandbox")
+	}
+
+	if credentials["sandbox"] != false {
+		t.Errorf("sandbox is %v, want false", credentials["sandbox"])
+	}
+}
+
+// DEFAULT needs only one platform's credentials, so the configuration can leave out a block the tenant has.
+func TestPushUpdateClearsApnsCredentialsTheConfigurationLeavesOut(t *testing.T) {
+	state := pushModelFor("DEFAULT")
+	state.ApnsCredentials = credentialObjectOf(t, apnsBlock, map[string]attr.Value{
+		"team_id":   types.StringValue("TEAM"),
+		"key_id":    types.StringValue("KEY"),
+		"bundle_id": types.StringValue("com.example.app"),
+	})
+	state.FcmCredentialsVersion = types.StringValue("v1")
+
+	config := pushModelFor("DEFAULT")
+	config.FcmCredentials = credentialObjectOf(t, fcmBlock, map[string]attr.Value{
+		"service_account_key": types.StringValue("{\"type\":\"service_account\"}"),
+	})
+	config.FcmCredentialsVersion = types.StringValue("v1")
+
+	body, diags := pushUpdateBody(context.Background(), config, config, state)
+	if diags.HasError() {
+		t.Fatalf("unexpected diagnostics: %v", diags)
+	}
+
+	encoded := marshalBody(t, body)
+
+	if credentials, ok := encoded["apnsCredentials"]; !ok || credentials != nil {
+		t.Errorf("apnsCredentials is %v, want null so the tenant's APNs credentials are removed", credentials)
 	}
 }

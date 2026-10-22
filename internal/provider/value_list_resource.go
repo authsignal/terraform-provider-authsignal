@@ -3,7 +3,6 @@ package provider
 import (
 	"context"
 	"fmt"
-	"slices"
 
 	"github.com/authsignal/authsignal-management-go/v6"
 	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
@@ -24,8 +23,6 @@ var (
 	_ resource.ResourceWithValidateConfig = &valueListResource{}
 )
 
-var valueListItemTypes = []string{"string", "number"}
-
 func NewValueListResource() resource.Resource {
 	return &valueListResource{}
 }
@@ -45,22 +42,6 @@ type valueListResourceModel struct {
 
 func (r *valueListResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
 	resp.TypeName = req.ProviderTypeName + "_value_list"
-}
-
-func (m valueListResourceModel) items(itemType string) types.List {
-	if itemType == "number" {
-		return m.ValueListItemsNumbers
-	}
-
-	return m.ValueListItemsStrings
-}
-
-func valueListItemsAttribute(itemType string) string {
-	if itemType == "number" {
-		return "value_list_items_numbers"
-	}
-
-	return "value_list_items_strings"
 }
 
 func (r *valueListResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
@@ -84,7 +65,7 @@ func (r *valueListResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 				Description: "The type of the items in the value list: `string` or `number`. The type can't change after the list is created, so changing it replaces the list.",
 				Required:    true,
 				Validators: []validator.String{
-					stringvalidator.OneOf(valueListItemTypes...),
+					stringvalidator.OneOf("string", "number"),
 				},
 				PlanModifiers: []planmodifier.String{
 					stringplanmodifier.RequiresReplace(),
@@ -108,7 +89,6 @@ func (r *valueListResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 	}
 }
 
-// Read can't tell `[]` from a list the configuration leaves out, so an empty list has one spelling.
 func (r *valueListResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
 	var config valueListResourceModel
 	resp.Diagnostics.Append(req.Config.Get(ctx, &config)...)
@@ -116,34 +96,40 @@ func (r *valueListResource) ValidateConfig(ctx context.Context, req resource.Val
 		return
 	}
 
-	configuredType := config.ItemType.ValueString()
-	typeIsValid := isKnownAndSet(config.ItemType) && slices.Contains(valueListItemTypes, configuredType)
+	rejectEmptyItems(resp, "value_list_items_strings", config.ValueListItemsStrings)
+	rejectEmptyItems(resp, "value_list_items_numbers", config.ValueListItemsNumbers)
 
-	for _, itemType := range valueListItemTypes {
-		items := config.items(itemType)
-		attribute := valueListItemsAttribute(itemType)
-
-		if !isKnownAndSet(items) {
-			continue
-		}
-
-		if len(items.Elements()) == 0 {
-			resp.Diagnostics.AddAttributeError(
-				path.Root(attribute),
-				"Empty Value List Items",
-				fmt.Sprintf("`%s` is set to `[]`. Leave it out of the configuration for an empty value list.", attribute),
-			)
-		}
-
-		if typeIsValid && configuredType != itemType {
-			resp.Diagnostics.AddAttributeError(
-				path.Root(attribute),
-				"Value List Items Do Not Match the Item Type",
-				fmt.Sprintf("`%s` is set but `item_type` is %q. The items of a %s value list go in `%s`.",
-					attribute, configuredType, configuredType, valueListItemsAttribute(configuredType)),
-			)
-		}
+	switch config.ItemType.ValueString() {
+	case "string":
+		rejectItemsOfTheOtherType(resp, "value_list_items_numbers", config.ValueListItemsNumbers, "string", "value_list_items_strings")
+	case "number":
+		rejectItemsOfTheOtherType(resp, "value_list_items_strings", config.ValueListItemsStrings, "number", "value_list_items_numbers")
 	}
+}
+
+// Read stores a list with no items as null, so `[]` in the configuration would plan a change on every run.
+func rejectEmptyItems(resp *resource.ValidateConfigResponse, attribute string, items types.List) {
+	if !isKnownAndSet(items) || len(items.Elements()) > 0 {
+		return
+	}
+
+	resp.Diagnostics.AddAttributeError(
+		path.Root(attribute),
+		"Empty Value List Items",
+		fmt.Sprintf("`%s` is set to `[]`. Leave it out of the configuration for an empty value list.", attribute),
+	)
+}
+
+func rejectItemsOfTheOtherType(resp *resource.ValidateConfigResponse, attribute string, items types.List, itemType string, itemsAttribute string) {
+	if !isKnownAndSet(items) {
+		return
+	}
+
+	resp.Diagnostics.AddAttributeError(
+		path.Root(attribute),
+		"Value List Items Do Not Match the Item Type",
+		fmt.Sprintf("`%s` is set but `item_type` is %q. The items of a %s value list go in `%s`.", attribute, itemType, itemType, itemsAttribute),
+	)
 }
 
 // The API replaces the items on every update and rejects null for them, so an empty list is sent as [].

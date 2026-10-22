@@ -1,6 +1,7 @@
 resource "authsignal_value_list" "example_value_list_strings" {
   name      = "Example Value List Strings"
   is_active = true
+  item_type = "string"
   value_list_items_strings = [
     "hello",
     "world",
@@ -11,6 +12,7 @@ resource "authsignal_value_list" "example_value_list_strings" {
 resource "authsignal_value_list" "example_value_list_numbers" {
   name      = "Example Value List Numbers"
   is_active = true
+  item_type = "number"
   value_list_items_numbers = [
     1,
     2,

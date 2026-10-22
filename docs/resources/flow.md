@@ -22,6 +22,7 @@ resource "authsignal_custom_data_point" "risk_score" {
 resource "authsignal_value_list" "blocked_countries" {
   name                     = "Blocked countries"
   is_active                = true
+  item_type                = "string"
   value_list_items_strings = ["KP", "IR"]
 }
 

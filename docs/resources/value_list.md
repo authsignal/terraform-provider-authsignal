@@ -16,6 +16,7 @@ description: |-
 resource "authsignal_value_list" "example_value_list_strings" {
   name      = "Example Value List Strings"
   is_active = true
+  item_type = "string"
   value_list_items_strings = [
     "hello",
     "world",
@@ -26,6 +27,7 @@ resource "authsignal_value_list" "example_value_list_strings" {
 resource "authsignal_value_list" "example_value_list_numbers" {
   name      = "Example Value List Numbers"
   is_active = true
+  item_type = "number"
   value_list_items_numbers = [
     1,
     2,
@@ -40,17 +42,17 @@ resource "authsignal_value_list" "example_value_list_numbers" {
 ### Required
 
 - `is_active` (Boolean) Whether or not the list is active. This currently has no effect, please set the value to `true`.
+- `item_type` (String) The type of the items in the value list: `string` or `number`. The type can't change after the list is created, so changing it replaces the list.
 - `name` (String) The name of the value list.
 
 ### Optional
 
-- `value_list_items_numbers` (List of Number) A list of number items in the value list.
-- `value_list_items_strings` (List of String) A list of string items in the value list.
+- `value_list_items_numbers` (List of Number) The items of a `number` value list. Leave it out for an empty list.
+- `value_list_items_strings` (List of String) The items of a `string` value list. Leave it out for an empty list.
 
 ### Read-Only
 
 - `alias` (String) The hyphenated alias of the value list, auto-generated upon creation.
-- `item_type` (String) The type of items in the value list (string or number).
 
 ## Import
 

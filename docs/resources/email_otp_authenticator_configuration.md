@@ -38,7 +38,7 @@ resource "authsignal_email_otp_authenticator_configuration" "email_otp" {
 
 ### Required
 
-- `email_provider` (String) Email delivery provider. Every provider except `WEBHOOK` requires its credential block, and `WEBHOOK` requires `webhook_url`. One of `BIRD`, `MAILGUN`, `MAILJET`, `MANDRILL`, `SENDGRID`, `SMTP`, `WEBHOOK`.
+- `email_provider` (String) Email delivery provider. Every provider except `SES` and `WEBHOOK` requires its credential block, and `WEBHOOK` requires `webhook_url`. One of `BIRD`, `MAILGUN`, `MAILJET`, `MANDRILL`, `SENDGRID`, `SES`, `SMTP`, `WEBHOOK`.
 
 ### Optional
 

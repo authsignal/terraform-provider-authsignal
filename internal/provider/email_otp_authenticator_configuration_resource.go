@@ -171,7 +171,7 @@ func (r *emailOtpAuthenticatorConfigurationResource) Schema(_ context.Context, _
 			Computed: true,
 		},
 		"email_provider": schema.StringAttribute{
-			Description: "Email delivery provider. Every provider except `WEBHOOK` requires its credential block, and `WEBHOOK` requires `webhook_url`." + allowedValues(allowedEmailProviders),
+			Description: "Email delivery provider. Every provider except `SES` and `WEBHOOK` requires its credential block, and `WEBHOOK` requires `webhook_url`." + allowedValues(allowedEmailProviders),
 			Required:    true,
 			Validators: []validator.String{
 				stringvalidator.OneOf(allowedEmailProviders...),

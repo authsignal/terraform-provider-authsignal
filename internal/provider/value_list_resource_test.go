@@ -16,6 +16,7 @@ func TestAccValueListResource(t *testing.T) {
 					resource "authsignal_value_list" "terraform-acc-test-strings" {
 						name = "Terraform Acc Test Strings"
 						is_active = true
+						item_type = "string"
 						value_list_items_strings = ["terraform", "acceptance", "test"]
 					}
 				`,
@@ -35,6 +36,7 @@ func TestAccValueListResource(t *testing.T) {
 					resource "authsignal_value_list" "terraform-acc-test-numbers" {
 						name = "Terraform Acc Test Numbers"
 						is_active = true
+						item_type = "number"
 						value_list_items_numbers = [1, 2, 3]
 					}
 				`,
@@ -54,6 +56,7 @@ func TestAccValueListResource(t *testing.T) {
 					resource "authsignal_value_list" "terraform-acc-test-strings" {
 						name = "Terraform Acc Test Strings"
 						is_active = false
+						item_type = "string"
 						value_list_items_strings = ["updated", "terraform", "test"]
 					}
 				`,
@@ -73,6 +76,7 @@ func TestAccValueListResource(t *testing.T) {
 					resource "authsignal_value_list" "terraform-acc-test-numbers" {
 						name = "Terraform Acc Test Numbers"
 						is_active = false
+						item_type = "number"
 						value_list_items_numbers = [4, 5, 6]
 					}
 				`,
@@ -92,6 +96,7 @@ func TestAccValueListResource(t *testing.T) {
 					resource "authsignal_value_list" "terraform-acc-test-strings" {
 						name = "Terraform Acc Test Strings Updated"
 						is_active = false
+						item_type = "string"
 						value_list_items_strings = ["foo", "bar", "baz"]
 					}
 				`,
@@ -111,6 +116,7 @@ func TestAccValueListResource(t *testing.T) {
 					resource "authsignal_value_list" "terraform-acc-test-numbers" {
 						name = "Terraform Acc Test Numbers Updated"
 						is_active = false
+						item_type = "number"
 						value_list_items_numbers = [7, 8, 9]
 					}
 				`,

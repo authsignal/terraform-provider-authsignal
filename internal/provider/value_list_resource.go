@@ -5,20 +5,22 @@ import (
 	"fmt"
 
 	"github.com/authsignal/authsignal-management-go/v6"
+	"github.com/hashicorp/terraform-plugin-framework-validators/stringvalidator"
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
-	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
+	"github.com/hashicorp/terraform-plugin-framework/schema/validator"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 )
 
 var (
-	_ resource.Resource                = &valueListResource{}
-	_ resource.ResourceWithConfigure   = &valueListResource{}
-	_ resource.ResourceWithImportState = &valueListResource{}
+	_ resource.Resource                   = &valueListResource{}
+	_ resource.ResourceWithConfigure      = &valueListResource{}
+	_ resource.ResourceWithImportState    = &valueListResource{}
+	_ resource.ResourceWithValidateConfig = &valueListResource{}
 )
 
 func NewValueListResource() resource.Resource {
@@ -42,19 +44,6 @@ func (r *valueListResource) Metadata(_ context.Context, req resource.MetadataReq
 	resp.TypeName = req.ProviderTypeName + "_value_list"
 }
 
-func checkListTypeHasntChanged(ctx context.Context, req planmodifier.ListRequest, resp *listplanmodifier.RequiresReplaceIfFuncResponse) {
-	var plan valueListResourceModel
-	_ = req.Plan.Get(ctx, &plan)
-	var state valueListResourceModel
-	_ = req.State.Get(ctx, &state)
-	if plan.ValueListItemsNumbers.IsNull() != state.ValueListItemsNumbers.IsNull() {
-		resp.RequiresReplace = true
-	}
-	if plan.ValueListItemsStrings.IsNull() != state.ValueListItemsStrings.IsNull() {
-		resp.RequiresReplace = true
-	}
-}
-
 func (r *valueListResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
@@ -73,10 +62,13 @@ func (r *valueListResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 				},
 			},
 			"item_type": schema.StringAttribute{
-				Description: "The type of items in the value list (string or number).",
-				Computed:    true,
+				Description: "The type of the items in the value list: `string` or `number`. The type can't change after the list is created, so changing it replaces the list.",
+				Required:    true,
+				Validators: []validator.String{
+					stringvalidator.OneOf("string", "number"),
+				},
 				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.UseStateForUnknown(),
+					stringplanmodifier.RequiresReplace(),
 				},
 			},
 			"is_active": schema.BoolAttribute{
@@ -85,28 +77,66 @@ func (r *valueListResource) Schema(_ context.Context, _ resource.SchemaRequest, 
 			},
 			"value_list_items_strings": schema.ListAttribute{
 				ElementType: types.StringType,
-				Description: "A list of string items in the value list.",
+				Description: "The items of a `string` value list. Leave it out for an empty list.",
 				Optional:    true,
-				PlanModifiers: []planmodifier.List{
-					listplanmodifier.RequiresReplaceIf(checkListTypeHasntChanged, "Ensures the list type hasn't changed.", "Ensures the list type hasn't changed."),
-				},
 			},
 			"value_list_items_numbers": schema.ListAttribute{
 				ElementType: types.Float64Type,
-				Description: "A list of number items in the value list.",
+				Description: "The items of a `number` value list. Leave it out for an empty list.",
 				Optional:    true,
-				PlanModifiers: []planmodifier.List{
-					listplanmodifier.RequiresReplaceIf(checkListTypeHasntChanged, "Ensures the list type hasn't changed.", "Ensures the list type hasn't changed."),
-				},
 			},
 		},
 	}
 }
 
-func prepareValueListItems(ctx context.Context, plan valueListResourceModel, itemType string, setNullIfEmpty bool) (authsignal.NullableJsonInput[[]authsignal.ValueListItem], diag.Diagnostics) {
-	var itemList []authsignal.ValueListItem
+func (r *valueListResource) ValidateConfig(ctx context.Context, req resource.ValidateConfigRequest, resp *resource.ValidateConfigResponse) {
+	var config valueListResourceModel
+	resp.Diagnostics.Append(req.Config.Get(ctx, &config)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
 
-	if itemType == "number" {
+	rejectEmptyItems(resp, "value_list_items_strings", config.ValueListItemsStrings)
+	rejectEmptyItems(resp, "value_list_items_numbers", config.ValueListItemsNumbers)
+
+	switch config.ItemType.ValueString() {
+	case "string":
+		rejectItemsOfTheOtherType(resp, "value_list_items_numbers", config.ValueListItemsNumbers, "string", "value_list_items_strings")
+	case "number":
+		rejectItemsOfTheOtherType(resp, "value_list_items_strings", config.ValueListItemsStrings, "number", "value_list_items_numbers")
+	}
+}
+
+// Read stores a list with no items as null, so `[]` in the configuration would plan a change on every run.
+func rejectEmptyItems(resp *resource.ValidateConfigResponse, attribute string, items types.List) {
+	if !isKnownAndSet(items) || len(items.Elements()) > 0 {
+		return
+	}
+
+	resp.Diagnostics.AddAttributeError(
+		path.Root(attribute),
+		"Empty Value List Items",
+		fmt.Sprintf("`%s` is set to `[]`. Leave it out of the configuration for an empty value list.", attribute),
+	)
+}
+
+func rejectItemsOfTheOtherType(resp *resource.ValidateConfigResponse, attribute string, items types.List, itemType string, itemsAttribute string) {
+	if !isKnownAndSet(items) {
+		return
+	}
+
+	resp.Diagnostics.AddAttributeError(
+		path.Root(attribute),
+		"Value List Items Do Not Match the Item Type",
+		fmt.Sprintf("`%s` is set but `item_type` is %q. The items of a %s value list go in `%s`.", attribute, itemType, itemType, itemsAttribute),
+	)
+}
+
+// The API replaces the items on every update and rejects null for them, so an empty list is sent as [].
+func prepareValueListItems(ctx context.Context, plan valueListResourceModel) (authsignal.NullableJsonInput[[]authsignal.ValueListItem], diag.Diagnostics) {
+	itemList := []authsignal.ValueListItem{}
+
+	if plan.ItemType.ValueString() == "number" {
 		valueListItemsNumbersSlice := make([]float64, 0, len(plan.ValueListItemsNumbers.Elements()))
 		diags := plan.ValueListItemsNumbers.ElementsAs(ctx, &valueListItemsNumbersSlice, false)
 		if diags.HasError() {
@@ -128,24 +158,7 @@ func prepareValueListItems(ctx context.Context, plan valueListResourceModel, ite
 		}
 	}
 
-	if len(itemList) > 0 {
-		return authsignal.SetValue(itemList), nil
-	} else if setNullIfEmpty {
-		return authsignal.SetNull(itemList), nil
-	}
-	return nil, nil
-}
-
-func getListType(plan valueListResourceModel) string {
-	if len(plan.ValueListItemsNumbers.Elements()) > 0 && len(plan.ValueListItemsStrings.Elements()) > 0 {
-		return "error"
-	}
-
-	if len(plan.ValueListItemsNumbers.Elements()) > 0 {
-		return "number"
-	}
-
-	return "string"
+	return authsignal.SetValue(itemList), nil
 }
 
 func (r *valueListResource) Create(ctx context.Context, req resource.CreateRequest, resp *resource.CreateResponse) {
@@ -159,20 +172,10 @@ func (r *valueListResource) Create(ctx context.Context, req resource.CreateReque
 	var valueListToCreate = authsignal.ValueList{
 		Name:     authsignal.SetValue(plan.Name.ValueString()),
 		IsActive: authsignal.SetValue(plan.IsActive.ValueBool()),
+		ItemType: authsignal.SetValue(plan.ItemType.ValueString()),
 	}
 
-	itemType := getListType(plan)
-	if itemType == "error" {
-		resp.Diagnostics.AddError(
-			"Invalid value list items",
-			"Only one of \"value_list_items_strings\" or \"value_list_items_numbers\" can be set",
-		)
-		return
-	}
-
-	valueListToCreate.ItemType = authsignal.SetValue(itemType)
-
-	valueListItems, diags := prepareValueListItems(ctx, plan, itemType, false)
+	valueListItems, diags := prepareValueListItems(ctx, plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -253,20 +256,11 @@ func (r *valueListResource) Update(ctx context.Context, req resource.UpdateReque
 		return
 	}
 
-	itemType := getListType(plan)
-	if itemType == "error" {
-		resp.Diagnostics.AddError(
-			"Invalid value list items",
-			"Only one of \"value_list_items_strings\" or \"value_list_items_numbers\" can be set",
-		)
-		return
-	}
-
 	var valueListToUpdate = authsignal.ValueList{
 		IsActive: authsignal.SetValue(plan.IsActive.ValueBool()),
 	}
 
-	valueListItems, diags := prepareValueListItems(ctx, plan, itemType, true)
+	valueListItems, diags := prepareValueListItems(ctx, plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return

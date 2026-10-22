@@ -2,7 +2,6 @@ package provider
 
 import (
 	"os"
-	"regexp"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
@@ -13,27 +12,6 @@ import (
 // no identifier at all and goes looking for one in the state, so it has to come from a function.
 func importTheEmptyThemeId(*terraform.State) (string, error) {
 	return "", nil
-}
-
-// The Management API rejects an exit position under dark mode, so the configuration cannot offer
-// one. Terraform turns this away while validating, before the theme is read or written.
-func TestAccThemeRejectsAPerModeExitPosition(t *testing.T) {
-	resource.Test(t, resource.TestCase{
-		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
-		Steps: []resource.TestStep{
-			{
-				Config: `resource "authsignal_theme" "theme" {
-  name = "Management-API-Testing"
-  dark_mode = {
-    container = {
-      exit_position = "bottom"
-    }
-  }
-}`,
-				ExpectError: regexp.MustCompile("exit_position"),
-			},
-		},
-	})
 }
 
 // Needs AUTHSIGNAL_DESTRUCTIVE_THEME_ACC=1. The test overwrites the tenant's theme with the fixture

@@ -187,6 +187,11 @@ func unmanagedSettingsIn(block string, attributes map[string]schema.Attribute, c
 			continue
 		}
 
+		// A plan modifier's change, such as clearing a superseded value, already shows in the plan.
+		if planned, ok := plan[name]; ok && !planned.IsUnknown() && !planned.Equal(value) {
+			continue
+		}
+
 		// The API reports defaults for top-level settings only.
 		var defaultValue json.RawMessage
 		if block == "" {

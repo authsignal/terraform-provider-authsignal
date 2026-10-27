@@ -313,23 +313,23 @@ func planModifiedWebhookUrlFor(
 	return resp.PlanValue
 }
 
-func TestSmsWebhookUrlIsPlannedUnknownWhenLeavingTheWebhookProvider(t *testing.T) {
+func TestSmsWebhookUrlIsPlannedNullWhenLeavingTheWebhookProvider(t *testing.T) {
 	planned := planModifiedWebhookUrlFor(
 		t, &smsAuthenticatorConfigurationResource{}, "sms_provider", "WEBHOOK", "TNZ", types.StringNull(),
 	)
 
-	if !planned.IsUnknown() {
-		t.Errorf("expected the endpoint to be planned as unknown, got %v", planned)
+	if !planned.IsNull() {
+		t.Errorf("expected the endpoint to be planned as null, got %v", planned)
 	}
 }
 
-func TestEmailOtpWebhookUrlIsPlannedUnknownWhenLeavingTheWebhookProvider(t *testing.T) {
+func TestEmailOtpWebhookUrlIsPlannedNullWhenLeavingTheWebhookProvider(t *testing.T) {
 	planned := planModifiedWebhookUrlFor(
 		t, &emailOtpAuthenticatorConfigurationResource{}, "email_provider", "WEBHOOK", "SENDGRID", types.StringNull(),
 	)
 
-	if !planned.IsUnknown() {
-		t.Errorf("expected the endpoint to be planned as unknown, got %v", planned)
+	if !planned.IsNull() {
+		t.Errorf("expected the endpoint to be planned as null, got %v", planned)
 	}
 }
 

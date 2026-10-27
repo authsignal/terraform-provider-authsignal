@@ -162,6 +162,56 @@ resource "authsignal_email_otp_authenticator_configuration" "email_otp" {
 	stub.assertNotCalled(t, emailOtpPatchRoute)
 }
 
+func TestPlanRemovesAWebhookUrlLeftUnderAnotherProvider(t *testing.T) {
+	skipUnlessAcceptance(t)
+
+	_, stub := newStubAPI(t, map[string][]stubResponse{
+		smsGetRoute: okResponse(`{"authenticatorId":"auth_sms","isActive":true,"verificationMethod":"SMS",` +
+			`"smsProvider":"TWILIO","webhookUrl":"https://example.com/sms",` +
+			`"twilioCredentials":{"accountSid":"AC123","messagingServiceSid":"MG123"},"defaults":{"isActive":true}}`),
+	})
+	t.Setenv("AUTHSIGNAL_HOST", stub.url)
+
+	const address = "authsignal_sms_authenticator_configuration.sms"
+
+	config := `
+resource "authsignal_sms_authenticator_configuration" "sms" {
+  sms_provider = "TWILIO"
+
+  twilio_credentials = {
+    auth_token            = "secret-token"
+    account_sid           = "AC123"
+    messaging_service_sid = "MG123"
+  }
+}
+`
+
+	resource.UnitTest(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config:             config,
+				ResourceName:       address,
+				ImportState:        true,
+				ImportStateId:      smsAuthenticatorSlug,
+				ImportStatePersist: true,
+			},
+			{
+				Config:             config,
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: true,
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PostApplyPostRefresh: []plancheck.PlanCheck{
+						plancheck.ExpectKnownValue(address, tfjsonpath.New("webhook_url"), knownvalue.Null()),
+					},
+				},
+			},
+		},
+	})
+
+	stub.assertNotCalled(t, smsPatchRoute)
+}
+
 func TestPlanClearingTheSmsCountryRestrictionRemovesTheDefaultCountryCode(t *testing.T) {
 	skipUnlessAcceptance(t)
 

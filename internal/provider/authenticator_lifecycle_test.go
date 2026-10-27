@@ -1499,12 +1499,12 @@ func TestPushWebhookUrlKeepsItsPriorPlanWhenTheProviderStaysWebhook(t *testing.T
 	}
 }
 
-func TestPushWebhookUrlKeepsItsPriorPlanWhenTheProviderWasNeverWebhook(t *testing.T) {
+func TestPushWebhookUrlIsPlannedNullWhenLeftUnderAnotherProvider(t *testing.T) {
 	resourceSchema := resourceSchemaOf(t, &pushAuthenticatorConfigurationResource{})
 
-	planned := planModifiedWebhookUrl(t, resourceSchema, "DEFAULT", "FIREBASE", types.StringValue("https://example.com/push"))
-	if planned.IsUnknown() || planned.ValueString() != "https://example.com/push" {
-		t.Errorf("webhook_url planned as %v, want the prior value left alone when no WEBHOOK endpoint is being superseded", planned)
+	planned := planModifiedWebhookUrl(t, resourceSchema, "DEFAULT", "DEFAULT", types.StringValue("https://example.com/push"))
+	if !planned.IsNull() {
+		t.Errorf("webhook_url planned as %v, want null because only the WEBHOOK provider uses it", planned)
 	}
 }
 

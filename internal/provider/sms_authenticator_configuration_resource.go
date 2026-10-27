@@ -662,6 +662,8 @@ func smsUpdateBody(ctx context.Context, plan smsAuthenticatorConfigurationResour
 
 	if isKnownAndSet(config.WebhookUrl) {
 		body.WebhookUrl = authsignal.SetValue(config.WebhookUrl.ValueString())
+	} else if isLeftoverWebhookUrl(state.SmsProvider, config.WebhookUrl, state.WebhookUrl) {
+		body.WebhookUrl = authsignal.SetNull("")
 	}
 
 	if isKnownAndSet(config.DefaultCountryCode) {

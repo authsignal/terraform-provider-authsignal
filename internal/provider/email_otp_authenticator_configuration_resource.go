@@ -577,6 +577,8 @@ func emailOtpUpdateBody(ctx context.Context, plan emailOtpAuthenticatorConfigura
 
 	if isKnownAndSet(config.WebhookUrl) {
 		body.WebhookUrl = authsignal.SetValue(config.WebhookUrl.ValueString())
+	} else if isLeftoverWebhookUrl(state.EmailProvider, config.WebhookUrl, state.WebhookUrl) {
+		body.WebhookUrl = authsignal.SetNull("")
 	}
 
 	if isKnownAndSet(config.AllowedCustomEmailVariables) {

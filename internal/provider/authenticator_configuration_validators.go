@@ -263,7 +263,7 @@ type supersededWebhookUrl struct {
 }
 
 func (m supersededWebhookUrl) Description(_ context.Context) string {
-	return fmt.Sprintf("Plans `webhook_url` as null when `%s` changes from `WEBHOOK`, because the Management API discards it.", m.providerAttribute)
+	return fmt.Sprintf("Plans `webhook_url` as null when `%s` is not `WEBHOOK`, so a URL left from the webhook provider is removed.", m.providerAttribute)
 }
 
 func (m supersededWebhookUrl) MarkdownDescription(ctx context.Context) string {
@@ -283,16 +283,9 @@ func (m supersededWebhookUrl) PlanModifyString(ctx context.Context, req planmodi
 		return
 	}
 
-	var storedProvider types.String
-	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root(m.providerAttribute), &storedProvider)...)
-
 	var configuredProvider types.String
 	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root(m.providerAttribute), &configuredProvider)...)
 	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	if storedProvider.ValueString() != webhookProvider {
 		return
 	}
 

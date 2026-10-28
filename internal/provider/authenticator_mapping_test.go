@@ -1574,3 +1574,48 @@ func TestPushUpdateClearsApnsCredentialsTheConfigurationLeavesOut(t *testing.T) 
 		t.Errorf("apnsCredentials is %v, want null so the tenant's APNs credentials are removed", credentials)
 	}
 }
+
+func TestPushUpdateClearsFirebaseCredentialsTheConfigurationLeavesOut(t *testing.T) {
+	state := pushModelFor("DEFAULT")
+	state.ApnsCredentials = credentialObjectOf(t, apnsBlock, map[string]attr.Value{
+		"team_id":   types.StringValue("TEAM"),
+		"key_id":    types.StringValue("KEY"),
+		"bundle_id": types.StringValue("com.example.app"),
+	})
+	state.FcmProjectId = types.StringValue("demo-project")
+	state.FcmClientEmail = types.StringValue("sa@demo.iam.gserviceaccount.com")
+
+	config := pushModelFor("DEFAULT")
+	config.ApnsCredentials = state.ApnsCredentials
+
+	body, diags := pushUpdateBody(context.Background(), config, config, state)
+	if diags.HasError() {
+		t.Fatalf("unexpected diagnostics: %v", diags)
+	}
+
+	assertSentAsNull(t, marshalBody(t, body), "fcmCredentials")
+}
+
+// DEFAULT uses Firebase too, so the Management API keeps the credentials on a switch from FIREBASE.
+func TestPushSwitchToDefaultClearsFirebaseCredentialsTheConfigurationLeavesOut(t *testing.T) {
+	state := pushModelFor("FIREBASE")
+	state.FcmProjectId = types.StringValue("demo-project")
+	state.FcmClientEmail = types.StringValue("sa@demo.iam.gserviceaccount.com")
+	state.FcmCredentialsVersion = types.StringValue("v1")
+
+	config := pushModelFor("DEFAULT")
+	config.ApnsCredentials = credentialObjectOf(t, apnsBlock, map[string]attr.Value{
+		"private_key": types.StringValue("apns-key"),
+		"team_id":     types.StringValue("TEAM"),
+		"key_id":      types.StringValue("KEY"),
+		"bundle_id":   types.StringValue("com.example.app"),
+	})
+	config.ApnsCredentialsVersion = types.StringValue("1")
+
+	body, diags := pushUpdateBody(context.Background(), config, config, state)
+	if diags.HasError() {
+		t.Fatalf("unexpected diagnostics: %v", diags)
+	}
+
+	assertSentAsNull(t, marshalBody(t, body), "fcmCredentials")
+}

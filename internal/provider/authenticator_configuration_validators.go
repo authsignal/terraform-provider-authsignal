@@ -223,7 +223,7 @@ func stringSetExcludes(set types.Set, value string) bool {
 type excludedDefaultCountryCode struct{}
 
 func (m excludedDefaultCountryCode) Description(_ context.Context) string {
-	return "Plans default_country_code as unknown when the configured sms_country_codes no longer allows the stored default, because the Management API discards the default along with it."
+	return "Plans default_country_code as null when the configured sms_country_codes no longer allows the stored default, because the Management API discards the default along with it."
 }
 
 func (m excludedDefaultCountryCode) MarkdownDescription(ctx context.Context) string {
@@ -254,7 +254,7 @@ func (m excludedDefaultCountryCode) PlanModifyString(ctx context.Context, req pl
 	}
 
 	if stringSetExcludes(countryCodes, req.StateValue.ValueString()) {
-		resp.PlanValue = types.StringUnknown()
+		resp.PlanValue = types.StringNull()
 	}
 }
 
@@ -263,7 +263,7 @@ type supersededWebhookUrl struct {
 }
 
 func (m supersededWebhookUrl) Description(_ context.Context) string {
-	return fmt.Sprintf("Marks `webhook_url` unknown when `%s` changes from `WEBHOOK`.", m.providerAttribute)
+	return fmt.Sprintf("Plans `webhook_url` as null when `%s` is not `WEBHOOK`, so a URL left from the webhook provider is removed.", m.providerAttribute)
 }
 
 func (m supersededWebhookUrl) MarkdownDescription(ctx context.Context) string {
@@ -283,16 +283,9 @@ func (m supersededWebhookUrl) PlanModifyString(ctx context.Context, req planmodi
 		return
 	}
 
-	var storedProvider types.String
-	resp.Diagnostics.Append(req.State.GetAttribute(ctx, path.Root(m.providerAttribute), &storedProvider)...)
-
 	var configuredProvider types.String
 	resp.Diagnostics.Append(req.Config.GetAttribute(ctx, path.Root(m.providerAttribute), &configuredProvider)...)
 	if resp.Diagnostics.HasError() {
-		return
-	}
-
-	if storedProvider.ValueString() != webhookProvider {
 		return
 	}
 
@@ -300,5 +293,5 @@ func (m supersededWebhookUrl) PlanModifyString(ctx context.Context, req planmodi
 		return
 	}
 
-	resp.PlanValue = types.StringUnknown()
+	resp.PlanValue = types.StringNull()
 }

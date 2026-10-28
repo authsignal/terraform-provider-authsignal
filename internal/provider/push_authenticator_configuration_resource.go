@@ -495,6 +495,8 @@ func pushUpdateBody(ctx context.Context, plan pushAuthenticatorConfigurationReso
 
 	if isKnownAndSet(config.WebhookUrl) {
 		body.WebhookUrl = authsignal.SetValue(config.WebhookUrl.ValueString())
+	} else if isLeftoverWebhookUrl(state.PushProvider, config.WebhookUrl, state.WebhookUrl) {
+		body.WebhookUrl = authsignal.SetNull("")
 	}
 
 	if isKnownAndSet(config.CredentialLifetimeInMinutes) {

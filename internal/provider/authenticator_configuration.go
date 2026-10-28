@@ -406,6 +406,11 @@ func resolvedValue[T attr.Value](planned T, fromResponse T) T {
 	return planned
 }
 
+// The Management API clears a webhook URL itself only on a switch away from WEBHOOK.
+func isLeftoverWebhookUrl(storedProvider types.String, configured types.String, stored types.String) bool {
+	return storedProvider.ValueString() != webhookProvider && removedFromConfig(configured, stored)
+}
+
 func webhookUrlDiagnostics(providerAttribute string, provider string, webhookUrl types.String) diag.Diagnostics {
 	var diags diag.Diagnostics
 

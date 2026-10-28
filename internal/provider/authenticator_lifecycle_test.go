@@ -1403,12 +1403,12 @@ func TestSmsClearingTheRestrictionDropsTheUnmanagedDefaultFromState(t *testing.T
 	}
 }
 
-func TestSmsDefaultCountryCodeIsPlannedUnknownWhenTheRestrictionIsEmptied(t *testing.T) {
+func TestSmsDefaultCountryCodeIsPlannedNullWhenTheRestrictionIsEmptied(t *testing.T) {
 	resourceSchema := resourceSchemaOf(t, &smsAuthenticatorConfigurationResource{})
 
 	planned := planModifiedDefaultCountryCode(t, resourceSchema, countryCodeSet(t), types.StringValue("NZ"))
-	if !planned.IsUnknown() {
-		t.Errorf("default_country_code planned as %v, want unknown so the write can take the API's answer", planned)
+	if !planned.IsNull() {
+		t.Errorf("default_country_code planned as %v, want null because the API discards the default", planned)
 	}
 }
 
@@ -1431,12 +1431,12 @@ func TestSmsDefaultCountryCodeKeepsItsPriorPlanWhenTheRestrictionIsOmitted(t *te
 	}
 }
 
-func TestSmsDefaultCountryCodeIsPlannedUnknownWhenTheRestrictionNarrowsPastIt(t *testing.T) {
+func TestSmsDefaultCountryCodeIsPlannedNullWhenTheRestrictionNarrowsPastIt(t *testing.T) {
 	resourceSchema := resourceSchemaOf(t, &smsAuthenticatorConfigurationResource{})
 
 	planned := planModifiedDefaultCountryCode(t, resourceSchema, countryCodeSet(t, "AU", "GB"), types.StringValue("NZ"))
-	if !planned.IsUnknown() {
-		t.Errorf("default_country_code planned as %v, want unknown so the write can take the API's answer", planned)
+	if !planned.IsNull() {
+		t.Errorf("default_country_code planned as %v, want null because the API discards the default", planned)
 	}
 }
 
@@ -1481,12 +1481,12 @@ func TestSmsDefaultCountryCodeKeepsItsPriorPlanWhenARestrictionElementIsUnknown(
 	}
 }
 
-func TestPushWebhookUrlIsPlannedUnknownWhenSwitchingAwayFromWebhook(t *testing.T) {
+func TestPushWebhookUrlIsPlannedNullWhenSwitchingAwayFromWebhook(t *testing.T) {
 	resourceSchema := resourceSchemaOf(t, &pushAuthenticatorConfigurationResource{})
 
 	planned := planModifiedWebhookUrl(t, resourceSchema, "WEBHOOK", "FIREBASE", types.StringValue("https://example.com/push"))
-	if !planned.IsUnknown() {
-		t.Errorf("webhook_url planned as %v, want unknown so the write can take the API's null", planned)
+	if !planned.IsNull() {
+		t.Errorf("webhook_url planned as %v, want null because the API discards it", planned)
 	}
 }
 
@@ -1499,12 +1499,12 @@ func TestPushWebhookUrlKeepsItsPriorPlanWhenTheProviderStaysWebhook(t *testing.T
 	}
 }
 
-func TestPushWebhookUrlKeepsItsPriorPlanWhenTheProviderWasNeverWebhook(t *testing.T) {
+func TestPushWebhookUrlIsPlannedNullWhenLeftUnderAnotherProvider(t *testing.T) {
 	resourceSchema := resourceSchemaOf(t, &pushAuthenticatorConfigurationResource{})
 
-	planned := planModifiedWebhookUrl(t, resourceSchema, "DEFAULT", "FIREBASE", types.StringValue("https://example.com/push"))
-	if planned.IsUnknown() || planned.ValueString() != "https://example.com/push" {
-		t.Errorf("webhook_url planned as %v, want the prior value left alone when no WEBHOOK endpoint is being superseded", planned)
+	planned := planModifiedWebhookUrl(t, resourceSchema, "DEFAULT", "DEFAULT", types.StringValue("https://example.com/push"))
+	if !planned.IsNull() {
+		t.Errorf("webhook_url planned as %v, want null because only the WEBHOOK provider uses it", planned)
 	}
 }
 

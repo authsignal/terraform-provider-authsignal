@@ -249,6 +249,22 @@ func TestSmsUpdateOmitsTheProviderWhenItHasNotChanged(t *testing.T) {
 	}
 }
 
+func TestSmsUpdateClearsAWebhookUrlLeftUnderAnotherProvider(t *testing.T) {
+	state := smsModelFor("TWILIO")
+	state.WebhookUrl = types.StringValue("https://example.com/hook")
+	twilioConfigured(t, &state)
+
+	config := smsModelFor("TWILIO")
+	twilioConfigured(t, &config)
+
+	body, diags := smsUpdateBody(context.Background(), config, config, state)
+	if diags.HasError() {
+		t.Fatalf("unexpected diagnostics: %v", diags)
+	}
+
+	assertSentAsNull(t, marshalBody(t, body), "webhookUrl")
+}
+
 func smsCollectionPatch(t *testing.T, countryCodes types.Set, variables types.Set) map[string]any {
 	t.Helper()
 

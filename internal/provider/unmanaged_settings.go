@@ -31,6 +31,11 @@ func storeDefaults(ctx context.Context, private interface {
 		return nil
 	}
 
+	// Stored as an empty set rather than null, because null means the defaults haven't been read.
+	if defaults == nil {
+		defaults = authsignal.Defaults{}
+	}
+
 	encoded, err := json.Marshal(defaults)
 	if err != nil {
 		var diags diag.Diagnostics
@@ -98,6 +103,7 @@ func checkUnmanagedSettings(ctx context.Context, req resource.ModifyPlanRequest,
 	resp.Diagnostics.Append(unmanagedSettingsDiagnostics(ctx, resourceSchema, req.Config.Raw, req.State.Raw, req.Plan.Raw, defaults)...)
 }
 
+// The defaults are nil until a read stores them, so state written by 3.x has none until a plan refreshes.
 func storedDefaults(ctx context.Context, req resource.ModifyPlanRequest) (authsignal.Defaults, diag.Diagnostics) {
 	encoded, diags := req.Private.GetKey(ctx, defaultsPrivateStateKey)
 	if diags.HasError() || len(encoded) == 0 {
@@ -113,10 +119,11 @@ func storedDefaults(ctx context.Context, req resource.ModifyPlanRequest) (authsi
 }
 
 type unmanagedSetting struct {
-	block        string
-	name         string
-	value        attr.Value
-	defaultValue json.RawMessage
+	block         string
+	name          string
+	value         attr.Value
+	defaultValue  json.RawMessage
+	defaultUnread bool
 }
 
 func unmanagedSettingsDiagnostics(ctx context.Context, resourceSchema schema.Schema, config tftypes.Value, state tftypes.Value, plan tftypes.Value, defaults authsignal.Defaults) diag.Diagnostics {
@@ -202,7 +209,7 @@ func unmanagedSettingsIn(block string, attributes map[string]schema.Attribute, c
 			continue
 		}
 
-		settings = append(settings, unmanagedSetting{block: block, name: name, value: value, defaultValue: defaultValue})
+		settings = append(settings, unmanagedSetting{block: block, name: name, value: value, defaultValue: defaultValue, defaultUnread: block == "" && defaults == nil})
 	}
 
 	return settings
@@ -371,11 +378,24 @@ func sortedNames(attributes map[string]schema.Attribute) []string {
 func unmanagedSettingsDiagnostic(settings []unmanagedSetting) diag.Diagnostic {
 	return diag.NewErrorDiagnostic(
 		"Settings Missing From the Configuration",
-		"The tenant has values for these settings, but the configuration doesn't set them:\n\n"+
+		defaultsUnreadNotice(settings)+
+			"The tenant has values for these settings, but the configuration doesn't set them:\n\n"+
 			strings.Join(hclLines(settings), "\n")+"\n\n"+
 			"Changes made to them outside Terraform won't show in a plan, and a tenant built from this configuration "+
 			"won't get these values. Add them to the configuration.",
 	)
+}
+
+func defaultsUnreadNotice(settings []unmanagedSetting) string {
+	for _, setting := range settings {
+		if setting.defaultUnread {
+			return "The provider hasn't read this resource's defaults yet, so it can't tell which of these settings are at their default. " +
+				"It reads them when a plan refreshes, and state written by version 3 of the provider doesn't have them. " +
+				"Run the plan again without `-refresh=false`.\n\n"
+		}
+	}
+
+	return ""
 }
 
 func hclLines(settings []unmanagedSetting) []string {
@@ -426,15 +446,19 @@ func hclSettingLines(settings []unmanagedSetting, indent string) []string {
 
 	lines := make([]string, len(settings))
 	for index, setting := range settings {
-		lines[index] = fmt.Sprintf("%s%-*s  # %s", indent, assignmentWidth, assignments[index], defaultComment(setting.defaultValue))
+		lines[index] = fmt.Sprintf("%s%-*s  # %s", indent, assignmentWidth, assignments[index], defaultComment(setting))
 	}
 
 	return lines
 }
 
-func defaultComment(defaultValue json.RawMessage) string {
+func defaultComment(setting unmanagedSetting) string {
+	if setting.defaultUnread {
+		return "default not read yet"
+	}
+
 	var compact bytes.Buffer
-	if defaultValue == nil || json.Compact(&compact, defaultValue) != nil {
+	if setting.defaultValue == nil || json.Compact(&compact, setting.defaultValue) != nil {
 		return "no default"
 	}
 

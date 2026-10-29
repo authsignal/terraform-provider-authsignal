@@ -15,12 +15,7 @@ import (
 func refuseDestroy(typeName string, what string, kept []unmanagedSetting) diag.Diagnostic {
 	detail := "The Management API can't delete a tenant's " + what + ". " +
 		"To stop Terraform managing this resource, use this removed block in place of its resource block:\n\n" +
-		"  removed {\n" +
-		"    from = " + typeName + ".<name>\n\n" +
-		"    lifecycle {\n" +
-		"      destroy = false\n" +
-		"    }\n" +
-		"  }\n\n" +
+		removedBlock(typeName) + "\n\n" +
 		"The tenant keeps its current " + what + "."
 
 	if len(kept) > 0 {
@@ -30,6 +25,15 @@ func refuseDestroy(typeName string, what string, kept []unmanagedSetting) diag.D
 	}
 
 	return diag.NewErrorDiagnostic("Can't Destroy "+typeName, detail)
+}
+
+func removedBlock(typeName string) string {
+	return "  removed {\n" +
+		"    from = " + typeName + ".<name>\n\n" +
+		"    lifecycle {\n" +
+		"      destroy = false\n" +
+		"    }\n" +
+		"  }"
 }
 
 func refuseTenantSettingsDestroy(ctx context.Context, req resource.ModifyPlanRequest, resp *resource.ModifyPlanResponse, typeName string, what string) {

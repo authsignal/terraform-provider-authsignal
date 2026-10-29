@@ -6,7 +6,9 @@ import (
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-testing/helper/resource"
+	"github.com/hashicorp/terraform-plugin-testing/knownvalue"
 	"github.com/hashicorp/terraform-plugin-testing/plancheck"
+	"github.com/hashicorp/terraform-plugin-testing/tfjsonpath"
 )
 
 const emailOtpAddress = "authsignal_email_otp_authenticator_configuration.email_otp"
@@ -77,6 +79,60 @@ resource "authsignal_email_otp_authenticator_configuration" "email_otp" {
 	})
 
 	stub.assertNotCalled(t, emailOtpPatchRoute)
+}
+
+func TestPlanAfterImportRemovesFirebaseCredentialsTheConfigurationLeavesOut(t *testing.T) {
+	skipUnlessAcceptance(t)
+
+	_, stub := newStubAPI(t, map[string][]stubResponse{
+		pushGetRoute: okResponse(`{"authenticatorId":"auth_push","isActive":true,"verificationMethod":"PUSH","pushProvider":"DEFAULT",` +
+			`"apnsCredentials":{"teamId":"TEAM123","keyId":"KEY123","bundleId":"com.example.app","sandbox":false},` +
+			`"fcmCredentials":{"projectId":"demo-project","clientEmail":"sa@demo.iam.gserviceaccount.com"},"defaults":{"isActive":true}}`),
+	})
+	t.Setenv("AUTHSIGNAL_HOST", stub.url)
+
+	const address = "authsignal_push_authenticator_configuration.push"
+
+	config := `
+resource "authsignal_push_authenticator_configuration" "push" {
+  push_provider = "DEFAULT"
+
+  apns_credentials = {
+    private_key = "apns-key"
+    team_id     = "TEAM123"
+    key_id      = "KEY123"
+    bundle_id   = "com.example.app"
+  }
+
+  apns_credentials_version = "1"
+}
+`
+
+	resource.UnitTest(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config:             config,
+				ResourceName:       address,
+				ImportState:        true,
+				ImportStateId:      pushAuthenticatorSlug,
+				ImportStatePersist: true,
+			},
+			{
+				Config:             config,
+				PlanOnly:           true,
+				ExpectNonEmptyPlan: true,
+				ConfigPlanChecks: resource.ConfigPlanChecks{
+					PostApplyPostRefresh: []plancheck.PlanCheck{
+						plancheck.ExpectKnownValue(address, tfjsonpath.New("fcm_project_id"), knownvalue.Null()),
+						plancheck.ExpectKnownValue(address, tfjsonpath.New("fcm_client_email"), knownvalue.Null()),
+					},
+				},
+			},
+		},
+	})
+
+	stub.assertNotCalled(t, pushPatchRoute)
 }
 
 type credentialMemberChange struct {

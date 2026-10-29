@@ -161,10 +161,16 @@ func (r *pushAuthenticatorConfigurationResource) Schema(_ context.Context, _ res
 		"fcm_project_id": schema.StringAttribute{
 			Description: "The Firebase project id, read back from the service account key.",
 			Computed:    true,
+			PlanModifiers: []planmodifier.String{
+				removedFcmCredentials{},
+			},
 		},
 		"fcm_client_email": schema.StringAttribute{
 			Description: "The Firebase client email, read back from the service account key.",
 			Computed:    true,
+			PlanModifiers: []planmodifier.String{
+				removedFcmCredentials{},
+			},
 		},
 	}
 
@@ -228,6 +234,42 @@ func (m pushAuthenticatorConfigurationResourceModel) credentialVersion(name stri
 		return m.FcmCredentialsVersion
 	default:
 		return types.StringNull()
+	}
+}
+
+// fcm_credentials is write-only, so the values the API derives from it are the only sign in state that the tenant has it.
+func removesFcmCredentials(config pushAuthenticatorConfigurationResourceModel, state pushAuthenticatorConfigurationResourceModel) bool {
+	if !config.FcmCredentials.IsNull() {
+		return false
+	}
+
+	return isKnownAndSet(state.FcmProjectId) || isKnownAndSet(state.FcmClientEmail)
+}
+
+type removedFcmCredentials struct{}
+
+func (m removedFcmCredentials) Description(_ context.Context) string {
+	return "Plans the value as null when the configuration leaves out `fcm_credentials` the tenant has, because the update removes them."
+}
+
+func (m removedFcmCredentials) MarkdownDescription(ctx context.Context) string {
+	return m.Description(ctx)
+}
+
+func (m removedFcmCredentials) PlanModifyString(ctx context.Context, req planmodifier.StringRequest, resp *planmodifier.StringResponse) {
+	if req.Plan.Raw.IsNull() || req.State.Raw.IsNull() {
+		return
+	}
+
+	var config, state pushAuthenticatorConfigurationResourceModel
+	resp.Diagnostics.Append(req.Config.Get(ctx, &config)...)
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	if removesFcmCredentials(config, state) {
+		resp.PlanValue = types.StringNull()
 	}
 }
 
@@ -533,6 +575,10 @@ func pushUpdateBody(ctx context.Context, plan pushAuthenticatorConfigurationReso
 		if block.Name == apnsCredentialsBlock && !providerChanging && removedFromConfig(config.ApnsCredentials, state.ApnsCredentials) {
 			body.ApnsCredentials = authsignal.SetNull(authsignal.ApnsCredentialsUpdate{})
 		}
+	}
+
+	if removesFcmCredentials(config, state) {
+		body.FcmCredentials = authsignal.SetNull(authsignal.FcmCredentialsUpdate{})
 	}
 
 	return body, diags

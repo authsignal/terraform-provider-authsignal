@@ -1619,3 +1619,20 @@ func TestPushSwitchToDefaultClearsFirebaseCredentialsTheConfigurationLeavesOut(t
 
 	assertSentAsNull(t, marshalBody(t, body), "fcmCredentials")
 }
+
+func TestPushUpdateClearsFirebaseCredentialsLeftUnderWebhook(t *testing.T) {
+	state := pushModelFor("WEBHOOK")
+	state.WebhookUrl = types.StringValue("https://example.com/hook")
+	state.FcmProjectId = types.StringValue("demo-project")
+	state.FcmClientEmail = types.StringValue("sa@demo.iam.gserviceaccount.com")
+
+	config := pushModelFor("WEBHOOK")
+	config.WebhookUrl = state.WebhookUrl
+
+	body, diags := pushUpdateBody(context.Background(), config, config, state)
+	if diags.HasError() {
+		t.Fatalf("unexpected diagnostics: %v", diags)
+	}
+
+	assertSentAsNull(t, marshalBody(t, body), "fcmCredentials")
+}

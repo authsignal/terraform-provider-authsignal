@@ -239,10 +239,6 @@ func (m pushAuthenticatorConfigurationResourceModel) credentialVersion(name stri
 
 // fcm_credentials is write-only, so the values the API derives from it are the only sign in state that the tenant has it.
 func removesFcmCredentials(config pushAuthenticatorConfigurationResourceModel, state pushAuthenticatorConfigurationResourceModel) bool {
-	if !isKnownAndSet(config.PushProvider) || !fcmBlock.appliesTo(config.PushProvider.ValueString()) {
-		return false
-	}
-
 	if !config.FcmCredentials.IsNull() {
 		return false
 	}

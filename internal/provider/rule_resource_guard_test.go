@@ -133,8 +133,8 @@ func TestRuleReadRefusesARuleOfAFlowAction(t *testing.T) {
 		t.Fatal("expected reading a rule of a FLOW action to fail")
 	}
 
-	if !strings.Contains(detailsOf(resp.Diagnostics), "terraform state rm") {
-		t.Errorf("the error must say how to stop managing the rule, got %s", detailsOf(resp.Diagnostics))
+	if !strings.Contains(detailsOf(resp.Diagnostics), removedBlock("authsignal_rule")) {
+		t.Errorf("the error must offer a removed block to stop managing the rule, got %s", detailsOf(resp.Diagnostics))
 	}
 
 	// Dropping the rule from state would let a later plan create it again on the flow's action.

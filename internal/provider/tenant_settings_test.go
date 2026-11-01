@@ -16,10 +16,32 @@ import (
 )
 
 func authenticatorEventsWebhook(url attr.Value, includePublicKey attr.Value) types.Object {
+	return authenticatorEventsWebhookWithCustomVariables(url, includePublicKey, types.SetNull(types.StringType))
+}
+
+func authenticatorEventsWebhookWithCustomVariables(url attr.Value, includePublicKey attr.Value, allowedCustomVariables attr.Value) types.Object {
 	return types.ObjectValueMust(authenticatorEventsWebhookConfigAttributeTypes, map[string]attr.Value{
 		"url":                           url,
 		"include_credential_public_key": includePublicKey,
+		"allowed_custom_variables":      allowedCustomVariables,
 	})
+}
+
+func customVariablesRequestBody(t *testing.T, allowedCustomVariables types.Set) map[string]any {
+	t.Helper()
+
+	body := requestBodyOf(t, tenantSettingsResourceModel{
+		TokenDurationInMinutes: types.Int64Null(),
+		AuthenticatorEventsWebhookConfig: authenticatorEventsWebhookWithCustomVariables(
+			types.StringValue("https://example.com/events"),
+			types.BoolNull(),
+			allowedCustomVariables,
+		),
+		LogEventsWebhookConfig: types.ObjectNull(logEventsWebhookConfigAttributeTypes),
+		IpWhitelist:            types.SetNull(types.StringType),
+	})
+
+	return body["authenticatorEventsWebhookConfig"].(map[string]any)
 }
 
 func requestBodyOf(t *testing.T, model tenantSettingsResourceModel) map[string]any {
@@ -434,5 +456,63 @@ func TestTenantSettingsOmittedNestedFieldConvergesOnTheApiValue(t *testing.T) {
 
 	if !config.IncludeCredentialPublicKey.ValueBool() {
 		t.Errorf("expected state to take the stored flag, got %v", config.IncludeCredentialPublicKey)
+	}
+}
+
+func TestTenantSettingsSendsTheCustomVariablesSorted(t *testing.T) {
+	events := customVariablesRequestBody(t, types.SetValueMust(types.StringType, []attr.Value{
+		types.StringValue("data-point-b"),
+		types.StringValue("data-point-a"),
+	}))
+
+	allowed, ok := events["allowedCustomVariables"].([]any)
+	if !ok || len(allowed) != 2 || allowed[0] != "data-point-a" || allowed[1] != "data-point-b" {
+		t.Errorf("expected sorted allowedCustomVariables, got %v", events)
+	}
+}
+
+func TestTenantSettingsSendsEmptyCustomVariables(t *testing.T) {
+	events := customVariablesRequestBody(t, types.SetValueMust(types.StringType, []attr.Value{}))
+
+	allowed, ok := events["allowedCustomVariables"].([]any)
+	if !ok || len(allowed) != 0 {
+		t.Errorf("expected an empty allowedCustomVariables to be sent, got %v", events)
+	}
+}
+
+func TestTenantSettingsOmitsUnsetCustomVariables(t *testing.T) {
+	for name, value := range map[string]types.Set{
+		"null":    types.SetNull(types.StringType),
+		"unknown": types.SetUnknown(types.StringType),
+	} {
+		t.Run(name, func(t *testing.T) {
+			events := customVariablesRequestBody(t, value)
+
+			if _, present := events["allowedCustomVariables"]; present {
+				t.Errorf("expected allowedCustomVariables to be omitted, got %v", events)
+			}
+		})
+	}
+}
+
+func TestTenantSettingsModelReadsBackCustomVariables(t *testing.T) {
+	url := "https://example.com/events"
+	allowed := []string{"data-point-a"}
+
+	model := tenantSettingsModelFromResponse(&authsignal.TenantResponse{
+		AuthenticatorEventsWebhookConfig: &authsignal.AuthenticatorEventsWebhookConfigResponse{
+			Url:                    &url,
+			AllowedCustomVariables: &allowed,
+		},
+	})
+
+	var config authenticatorEventsWebhookConfigModel
+	if diags := model.AuthenticatorEventsWebhookConfig.As(context.Background(), &config, basetypes.ObjectAsOptions{}); diags.HasError() {
+		t.Fatalf("unexpected diagnostics: %v", diags)
+	}
+
+	expected := types.SetValueMust(types.StringType, []attr.Value{types.StringValue("data-point-a")})
+	if !config.AllowedCustomVariables.Equal(expected) {
+		t.Errorf("expected the custom variables to be read back, got %v", config.AllowedCustomVariables)
 	}
 }

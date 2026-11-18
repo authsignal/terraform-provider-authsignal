@@ -426,7 +426,7 @@ func responseReadableOptionals() map[string][]string {
 			"sending_rate_limit_configurations",
 		},
 		"number_verify": {
-			"is_active", "environment", "region",
+			"is_active", "environment",
 		},
 	}
 }

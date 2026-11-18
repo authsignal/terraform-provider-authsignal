@@ -1746,7 +1746,7 @@ func numberVerifySchema(t *testing.T) schema.Schema {
 
 func numberVerifyJson(appId string, environment string) string {
 	return `{"authenticatorId":"auth_number_verify","isActive":true,"verificationMethod":"SNA",` +
-		`"appId":"` + appId + `","environment":"` + environment + `","region":"NA_01"}`
+		`"appId":"` + appId + `","environment":"` + environment + `"}`
 }
 
 func TestNumberVerifyCreateSendsOnlyTheConfiguredFields(t *testing.T) {
@@ -1764,7 +1764,6 @@ func TestNumberVerifyCreateSendsOnlyTheConfiguredFields(t *testing.T) {
 		"app_id":      tftypes.NewValue(tftypes.String, "app-1"),
 		"is_active":   tftypes.NewValue(tftypes.Bool, tftypes.UnknownValue),
 		"environment": tftypes.NewValue(tftypes.String, tftypes.UnknownValue),
-		"region":      tftypes.NewValue(tftypes.String, tftypes.UnknownValue),
 	})
 
 	resp := &resource.CreateResponse{State: tfsdk.State{Schema: resourceSchema}}
@@ -1794,8 +1793,8 @@ func TestNumberVerifyCreateSendsOnlyTheConfiguredFields(t *testing.T) {
 		t.Errorf("server-owned attributes are %q/%q, want auth_number_verify/SNA", model.AuthenticatorId.ValueString(), model.VerificationMethod.ValueString())
 	}
 
-	if model.Environment.ValueString() != "PRODUCTION" || model.Region.ValueString() != "NA_01" {
-		t.Errorf("unconfigured environment/region should be read back from the API, got %q/%q", model.Environment.ValueString(), model.Region.ValueString())
+	if model.Environment.ValueString() != "PRODUCTION" {
+		t.Errorf("unconfigured environment should be read back from the API, got %q", model.Environment.ValueString())
 	}
 }
 
@@ -1860,7 +1859,6 @@ func TestNumberVerifyUpdateSendsOnlyTheChangedAppId(t *testing.T) {
 	state := tfsdk.State{Schema: resourceSchema, Raw: resourceObject(t, resourceSchema, map[string]tftypes.Value{
 		"app_id":      tftypes.NewValue(tftypes.String, "app-1"),
 		"environment": tftypes.NewValue(tftypes.String, "PRODUCTION"),
-		"region":      tftypes.NewValue(tftypes.String, "NA_01"),
 	})}
 
 	configValue := resourceObject(t, resourceSchema, map[string]tftypes.Value{

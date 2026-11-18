@@ -45,8 +45,6 @@ var allowedAppAttestationFailureModes = []string{"ALLOW_WITH_WARNING", "BLOCK"}
 
 var allowedNumberVerifyEnvironments = []string{"PRODUCTION", "SANDBOX"}
 
-var allowedNumberVerifyRegions = []string{"NA_01"}
-
 func allowedValues(values []string) string {
 	quoted := make([]string, 0, len(values))
 	for _, value := range values {

@@ -16,7 +16,6 @@ Manages the tenant's Number Verify authenticator configuration, which verifies a
 resource "authsignal_number_verify_authenticator_configuration" "number_verify" {
   app_id      = "your-app-registration-id"
   environment = "PRODUCTION"
-  region      = "NA_01"
 }
 ```
 
@@ -31,7 +30,6 @@ resource "authsignal_number_verify_authenticator_configuration" "number_verify" 
 
 - `environment` (String) Whether to verify against live carrier networks or simulated carrier responses. Defaults to `PRODUCTION`. One of `PRODUCTION`, `SANDBOX`.
 - `is_active` (Boolean)
-- `region` (String) The carrier network region used in production. One of `NA_01`.
 
 ### Read-Only
 

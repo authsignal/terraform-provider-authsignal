@@ -34,7 +34,6 @@ type numberVerifyAuthenticatorConfigurationResourceModel struct {
 	IsActive           types.Bool   `tfsdk:"is_active"`
 	AppId              types.String `tfsdk:"app_id"`
 	Environment        types.String `tfsdk:"environment"`
-	Region             types.String `tfsdk:"region"`
 }
 
 func (r *numberVerifyAuthenticatorConfigurationResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -74,14 +73,6 @@ func (r *numberVerifyAuthenticatorConfigurationResource) Schema(_ context.Contex
 				Computed:    true,
 				Validators: []validator.String{
 					stringvalidator.OneOf(allowedNumberVerifyEnvironments...),
-				},
-			},
-			"region": schema.StringAttribute{
-				Description: "The carrier network region used in production." + allowedValues(allowedNumberVerifyRegions),
-				Optional:    true,
-				Computed:    true,
-				Validators: []validator.String{
-					stringvalidator.OneOf(allowedNumberVerifyRegions...),
 				},
 			},
 		},
@@ -215,7 +206,6 @@ func numberVerifyCreateBody(plan numberVerifyAuthenticatorConfigurationResourceM
 		IsActive:    boolPointer(config.IsActive),
 		AppId:       plan.AppId.ValueString(),
 		Environment: stringPointer(config.Environment),
-		Region:      stringPointer(config.Region),
 	}
 }
 
@@ -234,10 +224,6 @@ func numberVerifyUpdateBody(plan numberVerifyAuthenticatorConfigurationResourceM
 		body.Environment = authsignal.SetValue(config.Environment.ValueString())
 	}
 
-	if isKnownAndSet(config.Region) {
-		body.Region = authsignal.SetValue(config.Region.ValueString())
-	}
-
 	return body
 }
 
@@ -248,7 +234,6 @@ func numberVerifyStateAfterWrite(plan numberVerifyAuthenticatorConfigurationReso
 
 	state.IsActive = resolvedValue(plan.IsActive, types.BoolValue(response.IsActive))
 	state.Environment = resolvedValue(plan.Environment, types.StringPointerValue(response.Environment))
-	state.Region = resolvedValue(plan.Region, types.StringPointerValue(response.Region))
 
 	return state
 }
@@ -260,6 +245,5 @@ func numberVerifyStateFromResponse(response *authsignal.NumberVerifyAuthenticato
 		IsActive:           types.BoolValue(response.IsActive),
 		AppId:              types.StringPointerValue(response.AppId),
 		Environment:        types.StringPointerValue(response.Environment),
-		Region:             types.StringPointerValue(response.Region),
 	}
 }

@@ -52,6 +52,42 @@ resource "authsignal_passkey_authenticator_configuration" "passkey" {
 	})
 }
 
+// The production API reports no defaults until MANAGEMENT_API_DEFAULTS is on. A refresh has still read them.
+func TestPlanAfterAReadWithoutDefaultsListsSettingsWithNoDefault(t *testing.T) {
+	skipUnlessAcceptance(t)
+
+	_, stub := newStubAPI(t, map[string][]stubResponse{
+		passkeyGetRoute: okResponse(`{"authenticatorId":"auth_passkey","isActive":false,"verificationMethod":"PASSKEY",` +
+			`"relyingParty":"example.com","expectedOrigins":["https://example.com"]}`),
+	})
+	t.Setenv("AUTHSIGNAL_HOST", stub.url)
+
+	config := `
+resource "authsignal_passkey_authenticator_configuration" "passkey" {
+  relying_party    = "example.com"
+  expected_origins = ["https://example.com"]
+}
+`
+
+	resource.UnitTest(t, resource.TestCase{
+		ProtoV6ProviderFactories: testAccProtoV6ProviderFactories,
+		Steps: []resource.TestStep{
+			{
+				Config:             config,
+				ResourceName:       "authsignal_passkey_authenticator_configuration.passkey",
+				ImportState:        true,
+				ImportStateId:      passkeyAuthenticatorSlug,
+				ImportStatePersist: true,
+			},
+			{
+				Config:      config,
+				PlanOnly:    true,
+				ExpectError: regexp.MustCompile(`"passkey" \{\s+The tenant has values[\s\S]*is_active\s+=\s+false\s+#\s+no\s+default`),
+			},
+		},
+	})
+}
+
 func TestPlanToCreateTenantSettingsFailsForWhatTheTenantAlreadyHas(t *testing.T) {
 	skipUnlessAcceptance(t)
 

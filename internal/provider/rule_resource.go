@@ -53,7 +53,7 @@ func (r *ruleResource) Metadata(_ context.Context, req resource.MetadataRequest,
 	resp.TypeName = req.ProviderTypeName + "_rule"
 }
 
-const flowRuleSummary = "Rules of a " + actionTypeFlow + " action belong in its flow"
+const flowRuleSummary = "Rules of a " + actionTypeFlow + " Action Belong in Its Flow"
 
 // A FLOW action keeps its rules in the flow document, and the rules endpoint accepts one
 // written here regardless, so the rule would silently reappear inside `authsignal_flow`'s
@@ -268,7 +268,9 @@ func (r *ruleResource) Read(ctx context.Context, req resource.ReadRequest, resp 
 			path.Root("action_code"),
 			flowRuleSummary,
 			"Action configuration "+actionCode+" is a "+actionTypeFlow+" action, so this rule belongs to its flow, not to `authsignal_rule`. "+
-				"Remove this resource from the configuration, run `terraform state rm` on it, and manage the rule in the `flow` document of the `authsignal_flow` resource for "+actionCode+". "+
+				"To stop Terraform managing this resource, use this removed block in place of its resource block:\n\n"+
+				removedBlock("authsignal_rule")+"\n\n"+
+				"Then manage the rule in the `flow` document of the `authsignal_flow` resource for "+actionCode+". "+
 				"Don't destroy it: that deletes the rule from the flow.",
 		)
 		return

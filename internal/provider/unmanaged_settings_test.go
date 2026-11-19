@@ -94,6 +94,26 @@ func TestUnmanagedSettingsAreListedWithTheirDefaults(t *testing.T) {
 	}
 }
 
+// State written by 3.x has no defaults until a plan refreshes, so the check can't call a value non-default.
+func TestUnmanagedSettingsBeforeTheDefaultsAreReadSayToRefresh(t *testing.T) {
+	resourceSchema := passkeySchema(t)
+	state := resourceObject(t, resourceSchema, map[string]tftypes.Value{
+		"is_active": tftypes.NewValue(tftypes.Bool, true),
+	})
+
+	diags := unmanagedSettingsDiagnostics(context.Background(), resourceSchema, resourceObject(t, resourceSchema, nil), state, state, nil)
+
+	detail := unmanagedSettingsDetail(t, diags)
+
+	if !strings.HasPrefix(detail, "The provider hasn't read this resource's defaults yet") || !strings.Contains(detail, "`-refresh=false`") {
+		t.Errorf("the error must say the defaults haven't been read and to plan without -refresh=false, got\n%s", detail)
+	}
+
+	if !strings.Contains(detail, "is_active = true  # default not read yet") {
+		t.Errorf("the setting must not be labelled as having no default, got\n%s", detail)
+	}
+}
+
 func TestUnmanagedSettingsInsideABlockAreListedInsideIt(t *testing.T) {
 	resourceSchema := resourceSchemaOf(t, &tenantSettingsResource{})
 	config := resourceObject(t, resourceSchema, map[string]tftypes.Value{

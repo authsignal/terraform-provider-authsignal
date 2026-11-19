@@ -19,6 +19,7 @@ resource "authsignal_tenant_settings" "tenant_settings" {
   authenticator_events_webhook_config = {
     url                           = "https://example.com/authsignal/authenticator-events"
     include_credential_public_key = true
+    allowed_custom_variables      = [authsignal_custom_data_point.account_tier.id]
   }
 
   log_events_webhook_config = {
@@ -48,6 +49,7 @@ Required:
 
 Optional:
 
+- `allowed_custom_variables` (Set of String) IDs of custom data points to include in events. Set to `[]` to clear them.
 - `include_credential_public_key` (Boolean) Whether passkey `authenticator.created` events include the credential public key.
 
 

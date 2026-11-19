@@ -42,6 +42,7 @@ type tenantSettingsResourceModel struct {
 type authenticatorEventsWebhookConfigModel struct {
 	Url                        types.String `tfsdk:"url"`
 	IncludeCredentialPublicKey types.Bool   `tfsdk:"include_credential_public_key"`
+	AllowedCustomVariables     types.Set    `tfsdk:"allowed_custom_variables"`
 }
 
 type logEventsWebhookConfigModel struct {
@@ -51,6 +52,7 @@ type logEventsWebhookConfigModel struct {
 var authenticatorEventsWebhookConfigAttributeTypes = map[string]attr.Type{
 	"url":                           types.StringType,
 	"include_credential_public_key": types.BoolType,
+	"allowed_custom_variables":      types.SetType{ElemType: types.StringType},
 }
 
 var logEventsWebhookConfigAttributeTypes = map[string]attr.Type{
@@ -121,6 +123,12 @@ func (r *tenantSettingsResource) Schema(_ context.Context, _ resource.SchemaRequ
 						Optional:    true,
 						Computed:    true,
 					},
+					"allowed_custom_variables": schema.SetAttribute{
+						Description: "IDs of custom data points to include in events. Set to `[]` to clear them.",
+						Optional:    true,
+						Computed:    true,
+						ElementType: types.StringType,
+					},
 				},
 			},
 			"log_events_webhook_config": schema.SingleNestedAttribute{
@@ -171,6 +179,12 @@ func tenantSettingsRequestFrom(ctx context.Context, model tenantSettingsResource
 			webhook.IncludeCredentialPublicKey = config.IncludeCredentialPublicKey.ValueBoolPointer()
 		}
 
+		if isKnownAndSet(config.AllowedCustomVariables) {
+			variables, setDiags := sortedStringsFrom(ctx, config.AllowedCustomVariables)
+			diags.Append(setDiags...)
+			webhook.AllowedCustomVariables = authsignal.SetList(variables)
+		}
+
 		settings.AuthenticatorEventsWebhookConfig = authsignal.SetValue(webhook)
 	} else if removedFromConfig(model.AuthenticatorEventsWebhookConfig, state.AuthenticatorEventsWebhookConfig) {
 		settings.AuthenticatorEventsWebhookConfig = authsignal.SetNull(authsignal.AuthenticatorEventsWebhookConfig{})
@@ -208,6 +222,7 @@ func authenticatorEventsWebhookConfigValue(response *authsignal.AuthenticatorEve
 	return types.ObjectValueMust(authenticatorEventsWebhookConfigAttributeTypes, map[string]attr.Value{
 		"url":                           types.StringPointerValue(response.Url),
 		"include_credential_public_key": types.BoolPointerValue(response.IncludeCredentialPublicKey),
+		"allowed_custom_variables":      stringSetPointerValue(response.AllowedCustomVariables),
 	})
 }
 

@@ -30,7 +30,7 @@ const webhookProvider = "WEBHOOK"
 
 var allowedSmsProviders = []string{"BIRD", "MESSAGE_MEDIA", "MODICA_GROUP", "TNZ", "TWILIO", webhookProvider}
 
-var allowedEmailProviders = []string{"BIRD", "MAILGUN", "MAILJET", "MANDRILL", "SENDGRID", "SMTP", webhookProvider}
+var allowedEmailProviders = []string{"BIRD", "MAILGUN", "MAILJET", "MANDRILL", "SENDGRID", "SES", "SMTP", webhookProvider}
 
 var allowedPushProviders = []string{"DEFAULT", "FIREBASE", "WEBHOOK"}
 

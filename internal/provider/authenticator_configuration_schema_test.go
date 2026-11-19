@@ -163,7 +163,7 @@ func TestProviderEnumsMatchTheContract(t *testing.T) {
 		expected []string
 	}{
 		{"sms", allowedSmsProviders, []string{"BIRD", "MESSAGE_MEDIA", "MODICA_GROUP", "TNZ", "TWILIO", "WEBHOOK"}},
-		{"email", allowedEmailProviders, []string{"BIRD", "MAILGUN", "MAILJET", "MANDRILL", "SENDGRID", "SMTP", "WEBHOOK"}},
+		{"email", allowedEmailProviders, []string{"BIRD", "MAILGUN", "MAILJET", "MANDRILL", "SENDGRID", "SES", "SMTP", "WEBHOOK"}},
 		{"push", allowedPushProviders, []string{"DEFAULT", "FIREBASE", "WEBHOOK"}},
 	}
 
